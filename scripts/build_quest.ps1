@@ -1,0 +1,54 @@
+param(
+  [string]$UnityExe = 'C:\Program Files\Unity\Hub\Editor\6000.3.8f1\Editor\Unity.exe',
+  [string]$ProjectPath = 'C:\Users\ovied\Dev\T2\T2-QuestFlightLab\QuestFlightLab'
+)
+
+$ErrorActionPreference = 'Stop'
+
+if (!(Test-Path $UnityExe)) { throw "Unity not found: $UnityExe" }
+if (!(Test-Path $ProjectPath)) { throw "Project not found: $ProjectPath" }
+
+$logDir = Join-Path $ProjectPath 'Logs'
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+function Reset-UnityLock {
+  $lock = Join-Path $ProjectPath 'Temp\UnityLockfile'
+  if (Test-Path $lock) { Remove-Item -LiteralPath $lock -Force -ErrorAction SilentlyContinue }
+}
+
+function Invoke-UnityMethod {
+  param([string]$Method, [string]$LogName)
+  Reset-UnityLock
+  $log = Join-Path $logDir $LogName
+  $args = @('-batchmode', '-quit', '-projectPath', $ProjectPath, '-executeMethod', $Method, '-logFile', $log)
+  $process = Start-Process -FilePath $UnityExe -ArgumentList $args -Wait -PassThru -WindowStyle Hidden
+  $exitCode = [int]$process.ExitCode
+
+  $logText = ''
+  if (Test-Path $log) {
+    $logText = Get-Content -Raw -Path $log
+  }
+
+  if ($logText -match 'No valid Unity Editor license found') {
+    throw "Unity license is not active. Open Unity Hub, sign in/activate the editor, then rerun this script. Log: $log"
+  }
+
+  if ($logText -match 'DisplayDialog: Project folder or disk is read only') {
+    throw "Unity could not write the project folder. Close any open Unity instance and rerun this script. Log: $log"
+  }
+
+  if ($logText -match 'Application will terminate with return code ([1-9][0-9]*)') {
+    $exitCode = [int]$Matches[1]
+  }
+
+  if ($exitCode -ne 0) {
+    throw "Unity method failed: $Method (exit $exitCode). Log: $log"
+  }
+}
+
+Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestProjectBootstrap.ConfigureProject' -LogName 'bootstrap_configure.log'
+Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestProjectBootstrap.CreateInputLabScene' -LogName 'bootstrap_scene.log'
+Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestProjectBootstrap.ValidateProject' -LogName 'validate_project.log'
+Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestBuild.PerformAndroidBuild' -LogName 'build_android.log'
+
+Write-Host "APK built: $(Join-Path $ProjectPath 'Builds\Android\QuestFlightLab-v0.1-dev.apk')"
