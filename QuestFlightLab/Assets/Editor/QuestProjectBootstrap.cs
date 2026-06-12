@@ -11,8 +11,16 @@ using QuestFlightLab.Runtime;
 using QuestFlightLab.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEditor.XR.Management;
+using UnityEditor.XR.Management.Metadata;
+using UnityEditor.XR.OpenXR.Features;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.XR.Management;
+using UnityEngine.XR.OpenXR;
+using UnityEngine.XR.OpenXR.Features;
+using UnityEngine.XR.OpenXR.Features.Interactions;
+using UnityEngine.XR.OpenXR.Features.MetaQuestSupport;
 
 namespace QuestFlightLab.Editor
 {
@@ -154,6 +162,7 @@ namespace QuestFlightLab.Editor
             AssertClose(mapped.throttle, 0.72f, "throttle placeholder");
 
             if (!File.Exists(ScenePath)) throw new Exception($"Scene missing: {ScenePath}");
+            ValidateQuestBuildSettings();
             Debug.Log("[QuestFlightLab] Validation passed.");
         }
 
@@ -360,92 +369,136 @@ namespace QuestFlightLab.Editor
 
         private static void EnableOpenXRLoaderAndroid()
         {
-            Type settingsPerBuildTargetType = Type.GetType("UnityEditor.XR.Management.XRGeneralSettingsPerBuildTarget, Unity.XR.Management.Editor");
-            Type metadataStoreType = Type.GetType("UnityEditor.XR.Management.Metadata.XRPackageMetadataStore, Unity.XR.Management.Editor");
-            Type generalSettingsType = Type.GetType("UnityEngine.XR.Management.XRGeneralSettings, Unity.XR.Management")
-                                       ?? Type.GetType("UnityEngine.XR.Management.XRGeneralSettings, Unity.XR.Management.Runtime");
-            Type managerSettingsType = Type.GetType("UnityEngine.XR.Management.XRManagerSettings, Unity.XR.Management")
-                                       ?? Type.GetType("UnityEngine.XR.Management.XRManagerSettings, Unity.XR.Management.Runtime");
-
-            if (settingsPerBuildTargetType == null || metadataStoreType == null || generalSettingsType == null || managerSettingsType == null)
+            XRGeneralSettingsPerBuildTarget buildTargetSettings = GetOrCreateXrBuildTargetSettings();
+            if (!buildTargetSettings.HasSettingsForBuildTarget(BuildTargetGroup.Android))
             {
-                Debug.LogWarning("[QuestFlightLab] XR Management types unavailable before package restore.");
-                return;
+                buildTargetSettings.CreateDefaultSettingsForBuildTarget(BuildTargetGroup.Android);
             }
 
-            object xrSettings = settingsPerBuildTargetType
-                .GetMethod("XRGeneralSettingsForBuildTarget", BindingFlags.Public | BindingFlags.Static)
-                ?.Invoke(null, new object[] { BuildTargetGroup.Android });
-
-            if (xrSettings == null)
+            if (!buildTargetSettings.HasManagerSettingsForBuildTarget(BuildTargetGroup.Android))
             {
-                xrSettings = ScriptableObject.CreateInstance(generalSettingsType);
-                settingsPerBuildTargetType
-                    .GetMethod("SetSettingsForBuildTarget", BindingFlags.Public | BindingFlags.Static)
-                    ?.Invoke(null, new[] { (object)BuildTargetGroup.Android, xrSettings });
+                buildTargetSettings.CreateDefaultManagerSettingsForBuildTarget(BuildTargetGroup.Android);
             }
 
-            PropertyInfo assignedSettingsProp = xrSettings.GetType().GetProperty("AssignedSettings")
-                                                ?? xrSettings.GetType().GetProperty("Manager");
-            object manager = assignedSettingsProp?.GetValue(xrSettings);
-            if (manager == null)
+            XRGeneralSettings generalSettings = buildTargetSettings.SettingsForBuildTarget(BuildTargetGroup.Android);
+            XRManagerSettings managerSettings = buildTargetSettings.ManagerSettingsForBuildTarget(BuildTargetGroup.Android);
+            if (generalSettings == null || managerSettings == null)
             {
-                manager = ScriptableObject.CreateInstance(managerSettingsType);
-                assignedSettingsProp?.SetValue(xrSettings, manager);
+                throw new Exception("Could not create Android XR management settings.");
             }
 
-            MethodInfo assignLoader = metadataStoreType.GetMethod("AssignLoader", BindingFlags.Public | BindingFlags.Static);
-            if (assignLoader == null) return;
+            generalSettings.InitManagerOnStart = true;
+            managerSettings.automaticLoading = true;
+            managerSettings.automaticRunning = true;
 
-            ParameterInfo[] parameters = assignLoader.GetParameters();
-            object result = parameters.Length == 3
-                ? assignLoader.Invoke(null, new object[] { manager, "UnityEngine.XR.OpenXR.OpenXRLoader", BuildTargetGroup.Android })
-                : assignLoader.Invoke(null, new object[] { manager, "UnityEngine.XR.OpenXR.OpenXRLoader", "", BuildTargetGroup.Android });
+            bool result = XRPackageMetadataStore.AssignLoader(
+                managerSettings,
+                "UnityEngine.XR.OpenXR.OpenXRLoader",
+                BuildTargetGroup.Android);
 
-            Debug.Log($"[QuestFlightLab] OpenXR loader assigned for Android: {result}");
+            EditorUtility.SetDirty(buildTargetSettings);
+            EditorUtility.SetDirty(generalSettings);
+            EditorUtility.SetDirty(managerSettings);
+            EditorBuildSettings.AddConfigObject(XRGeneralSettings.k_SettingsKey, buildTargetSettings, true);
+            AssetDatabase.SaveAssets();
+
+            if (!result)
+            {
+                throw new Exception("Unity XR Plug-in Management could not assign the OpenXR loader for Android.");
+            }
+
+            Debug.Log("[QuestFlightLab] OpenXR loader assigned for Android.");
         }
 
         private static void EnableOpenXRFeaturesAndroid()
         {
-            Type settingsType = Type.GetType("UnityEngine.XR.OpenXR.OpenXRSettings, Unity.XR.OpenXR")
-                                ?? Type.GetType("UnityEngine.XR.OpenXR.OpenXRSettings, UnityEngine.XR.OpenXR");
-            if (settingsType == null)
+            FeatureHelpers.RefreshFeatures(BuildTargetGroup.Android);
+
+            SetOpenXRFeatureEnabled(MetaQuestFeature.featureId, required: true);
+            SetOpenXRFeatureEnabled(OculusTouchControllerProfile.featureId, required: false);
+            SetOpenXRFeatureEnabled(MetaQuestTouchPlusControllerProfile.featureId, required: false);
+
+            OpenXRSettings settings = OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Android);
+            if (settings == null)
             {
-                Debug.LogWarning("[QuestFlightLab] OpenXR settings unavailable before package restore.");
+                throw new Exception("Could not create Android OpenXR package settings.");
+            }
+
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[QuestFlightLab] Android OpenXR Quest features configured.");
+        }
+
+        private static XRGeneralSettingsPerBuildTarget GetOrCreateXrBuildTargetSettings()
+        {
+            if (EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.k_SettingsKey, out XRGeneralSettingsPerBuildTarget settings)
+                && settings != null)
+            {
+                return settings;
+            }
+
+            string[] existing = AssetDatabase.FindAssets("t:XRGeneralSettingsPerBuildTarget");
+            if (existing.Length > 0)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(existing[0]);
+                settings = AssetDatabase.LoadAssetAtPath<XRGeneralSettingsPerBuildTarget>(path);
+                if (settings != null)
+                {
+                    EditorBuildSettings.AddConfigObject(XRGeneralSettings.k_SettingsKey, settings, true);
+                    return settings;
+                }
+            }
+
+            Directory.CreateDirectory("Assets/XR");
+            AssetDatabase.Refresh();
+            settings = ScriptableObject.CreateInstance<XRGeneralSettingsPerBuildTarget>();
+            AssetDatabase.CreateAsset(settings, "Assets/XR/XRGeneralSettingsPerBuildTarget.asset");
+            EditorBuildSettings.AddConfigObject(XRGeneralSettings.k_SettingsKey, settings, true);
+            AssetDatabase.SaveAssets();
+            return settings;
+        }
+
+        private static void SetOpenXRFeatureEnabled(string featureId, bool required)
+        {
+            OpenXRFeature feature = FeatureHelpers.GetFeatureWithIdForBuildTarget(BuildTargetGroup.Android, featureId);
+            if (feature == null)
+            {
+                string message = $"OpenXR feature missing for Android: {featureId}";
+                if (required) throw new Exception(message);
+                Debug.LogWarning($"[QuestFlightLab] {message}");
                 return;
             }
 
-            MethodInfo getSettings = settingsType.GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .FirstOrDefault(m => m.Name == "GetSettingsForBuildTargetGroup" && m.GetParameters().Length == 1);
-            object settings = getSettings?.Invoke(null, new object[] { BuildTargetGroup.Android });
-            if (settings == null) return;
+            feature.enabled = true;
+            EditorUtility.SetDirty(feature);
+            Debug.Log($"[QuestFlightLab] Enabled Android OpenXR feature: {featureId}");
+        }
 
-            IEnumerable features = null;
-            MethodInfo getFeatures = settings.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(m => m.Name == "GetFeatures" && !m.IsGenericMethod && m.GetParameters().Length == 0);
-            if (getFeatures != null)
+        private static void ValidateQuestBuildSettings()
+        {
+            if (!EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.k_SettingsKey, out XRGeneralSettingsPerBuildTarget buildTargetSettings)
+                || buildTargetSettings == null)
             {
-                features = getFeatures.Invoke(settings, null) as IEnumerable;
+                throw new Exception("Android XR Management settings are not registered in EditorBuildSettings.");
             }
 
-            if (features == null) return;
-
-            foreach (object feature in features)
+            XRManagerSettings managerSettings = buildTargetSettings.ManagerSettingsForBuildTarget(BuildTargetGroup.Android);
+            if (managerSettings == null)
             {
-                if (feature == null) continue;
-                string fullName = feature.GetType().FullName ?? feature.GetType().Name;
-                PropertyInfo enabled = feature.GetType().GetProperty("enabled", BindingFlags.Public | BindingFlags.Instance);
-                if (enabled == null || !enabled.CanWrite) continue;
+                throw new Exception("Android XR Manager settings are missing.");
+            }
 
-                bool shouldEnable = fullName.IndexOf("OculusTouchControllerProfile", StringComparison.OrdinalIgnoreCase) >= 0
-                                    || fullName.IndexOf("MetaQuest", StringComparison.OrdinalIgnoreCase) >= 0
-                                    || fullName.IndexOf("HandInteraction", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool hasOpenXrLoader = managerSettings.activeLoaders.Any(loader =>
+                loader != null && loader.GetType().FullName == "UnityEngine.XR.OpenXR.OpenXRLoader");
+            if (!hasOpenXrLoader)
+            {
+                throw new Exception("Android XR Manager does not have the OpenXR loader assigned.");
+            }
 
-                if (shouldEnable)
-                {
-                    enabled.SetValue(feature, true);
-                    Debug.Log($"[QuestFlightLab] Enabled OpenXR feature: {fullName}");
-                }
+            OpenXRFeature metaQuestFeature = FeatureHelpers.GetFeatureWithIdForBuildTarget(BuildTargetGroup.Android, MetaQuestFeature.featureId);
+            if (metaQuestFeature == null || !metaQuestFeature.enabled)
+            {
+                throw new Exception("Meta Quest OpenXR feature is not enabled for Android.");
             }
         }
     }

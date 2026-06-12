@@ -22,5 +22,4 @@ Maximum 60 minutes after the mesh/terrain fallback scene builds and runs.
 
 ## Current Result
 
-Not attempted yet because Unity batchmode is blocked by editor licensing. The fallback mesh/terrain path is the v0.1 implementation path.
-
+Deferred during the 2026-06-12 build/device bring-up because Unity activation, Android build, ADB visibility, APK install, and runtime smoke are higher priority for v0.1. The fallback mesh/terrain path is the v0.1 implementation path.

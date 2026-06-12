@@ -15,7 +15,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 
 ## Build
 
-Unity batchmode is currently expected to require a valid Unity license/login on this machine. After Unity Hub is signed in and the editor is activated:
+Unity batchmode has been validated on Alex's Windows 11 PC with Unity `6000.3.8f1` after Unity Hub license activation:
 
 ```powershell
 Set-Location C:\Users\ovied\Dev\T2\T2-QuestFlightLab
@@ -36,6 +36,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install_quest.ps1
 
 If ADB does not show a Quest device, connect Quest 3 by USB-C, enable Developer Mode, approve USB debugging in the headset, and rerun the install script.
 
+On Quest, a VR launch may be intercepted until the headset is worn and Touch controllers are awake or the in-headset launch prompt is accepted.
+
 ## Evidence
 
 Runtime evidence JSON is written by the app under:
@@ -46,3 +48,8 @@ Application.persistentDataPath\QuestFlightLab\evidence\session_<timestamp>.json
 
 Use `scripts\run_adb_logcat.ps1` to capture Quest logs during input tests.
 
+Bring-up artifacts from the first build/install pass are under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\bringup_20260612_133231
+```
