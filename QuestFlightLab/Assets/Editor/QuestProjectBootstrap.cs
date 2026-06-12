@@ -38,6 +38,7 @@ namespace QuestFlightLab.Editor
             PlayerSettings.productName = "Quest Flight Input Lab";
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.alexoviedo.t2.questflightlab");
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.Android.resizeableActivity = false;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.colorSpace = ColorSpace.Linear;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;

@@ -1,6 +1,7 @@
 param(
   [string]$UnityExe = 'C:\Program Files\Unity\Hub\Editor\6000.3.8f1\Editor\Unity.exe',
-  [string]$ProjectPath = 'C:\Users\ovied\Dev\T2\T2-QuestFlightLab\QuestFlightLab'
+  [string]$ProjectPath = 'C:\Users\ovied\Dev\T2\T2-QuestFlightLab\QuestFlightLab',
+  [switch]$RegenerateScene
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,7 +48,15 @@ function Invoke-UnityMethod {
 }
 
 Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestProjectBootstrap.ConfigureProject' -LogName 'bootstrap_configure.log'
-Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestProjectBootstrap.CreateInputLabScene' -LogName 'bootstrap_scene.log'
+
+$scenePath = Join-Path $ProjectPath 'Assets\Scenes\InputLab.unity'
+if ($RegenerateScene -or !(Test-Path $scenePath)) {
+  Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestProjectBootstrap.CreateInputLabScene' -LogName 'bootstrap_scene.log'
+} else {
+  Write-Host "Using existing scene: $scenePath"
+  Write-Host 'Pass -RegenerateScene to rebuild the generated InputLab scene.'
+}
+
 Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestProjectBootstrap.ValidateProject' -LogName 'validate_project.log'
 Invoke-UnityMethod -Method 'QuestFlightLab.Editor.QuestBuild.PerformAndroidBuild' -LogName 'build_android.log'
 

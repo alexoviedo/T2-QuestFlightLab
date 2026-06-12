@@ -53,3 +53,14 @@ Bring-up artifacts from the first build/install pass are under:
 ```text
 C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\bringup_20260612_133231
 ```
+
+Quest runtime smoke and USB2BLE Xbox input telemetry evidence from the first successful device witness are under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\runtime_smoke_20260612_162235
+```
+
+Repo evidence notes:
+
+- `docs/evidence/QUEST_RUNTIME_SMOKE_2026-06-12.md`
+- `docs/evidence/USB2BLE_QUEST_XBOX_INPUT_WITNESS_2026-06-12.md`

@@ -41,3 +41,19 @@ Collect:
 - Quest logcat.
 - Notes on pairing result and whether USB2BLE virtual input moved Unity telemetry.
 
+## 2026-06-12 Witness
+
+A first Quest 3 witness passed for the Xbox path after Windows was stopped from reclaiming the USB2BLE Xbox identity and Alex paired `Xbox Wireless Controller` in Quest Bluetooth settings.
+
+Observed in QuestFlightLab app evidence:
+
+- Unity Input System display name: `Xbox Wireless Controller`
+- Unity layout: `XboxOneGamepadAndroid`
+- Axes/triggers mapped to aircraft control telemetry from `-1..1` or `0..1` as expected.
+- A/B/X/Y button reports were observed.
+
+Not yet proven in this witness:
+
+- D-pad telemetry on Quest.
+- Physical HOTAS movement.
+- Broad Quest compatibility across devices or OS versions.

@@ -6,7 +6,7 @@
 - Android Build Support, SDK, NDK, and OpenJDK under the Unity install
 - Meta Quest Developer Hub ADB at `C:\Program Files\Meta Quest Developer Hub\resources\bin\adb.exe`
 
-## Current Blocker
+## Current Status
 
 Unity Hub license activation was required during bring-up and is now working for batchmode builds on this PC. If the license expires or Unity reports another license error, open Unity Hub, sign in, refresh the Unity Personal license, and rerun:
 
@@ -14,7 +14,9 @@ Unity Hub license activation was required during bring-up and is now working for
 powershell -ExecutionPolicy Bypass -File .\scripts\build_quest.ps1
 ```
 
-The current remaining runtime smoke gate is in-headset launch focus: Quest logs show the VR launch can be intercepted by a controller-required prompt while the headset is doffed or controllers are asleep.
+The first Quest 3 runtime smoke passed on 2026-06-12 after the app was rebuilt with Android `resizeableActivity` disabled and Alex accepted the Quest controller-required launch prompt in headset.
+
+Quest launch can still be intercepted while the headset is doffed or Touch controllers are asleep. If the app appears not to focus after install, put on the headset once, wake the Touch controllers, and accept or continue past the launch prompt.
 
 ## Device Deploy Setup
 
@@ -41,4 +43,5 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install_quest.ps1
 - Package id: `com.alexoviedo.t2.questflightlab`.
 - APK built and installed successfully.
 - APK manifest includes `com.oculus.intent.category.VR`, `android.hardware.vr.headtracking`, and `com.oculus.supportedDevices` with `eureka`.
-- Full runtime scene visibility still requires in-headset confirmation.
+- Runtime scene visibility was confirmed in headset and by ADB screenshot.
+- USB2BLE's Xbox persona was paired as `Xbox Wireless Controller` and observed by Unity Input System as `XboxOneGamepadAndroid` during the input witness.
