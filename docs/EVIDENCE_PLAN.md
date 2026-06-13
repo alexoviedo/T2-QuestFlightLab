@@ -67,6 +67,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_real_splat_renderer_spike
 
 This writes real renderer JSON/CSV/Markdown evidence, screenshots, sample hashes, package resolution logs, scenario regression evidence, PlayMode XML, Android build logs, and APK hash evidence. Treat `android_build_only` as an explicit non-Quest-runtime classification.
 
+For v0.6c Quest runtime Gaussian splat gating, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\prepare_splat_runtime_samples.ps1 -ArtifactDir <artifact-root>\runtime_samples -Counts 5000,50000,100000
+powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode mesh -OutputDir <artifact-root>\quest_mesh_fallback_runtime
+powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode splat_5k -OutputDir <artifact-root>\quest_splat_5k
+powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode splat_50k -OutputDir <artifact-root>\quest_splat_50k
+powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode splat_100k -OutputDir <artifact-root>\quest_splat_100k
+```
+
+This pulls runtime JSON evidence from `Application.persistentDataPath\QuestFlightLab\scenery_runtime`, captures logcat/activity state, and attempts ADB screenshots. Treat the v0.6c `quest_runtime_viable_small_scenic_patch` result as synthetic-only unless a real owned/licensed visual asset is also tested.
+
 The supplemental PlayMode probe is:
 
 ```powershell
@@ -138,3 +150,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_renderer_20260612_
 ```
 
 This folder contains the v0.6b renderer selection note, package probe logs, renderer-compatible binary PLY samples and hashes, real editor renderer screenshots/results, mesh fallback scenario regression evidence, PlayMode XML, Android build logs, and APK hash evidence. The result is `android_build_only`: editor renderer smoke and Android build pass, Quest runtime splat rendering not yet proven.
+
+## 2026-06-12 Quest Runtime Gaussian Splat Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_runtime_20260612_232554
+```
+
+This folder contains v0.6c Quest runtime mesh fallback evidence, synthetic 5k/50k/100k splat runtime JSON/logcat/screenshots, the synthetic sample manifest and hashes, and the real visual asset source investigation note. The result is synthetic-only `quest_runtime_viable_small_scenic_patch` on one Quest 3 test; full-airport splats and real capture pipelines remain unproven.

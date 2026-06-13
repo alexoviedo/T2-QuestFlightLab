@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Debug = UnityEngine.Debug;
 
 namespace QuestFlightLab.Environment
 {
@@ -13,6 +15,10 @@ namespace QuestFlightLab.Environment
         public int syntheticSplatCount = 5000;
         public int maxProxyPointCount = 5000;
         public string sampleAssetPath;
+        public bool enableRealRenderer = true;
+        public string runtimeConfigResourcePath = QuestSplatRuntimeConfig.ResourcePath;
+
+        private GameObject activeRuntimeRenderer;
 
         public override SceneryMode Mode => SceneryMode.ExperimentalSplatRenderer;
 
@@ -32,12 +38,12 @@ namespace QuestFlightLab.Environment
                 status.warnings.Add("No Unity Gaussian splat renderer package was detected. Mesh fallback must remain active.");
             }
 
-            if (rendererAvailable)
+            if (rendererAvailable && enableRealRenderer)
             {
-                status.activeMode = SceneryMode.ExperimentalSplatRenderer.ToString();
-                status.warnings.Add("Renderer-like Gaussian splat types were detected, but this spike does not bind a production renderer automatically.");
-                Debug.Log("[QuestFlightLab][Splats] Renderer-like package detected. Manual binding is still required before production use.");
-                return status;
+                if (TryCreateRuntimeRenderer(parent, status))
+                {
+                    return status;
+                }
             }
 
             if (enableExperimentalProxy)
@@ -47,6 +53,17 @@ namespace QuestFlightLab.Environment
 
             Debug.Log("[QuestFlightLab][Splats] Splat renderer unavailable. Mesh fallback remains required.");
             return status;
+        }
+
+        public override void DeactivateProvider()
+        {
+            if (activeRuntimeRenderer != null)
+            {
+                Destroy(activeRuntimeRenderer);
+                activeRuntimeRenderer = null;
+            }
+
+            base.DeactivateProvider();
         }
 
         public static bool IsGaussianSplatRendererAvailable()
@@ -85,6 +102,205 @@ namespace QuestFlightLab.Environment
             }
 
             return false;
+        }
+
+        private bool TryCreateRuntimeRenderer(Transform parent, SceneryProviderStatus status)
+        {
+            Stopwatch sw = Stopwatch.StartNew();
+            try
+            {
+                QuestSplatRuntimeConfig config = Resources.Load<QuestSplatRuntimeConfig>(runtimeConfigResourcePath);
+                if (config == null)
+                {
+                    status.fallbackUsed = true;
+                    status.warnings.Add($"Runtime splat config missing from Resources path '{runtimeConfigResourcePath}'.");
+                    return false;
+                }
+
+                UnityEngine.Object sample = config.AssetForBudget(status.splatCount);
+                if (sample == null)
+                {
+                    status.fallbackUsed = true;
+                    status.warnings.Add($"No runtime GaussianSplatAsset configured for budget {status.splatCount}.");
+                    return false;
+                }
+
+                Type rendererType = FindGaussianSplatRendererType();
+                if (rendererType == null)
+                {
+                    status.fallbackUsed = true;
+                    status.warnings.Add("GaussianSplatRenderer type was not found at runtime.");
+                    return false;
+                }
+
+                if (!ComputeKernelsSupported(config.splatUtilitiesCompute, status))
+                {
+                    status.fallbackUsed = true;
+                    return false;
+                }
+
+                DestroyExistingRuntimeRenderer();
+
+                activeRuntimeRenderer = new GameObject($"QuestRuntimeGaussianSplat_{status.splatCount}");
+                activeRuntimeRenderer.transform.SetParent(parent, false);
+                activeRuntimeRenderer.transform.position = config.sampleWorldPosition;
+                activeRuntimeRenderer.transform.rotation = Quaternion.Euler(config.sampleEulerAngles);
+
+                Component renderer = activeRuntimeRenderer.AddComponent(rendererType);
+                SetField(rendererType, renderer, "m_Asset", sample);
+                SetField(rendererType, renderer, "m_ShaderSplats", config.renderSplatsShader);
+                SetField(rendererType, renderer, "m_ShaderComposite", config.compositeShader);
+                SetField(rendererType, renderer, "m_ShaderDebugPoints", config.debugPointsShader);
+                SetField(rendererType, renderer, "m_ShaderDebugBoxes", config.debugBoxesShader);
+                SetField(rendererType, renderer, "m_CSSplatUtilities", config.splatUtilitiesCompute);
+                SetField(rendererType, renderer, "m_SplatScale", config.splatScale);
+                SetField(rendererType, renderer, "m_OpacityScale", config.opacityScale);
+                SetField(rendererType, renderer, "m_SHOrder", config.sphericalHarmonicsOrder);
+                SetField(rendererType, renderer, "m_SortNthFrame", Mathf.Max(1, config.sortNthFrame));
+
+                MethodInfo onEnable = rendererType.GetMethod("OnEnable", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                onEnable?.Invoke(renderer, null);
+
+                status.activeMode = SceneryMode.ExperimentalSplatRenderer.ToString();
+                status.sampleName = sample.name;
+                status.sampleAssetPath = $"Resources/{runtimeConfigResourcePath}/{sample.name}";
+                status.rendererInstantiated = true;
+                status.hasValidAsset = ReadBoolProperty(rendererType, renderer, "HasValidAsset");
+                status.hasValidRenderSetup = ReadBoolProperty(rendererType, renderer, "HasValidRenderSetup");
+                status.assetBytes = EstimatePackedAssetBytes(sample);
+                status.estimatedGpuBytes = SceneryPerformanceProbe.EstimateGpuBytes(status.splatCount);
+                status.fallbackUsed = !(status.hasValidAsset && status.hasValidRenderSetup);
+
+                if (status.fallbackUsed)
+                {
+                    status.warnings.Add("Gaussian splat renderer instantiated but did not report a valid asset/render setup.");
+                }
+                else
+                {
+                    Debug.Log($"[QuestFlightLab][Splats] Runtime Gaussian splat renderer active: {sample.name}, budget {status.splatCount}.");
+                }
+
+                return !status.fallbackUsed;
+            }
+            catch (Exception ex)
+            {
+                DestroyExistingRuntimeRenderer();
+                status.fallbackUsed = true;
+                status.loadError = ex.GetType().Name + ": " + ex.Message;
+                status.warnings.Add(status.loadError);
+                Debug.LogWarning($"[QuestFlightLab][Splats] Runtime renderer failed: {status.loadError}");
+                return false;
+            }
+            finally
+            {
+                sw.Stop();
+                status.loadMs = (float)sw.Elapsed.TotalMilliseconds;
+            }
+        }
+
+        private void DestroyExistingRuntimeRenderer()
+        {
+            if (activeRuntimeRenderer == null) return;
+            Destroy(activeRuntimeRenderer);
+            activeRuntimeRenderer = null;
+        }
+
+        private static Type FindGaussianSplatRendererType()
+        {
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type type = assembly.GetType("GaussianSplatting.Runtime.GaussianSplatRenderer");
+                if (type != null) return type;
+            }
+
+            return null;
+        }
+
+        private static void SetField(Type type, object instance, string name, object value)
+        {
+            FieldInfo field = type.GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field == null) throw new MissingFieldException(type.FullName, name);
+            field.SetValue(instance, value);
+        }
+
+        private static bool ReadBoolProperty(Type type, object instance, string name)
+        {
+            PropertyInfo property = type.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (property == null) return false;
+            object value = property.GetValue(instance);
+            return value is bool result && result;
+        }
+
+        private static long EstimatePackedAssetBytes(UnityEngine.Object sample)
+        {
+            if (sample == null) return 0L;
+            Type type = sample.GetType();
+            long total = 0L;
+            foreach (string propertyName in new[] { "posData", "otherData", "shData", "colorData", "chunkData" })
+            {
+                PropertyInfo property = type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (property?.GetValue(sample) is TextAsset textAsset)
+                {
+                    total += textAsset.dataSize;
+                }
+            }
+
+            return total;
+        }
+
+        private static bool ComputeKernelsSupported(ComputeShader computeShader, SceneryProviderStatus status)
+        {
+            if (computeShader == null)
+            {
+                status.warnings.Add("Gaussian splat compute shader reference is missing.");
+                return false;
+            }
+
+            if (!SystemInfo.supportsComputeShaders)
+            {
+                status.warnings.Add("Current platform reports no compute shader support.");
+                return false;
+            }
+
+            MethodInfo isSupported = typeof(ComputeShader).GetMethod("IsSupported", new[] { typeof(int) });
+            if (isSupported == null)
+            {
+                status.warnings.Add("ComputeShader.IsSupported is unavailable; proceeding without per-kernel preflight.");
+                return true;
+            }
+
+            foreach (string kernelName in new[] { "CSSetIndices", "CSCalcDistances", "CSCalcViewData", "InitDeviceRadixSort", "Upsweep", "Scan", "Downsweep" })
+            {
+                int kernelIndex;
+                try
+                {
+                    kernelIndex = computeShader.FindKernel(kernelName);
+                }
+                catch (Exception ex)
+                {
+                    status.warnings.Add($"Gaussian splat compute kernel '{kernelName}' missing: {ex.Message}");
+                    return false;
+                }
+
+                bool supported;
+                try
+                {
+                    supported = (bool)isSupported.Invoke(computeShader, new object[] { kernelIndex });
+                }
+                catch (Exception ex)
+                {
+                    status.warnings.Add($"Could not preflight compute kernel '{kernelName}': {ex.Message}");
+                    return false;
+                }
+
+                if (!supported)
+                {
+                    status.warnings.Add($"Gaussian splat compute kernel '{kernelName}' is unsupported on {SystemInfo.graphicsDeviceType}; mesh fallback required.");
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private void CreateProxyPointCloud(Transform parent, SceneryProviderStatus status)

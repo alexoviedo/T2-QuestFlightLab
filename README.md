@@ -18,6 +18,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v0.5 approach path: source-backed stabilized approach/go-around prototype targets, approach-status cockpit fields, replay timeline export, approach debrief scoring, and autonomous stable/unstable approach evidence
 - v0.6 scenery path: optional Gaussian splat feasibility abstraction and budget/proxy evidence with mesh/terrain fallback still default
 - v0.6b renderer gate: `aras-p/UnityGaussianSplatting` renders synthetic 5k/50k/100k samples in the Unity editor using D3D12, and the Android APK builds with the package present; Quest runtime splat rendering is not yet proven
+- v0.6c Quest splat runtime gate: the same real renderer loads synthetic 5k/50k/100k samples on one Quest 3 with Vulkan/Adreno 740 evidence and stereo ADB screenshots for 50k/100k; mesh/terrain fallback remains default, and real airport-capture viability is not proven
 
 ## Build
 
@@ -76,6 +77,7 @@ Repo evidence notes:
 - `docs/evidence/STABILIZED_APPROACH_GO_AROUND_AUTONOMOUS_WITNESS_2026-06-12.md`
 - `docs/evidence/GAUSSIAN_SPLAT_FEASIBILITY_SPIKE_2026-06-12.md`
 - `docs/evidence/GAUSSIAN_SPLAT_REAL_RENDERER_SPIKE_2026-06-12.md`
+- `docs/evidence/GAUSSIAN_SPLAT_QUEST_RUNTIME_SPIKE_2026-06-12.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 
@@ -110,6 +112,14 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_renderer_20260612_
 ```
 
 The v0.6b result is `android_build_only`: the real renderer works in Unity editor smoke tests up to 100k synthetic splats and the APK builds with the package present, but no Quest runtime splat rendering or frame timing has been proven.
+
+The v0.6c Quest runtime splat gate is under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_runtime_20260612_232554
+```
+
+The v0.6c result is `quest_runtime_viable_small_scenic_patch` for synthetic static/background-style splat patches up to 100k splats on one Quest 3 test. It does not prove real airport captures, full-airport splats, production photorealism, or final Quest performance.
 
 Run the deterministic simulator suite without the headset:
 

@@ -15,6 +15,11 @@ namespace QuestFlightLab.Environment
 
         private void Start()
         {
+            if (LastStatus != null)
+            {
+                return;
+            }
+
             ApplyMode(requestedMode);
         }
 

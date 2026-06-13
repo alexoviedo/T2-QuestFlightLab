@@ -14,9 +14,15 @@ namespace QuestFlightLab.Environment
         public bool rendererAvailable;
         public bool proxyUsed;
         public string sampleAssetPath;
+        public string sampleName;
         public int splatCount;
         public long assetBytes;
         public long estimatedGpuBytes;
+        public bool rendererInstantiated;
+        public bool hasValidAsset;
+        public bool hasValidRenderSetup;
+        public float loadMs;
+        public string loadError;
         public float averageFrameMs;
         public float estimatedFps;
         public List<string> warnings = new List<string>();

@@ -38,6 +38,7 @@ sysinfo.txt
 *.ply
 *.spz
 QuestFlightLab/Assets/Experimental/Splats/Generated/
+QuestFlightLab/Assets/Experimental/Splats/Generated.meta
 
 # OS/editor noise
 .DS_Store

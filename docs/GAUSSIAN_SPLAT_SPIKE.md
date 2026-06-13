@@ -180,6 +180,49 @@ Quest runtime:
 - Not attempted for v0.6b.
 - No Quest splat visibility, stereo quality, or frame timing claim is made.
 
+## v0.6c Quest Runtime Gate
+
+v0.6c tested the real renderer path on Quest 3 with mesh fallback first, then synthetic splat samples.
+
+Artifact root:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_runtime_20260612_232554
+```
+
+Runtime package/build:
+
+- Unity: `6000.3.8f1`
+- Renderer: `aras-p/UnityGaussianSplatting`
+- Package: `org.nesnausk.gaussian-splatting`
+- Package version/commit: `v1.1.1`, `9310dce438da726244ace17eaf6f768826435fa4`
+- Quest device: `Oculus Quest 3` / `eureka`
+- Runtime graphics API: Vulkan on `Adreno (TM) 740`
+- APK SHA256: `EC68D7D5AE26354E65AF662C1E1523452AACD108926C635AF74BED93FFC03395`
+
+Quest runtime results:
+
+| Mode | Provider | Fallback | Splats | Asset bytes | Load ms | Avg frame ms | Est. FPS | Result |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `mesh` | `MeshSceneryProvider` | no | 0 | 0 | 0.00 | 14.00 | 71.43 | pass |
+| `splat_5k` | `SplatSceneryProvider` | no | 5,000 | 352,352 | 211.81 | 14.70 | 68.02 | pass |
+| `splat_50k` | `SplatSceneryProvider` | no | 50,000 | 2,474,688 | 213.58 | 14.58 | 68.61 | pass |
+| `splat_100k` | `SplatSceneryProvider` | no | 100,000 | 4,949,312 | 206.68 | 14.67 | 68.16 | pass |
+
+ADB screenshots for 5k, 50k, and 100k show visible synthetic splat points in both eye views.
+
+Real asset source check:
+
+- Meta's Spatial SDK Gaussian Splat sample is useful Quest/runtime reference material, but it uses the Spatial SDK experimental Splat API and bundled `.spz` assets under Meta SDK/supporting-material licensing.
+- No Meta sample asset was imported into this Unity/OpenXR project.
+- Niantic SPZ remains a future compression/delivery candidate; SPZ import/conversion is a separate asset-pipeline task.
+
+v0.6c evidence:
+
+```text
+docs/evidence/GAUSSIAN_SPLAT_QUEST_RUNTIME_SPIKE_2026-06-12.md
+```
+
 ## Classification
 
 v0.6 classification: `defer_to_later`
@@ -200,21 +243,34 @@ Reason:
 - The Android APK builds with the package present.
 - No Quest runtime splat render was attempted, so this is not Quest viability.
 
+v0.6c classification: `quest_runtime_viable_small_scenic_patch` for synthetic static/background-style splat patches up to 100k splats on this one Quest 3 test.
+
+Reason:
+
+- Mesh fallback runtime smoke passed first.
+- The real renderer instantiated on Quest for 5k, 50k, and 100k synthetic samples.
+- No splat runtime test fell back to mesh.
+- Logcat captured renderer activation and evidence writes.
+- App evidence captured frame timing for each mode.
+- ADB screenshots captured visible stereo splat points for 50k and 100k.
+
+Important caveat: this is synthetic-only runtime evidence. It does not prove full-airport capture viability, production photorealistic scenery, long-session thermal behavior, or a real asset pipeline.
+
 ## Next Splat Milestone
 
 The next splat chunk should remain isolated from flight-model/training work:
 
-1. Bind a tiny generated/committed-or-runtime-generated `GaussianSplatAsset` into an experimental scene or toggle.
-2. Build and install on Quest 3.
-3. Capture logcat, screenshot, and frame timing.
-4. Confirm mesh fallback can still be selected.
-5. Test 5k first, then 50k and 100k only if runtime remains stable.
-6. Only after a tiny Quest runtime pass, investigate LOD/chunking/SPZ.
+1. Capture or source a tiny owned/licensed real-world SPZ/PLY sample.
+2. Convert/import it into the current Unity renderer path without committing large raw assets.
+3. Test 50k and 100k visible budgets against real overdraw, not just synthetic points.
+4. Add explicit LOD/chunking/global-budget controls before increasing beyond 100k.
+5. Investigate SPZ compression/conversion as an asset-pipeline step.
+6. Keep mesh/terrain fallback as the default shipping path.
 
 ## Limitations
 
 - No full-airport splat viability is proven.
 - No production photorealism claim is made.
-- No final Quest performance claim is made.
+- No final Quest performance claim is made beyond the short synthetic v0.6c runtime windows.
 - No large splat assets are committed.
 - Mesh/terrain fallback remains the default shipping path.
