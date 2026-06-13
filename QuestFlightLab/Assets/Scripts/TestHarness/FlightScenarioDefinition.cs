@@ -21,6 +21,10 @@ namespace QuestFlightLab.TestHarness
         public bool isTrafficPatternScenario;
         public bool requiresAirportPatternVerification;
         public bool requiresDebrief;
+        public bool isApproachScenario;
+        public bool requiresApproachDebrief;
+        public bool requiresTimeline;
+        public string approachProfile = "";
         public bool structuralOnlyScenario;
 
         public static List<FlightScenarioDefinition> DefaultSuite()
@@ -47,7 +51,19 @@ namespace QuestFlightLab.TestHarness
                 new FlightScenarioDefinition { id = "instrument_ui_verification", name = "Instrument/UI verification", purpose = "Verifies cockpit/instrument and training/debrief panel object coverage", durationSeconds = 3f, initialAirspeedKts = 0f, startOnRunway = true, structuralOnlyScenario = true },
                 new FlightScenarioDefinition { id = "lesson_panel_prompt_update", name = "Lesson panel prompt update", purpose = "Checks traffic-pattern lesson prompts and target summaries are available to cockpit UI", durationSeconds = 4f, initialAirspeedKts = 0f, startOnRunway = true, markChecklistComplete = true, structuralOnlyScenario = true, expectedLessonStepId = "downwind_level_configure" },
                 new FlightScenarioDefinition { id = "airport_gate_checkpoint_verification", name = "Airport gate/checkpoint verification", purpose = "Verifies approximate KBDU training gates, checkpoints, and visual references", durationSeconds = 3f, initialAirspeedKts = 0f, startOnRunway = true, requiresAirportPatternVerification = true, structuralOnlyScenario = true },
-                new FlightScenarioDefinition { id = "pattern_reset_retry", name = "Pattern reset/retry", purpose = "Pattern retry returns aircraft and scoring to a known state", durationSeconds = 10f, initialAirspeedKts = 62f, initialAltitudeFt = 450f, startOnRunway = false, markChecklistComplete = true, isTrafficPatternScenario = true, requiresDebrief = true }
+                new FlightScenarioDefinition { id = "pattern_reset_retry", name = "Pattern reset/retry", purpose = "Pattern retry returns aircraft and scoring to a known state", durationSeconds = 10f, initialAirspeedKts = 62f, initialAltitudeFt = 450f, startOnRunway = false, markChecklistComplete = true, isTrafficPatternScenario = true, requiresDebrief = true },
+                new FlightScenarioDefinition { id = "stabilized_final_approach", name = "Stabilized final approach - pass case", purpose = "Meets prototype final-approach stability criteria without requiring go-around", durationSeconds = 34f, initialAirspeedKts = 68f, initialAltitudeFt = 480f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, expectedLessonStepId = "stabilized_approach_gate", approachProfile = "stable" },
+                new FlightScenarioDefinition { id = "high_unstable_approach_goaround", name = "High/unstable approach - go-around required", purpose = "Detects high glide-path/altitude state and scores go-around decision", durationSeconds = 36f, initialAirspeedKts = 76f, initialAltitudeFt = 780f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, expectedLessonStepId = "go_around_decision", approachProfile = "high_goaround" },
+                new FlightScenarioDefinition { id = "low_unstable_approach_goaround", name = "Low/unstable approach - go-around required", purpose = "Detects low/slow final and scores go-around decision", durationSeconds = 34f, initialAirspeedKts = 58f, initialAltitudeFt = 190f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, expectedLessonStepId = "go_around_decision", approachProfile = "low_goaround" },
+                new FlightScenarioDefinition { id = "excessive_sink_rate_goaround", name = "Excessive sink rate warning/go-around", purpose = "Triggers unstable descent warning and go-around from excessive sink", durationSeconds = 34f, initialAirspeedKts = 72f, initialAltitudeFt = 430f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, approachProfile = "sink_goaround" },
+                new FlightScenarioDefinition { id = "final_speed_deviation", name = "Final speed high/low scoring deviation", purpose = "Records approach score penalty for final-approach speed errors", durationSeconds = 24f, initialAirspeedKts = 88f, initialAltitudeFt = 420f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, approachProfile = "speed_deviation" },
+                new FlightScenarioDefinition { id = "go_around_sequence", name = "Go-around sequence - power/pitch/config/climb", purpose = "Verifies power, pitch, flap sequencing placeholder, and positive climb", durationSeconds = 32f, initialAirspeedKts = 62f, initialAltitudeFt = 240f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, approachProfile = "goaround_sequence" },
+                new FlightScenarioDefinition { id = "approach_debrief_generation", name = "Approach debrief generation", purpose = "Generates approach debrief JSON/Markdown summary data", durationSeconds = 30f, initialAirspeedKts = 70f, initialAltitudeFt = 460f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, approachProfile = "stable" },
+                new FlightScenarioDefinition { id = "timeline_export_replay_markers", name = "Timeline export and replay markers", purpose = "Records replay timeline samples and approach decision markers", durationSeconds = 32f, initialAirspeedKts = 72f, initialAltitudeFt = 390f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, approachProfile = "goaround_sequence" },
+                new FlightScenarioDefinition { id = "instrument_approach_status_verification", name = "Instrument approach-status verification", purpose = "Verifies approach status, glide path, centerline, and go-around fields are present", durationSeconds = 4f, initialAirspeedKts = 0f, startOnRunway = true, structuralOnlyScenario = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, approachProfile = "stable" },
+                new FlightScenarioDefinition { id = "pattern_to_final_transition", name = "Pattern-to-final transition", purpose = "Runs base-to-final transition evidence with approach scoring", durationSeconds = 42f, initialAirspeedKts = 74f, initialAltitudeFt = 720f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, isTrafficPatternScenario = true, requiresApproachDebrief = true, requiresDebrief = true, requiresAirportPatternVerification = true, requiresTimeline = true, approachProfile = "transition" },
+                new FlightScenarioDefinition { id = "stable_touchdown_placeholder", name = "Touchdown/landing placeholder if stable", purpose = "Reaches a low-altitude stable endpoint without claiming landing fidelity", durationSeconds = 36f, initialAirspeedKts = 65f, initialAltitudeFt = 260f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, approachProfile = "touchdown" },
+                new FlightScenarioDefinition { id = "reset_after_goaround", name = "Reset after go-around", purpose = "Go-around/reset returns aircraft and approach state to known endpoint", durationSeconds = 18f, initialAirspeedKts = 62f, initialAltitudeFt = 220f, startOnRunway = false, markChecklistComplete = true, isApproachScenario = true, requiresApproachDebrief = true, requiresTimeline = true, approachProfile = "reset_after_goaround" }
             };
         }
 
@@ -157,9 +173,139 @@ namespace QuestFlightLab.TestHarness
                     c.leftToeBrake = time > 6f ? 0.6f : 0f;
                     c.rightToeBrake = time > 6f ? 0.6f : 0f;
                     break;
+                case "stabilized_final_approach":
+                case "approach_debrief_generation":
+                    ApplyApproachControls(c, time, "stable");
+                    break;
+                case "high_unstable_approach_goaround":
+                    ApplyApproachControls(c, time, "high_goaround");
+                    break;
+                case "low_unstable_approach_goaround":
+                    ApplyApproachControls(c, time, "low_goaround");
+                    break;
+                case "excessive_sink_rate_goaround":
+                    ApplyApproachControls(c, time, "sink_goaround");
+                    break;
+                case "final_speed_deviation":
+                    ApplyApproachControls(c, time, "speed_deviation");
+                    break;
+                case "go_around_sequence":
+                case "timeline_export_replay_markers":
+                    ApplyApproachControls(c, time, "goaround_sequence");
+                    break;
+                case "instrument_approach_status_verification":
+                    c.throttle = 0f;
+                    c.flaps = 1f;
+                    c.leftToeBrake = 0.2f;
+                    c.rightToeBrake = 0.2f;
+                    break;
+                case "pattern_to_final_transition":
+                    ApplyApproachControls(c, time, "transition");
+                    break;
+                case "stable_touchdown_placeholder":
+                    ApplyApproachControls(c, time, "touchdown");
+                    break;
+                case "reset_after_goaround":
+                    ApplyApproachControls(c, time, "reset_after_goaround");
+                    break;
             }
 
             return c;
+        }
+
+        private static void ApplyApproachControls(AircraftControlState c, float time, string profile)
+        {
+            c.mixture = 1f;
+            c.carbHeat = 0f;
+            c.flaps = 1f;
+            c.trim = 0.08f;
+            c.rudder = 0.02f;
+
+            bool goAroundNow = profile.Contains("goaround") && time > 6f;
+            if (profile == "high_goaround") goAroundNow = time > 8f;
+            if (profile == "low_goaround") goAroundNow = time > 4f;
+            if (profile == "sink_goaround") goAroundNow = time > 5f;
+            if (profile == "reset_after_goaround") goAroundNow = time > 3f && time < 10f;
+
+            if (goAroundNow)
+            {
+                c.throttle = 1f;
+                c.elevator = time < 10f ? 0.16f : 0.08f;
+                c.trim = 0.12f;
+                c.flaps = time < 10f ? 0.66f : time < 16f ? 0.33f : 0f;
+                c.rudder = 0.05f;
+                return;
+            }
+
+            switch (profile)
+            {
+                case "stable":
+                    c.throttle = 0.42f;
+                    c.elevator = 0.03f;
+                    c.trim = 0.07f;
+                    c.flaps = 1f;
+                    break;
+                case "high_goaround":
+                    c.throttle = 0.34f;
+                    c.elevator = -0.04f;
+                    c.trim = 0.03f;
+                    c.flaps = 1f;
+                    break;
+                case "low_goaround":
+                    c.throttle = 0.22f;
+                    c.elevator = 0.16f;
+                    c.trim = 0.1f;
+                    c.flaps = 1f;
+                    break;
+                case "sink_goaround":
+                    c.throttle = 0.12f;
+                    c.elevator = -0.18f;
+                    c.trim = -0.04f;
+                    c.flaps = 1f;
+                    break;
+                case "speed_deviation":
+                    c.throttle = time < 10f ? 0.8f : 0.22f;
+                    c.elevator = time < 10f ? -0.03f : 0.18f;
+                    c.trim = time < 10f ? 0.01f : 0.12f;
+                    c.flaps = time < 12f ? 0.33f : 1f;
+                    break;
+                case "transition":
+                    if (time < 13f)
+                    {
+                        c.throttle = 0.52f;
+                        c.elevator = 0.02f;
+                        c.aileron = -0.22f;
+                        c.rudder = -0.1f;
+                        c.flaps = 0.66f;
+                    }
+                    else
+                    {
+                        c.throttle = 0.4f;
+                        c.elevator = 0.04f;
+                        c.aileron = -0.04f;
+                        c.rudder = -0.02f;
+                        c.flaps = 1f;
+                    }
+                    break;
+                case "touchdown":
+                    c.throttle = time < 22f ? 0.34f : 0.12f;
+                    c.elevator = time < 24f ? 0.05f : 0.16f;
+                    c.trim = 0.09f;
+                    c.flaps = 1f;
+                    break;
+                case "reset_after_goaround":
+                    c.throttle = time > 10f ? 0f : 0.35f;
+                    c.elevator = 0.02f;
+                    c.flaps = time > 10f ? 0f : 1f;
+                    c.leftToeBrake = time > 12f ? 0.8f : 0f;
+                    c.rightToeBrake = time > 12f ? 0.8f : 0f;
+                    break;
+                default:
+                    c.throttle = 0.42f;
+                    c.elevator = 0.03f;
+                    c.flaps = 1f;
+                    break;
+            }
         }
 
         private static void ApplyTrafficPatternControls(AircraftControlState c, float time, float duration, bool airborneStart)

@@ -32,6 +32,10 @@ Flight Model Fidelity v0.3 adds public C172-style reference targets, a more data
 
 Flight Sim Core v0.4 adds a more complete generated cockpit/training panel, Basic Traffic Pattern Familiarization scaffold, airport pattern gates/checkpoints, scored debrief reports, and 21-scenario autonomous evidence. This is still a deterministic training-quality prototype direction, not a validated instructional system.
 
+## v0.5 Approach Direction
+
+Flight Sim Core v0.5 adds source-backed stabilized approach/go-around prototype targets, a Stabilized Approach + Go-Around Familiarization lesson scaffold, final-approach airport gates, cockpit approach-status fields, replay timeline export, approach debrief scoring, and autonomous stable/unstable approach evidence. This improves the simulator seed without claiming aircraft-specific procedure fidelity or real-world training credit.
+
 ## Claim Boundary
 
 This prototype is not FAA-approved training, not a BATD/AATD, not pilot-training credit, not a broad Quest compatibility claim, and not final C172 fidelity.

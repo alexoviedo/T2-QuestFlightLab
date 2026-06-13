@@ -34,13 +34,20 @@ The runner writes:
 - `scenario_results.csv`
 - `flight_core_summary.md`
 - `flight_pattern_summary.md`
+- `flight_approach_summary.md`
 - `debrief_report.json`
 - `debrief_report.md`
+- `approach_debrief_report.json`
+- `approach_debrief_report.md`
+- `timeline.json`
+- `timeline.csv`
 - `unity_editor_scenario_tests.log`
 
 For v0.3 the scenario evidence also includes instrument/cockpit verification, training/checklist verification, stall warning count/onset, initial/final airspeed, altitude delta, heading change, and reference-speed error metrics.
 
 For v0.4 the scenario evidence also includes traffic-pattern phase scoring, debrief warnings, airport/pattern reference verification, lesson prompt verification, and instrument value-refresh verification.
+
+For v0.5 the scenario evidence also includes stabilized approach criteria, go-around decision flags, speed/altitude/descent/glide-path/centerline deviations, approach-status instrument verification, replay timeline samples, replay markers, and approach debrief recommendations.
 
 The supplemental PlayMode probe is:
 
@@ -89,3 +96,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_pattern_20260612_
 ```
 
 This folder contains the v0.4 implementation review, Unity scenario runner logs, scenario JSON/CSV/summary, traffic-pattern debrief JSON/Markdown, PlayMode XML, Android build logs, and APK hash evidence.
+
+## 2026-06-12 Stabilized Approach Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_approach_20260612_200229
+```
+
+This folder contains the v0.5 implementation review, Unity scenario runner logs, scenario JSON/CSV/summary, approach debrief JSON/Markdown, replay timeline JSON/CSV, PlayMode XML, Android build logs, and APK hash evidence when validation completes.

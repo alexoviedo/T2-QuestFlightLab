@@ -174,6 +174,10 @@ namespace QuestFlightLab.Flight
                 float speedError = Mathf.Clamp(state.airspeedKts - target, -20f, 20f);
                 localAngularTarget.x += -speedError * 0.16f;
             }
+            else if (!state.onGround && c.throttle > 0.85f && flapFraction > 0.2f && state.airspeedKts > speeds.stallLandingKts + 10f)
+            {
+                localAngularTarget.x += -2.2f;
+            }
 
             if (!state.onGround)
             {
@@ -248,7 +252,14 @@ namespace QuestFlightLab.Flight
             state.stallWarning = lowSpeedWarning || aoaWarning || stall;
             state.stallIntensity = stallIntensity;
             state.slipSkid = sideSlip;
-            state.referenceSpeedKts = state.onGround ? speeds.rotationKts : (c.throttle > 0.7f ? speeds.bestRateClimbKts : speeds.bestGlideKts);
+            bool approachConfigured = !state.onGround && flapFraction > 0.2f && c.throttle < 0.75f;
+            state.referenceSpeedKts = state.onGround
+                ? speeds.rotationKts
+                : approachConfigured
+                    ? speeds.approachKts
+                    : c.throttle > 0.7f
+                        ? speeds.bestRateClimbKts
+                        : speeds.bestGlideKts;
             state.targetSpeedErrorKts = state.airspeedKts - state.referenceSpeedKts;
             state.engineRpm = Mathf.Lerp(engine.idleRpm, engine.maxRpm, Mathf.Clamp01(c.throttle));
             state.powerPercent = ComputePowerPercent(c);

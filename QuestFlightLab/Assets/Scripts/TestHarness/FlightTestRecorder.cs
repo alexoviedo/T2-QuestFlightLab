@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using QuestFlightLab.Runtime;
 using QuestFlightLab.Training;
+using UnityEngine;
 
 namespace QuestFlightLab.TestHarness
 {
@@ -16,6 +17,19 @@ namespace QuestFlightLab.TestHarness
         public float elevatorDeg;
         public float rudderDeg;
         public float flapDeg;
+        public float positionX;
+        public float positionY;
+        public float positionZ;
+        public string approachPhase = "";
+        public bool stableApproach;
+        public bool goAroundRequired;
+        public bool goAroundInitiated;
+        public string gateId = "";
+        public float glidePathDeviationDeg;
+        public float centerlineDeviationMeters;
+        public float targetDescentRateFpm;
+        public float scoreDelta;
+        public string approachWarningSummary = "";
     }
 
     [Serializable]
@@ -61,6 +75,11 @@ namespace QuestFlightLab.TestHarness
         public int stallWarningSamples;
         public float stallWarningOnsetSeconds = -1f;
         public float maxReferenceSpeedErrorAbsKts;
+        public float maxGlidePathDeviationAbsDeg;
+        public float maxCenterlineDeviationAbsMeters;
+        public int stableApproachSamples;
+        public int goAroundRequiredSamples;
+        public int goAroundInitiatedSamples;
         public bool stallWarningObserved;
         public int sampleCount;
     }
@@ -80,6 +99,8 @@ namespace QuestFlightLab.TestHarness
         public TrainingVerificationSnapshot trainingVerification = new TrainingVerificationSnapshot();
         public AirportPatternVerificationSnapshot airportPatternVerification = new AirportPatternVerificationSnapshot();
         public DebriefReport debriefReport = new DebriefReport();
+        public ApproachDebrief approachDebrief = new ApproachDebrief();
+        public DebriefTimeline timeline = new DebriefTimeline();
         public List<string> warnings = new List<string>();
         public List<string> errors = new List<string>();
         public List<FlightScenarioSample> samples = new List<FlightScenarioSample>();
@@ -159,6 +180,11 @@ namespace QuestFlightLab.TestHarness
             s.maxLoadFactorG = Max(s.maxLoadFactorG, sample.flight.loadFactorG);
             s.maxStallIntensity = Max(s.maxStallIntensity, sample.flight.stallIntensity);
             s.maxReferenceSpeedErrorAbsKts = Max(s.maxReferenceSpeedErrorAbsKts, System.Math.Abs(sample.flight.targetSpeedErrorKts));
+            s.maxGlidePathDeviationAbsDeg = Max(s.maxGlidePathDeviationAbsDeg, Mathf.Abs(sample.glidePathDeviationDeg));
+            s.maxCenterlineDeviationAbsMeters = Max(s.maxCenterlineDeviationAbsMeters, Mathf.Abs(sample.centerlineDeviationMeters));
+            if (sample.stableApproach) s.stableApproachSamples++;
+            if (sample.goAroundRequired) s.goAroundRequiredSamples++;
+            if (sample.goAroundInitiated) s.goAroundInitiatedSamples++;
             if (sample.flight.stallWarning)
             {
                 s.stallWarningSamples++;

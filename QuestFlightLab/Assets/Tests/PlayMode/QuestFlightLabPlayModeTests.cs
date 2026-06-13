@@ -49,6 +49,8 @@ namespace QuestFlightLab.Tests.PlayMode
             InstrumentVerificationSnapshot snapshot = InstrumentVerification.Capture();
             Assert.That(snapshot.allRequiredPresent, Is.True, snapshot.summary);
             Assert.That(snapshot.valuesUpdated, Is.True, snapshot.summary);
+            Assert.That(snapshot.approachFieldsPresent, Is.True, snapshot.summary);
+            Assert.That(snapshot.approachFieldCount, Is.GreaterThanOrEqualTo(7));
         }
     }
 }

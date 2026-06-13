@@ -89,6 +89,96 @@ namespace QuestFlightLab.Tests.EditMode
             Assert.That(json, Does.Contain("Traffic Pattern"));
             Assert.That(report.phaseScores.Count, Is.EqualTo(TrafficPatternLesson.RequiredPhaseIds.Length));
         }
+
+        [Test]
+        public void StabilizedApproachLessonContainsRequiredPhases()
+        {
+            LessonSequence lesson = LessonSequence.StabilizedApproachGoAroundFamiliarization();
+            foreach (string phaseId in StabilizedApproachLesson.RequiredPhaseIds)
+            {
+                Assert.That(lesson.steps.Exists(step => step.id == phaseId), Is.True, $"Missing phase {phaseId}");
+            }
+        }
+
+        [Test]
+        public void ApproachScoringDistinguishesStableAndUnstableSamples()
+        {
+            ApproachPhase phase = StabilizedApproachLesson.FindPhase("stabilized_approach_gate");
+            FlightTelemetrySnapshot stable = new FlightTelemetrySnapshot
+            {
+                headingDeg = 78f,
+                airspeedKts = 66f,
+                altitudeFt = 310f,
+                verticalSpeedFpm = -620f,
+                bankDeg = 4f,
+                pitchDeg = 2f,
+                flapDegrees = 30f,
+                runwayLateralOffsetMeters = 3f
+            };
+            FlightTelemetrySnapshot unstable = new FlightTelemetrySnapshot
+            {
+                headingDeg = 115f,
+                airspeedKts = 49f,
+                altitudeFt = 260f,
+                verticalSpeedFpm = -1350f,
+                bankDeg = 31f,
+                pitchDeg = 12f,
+                flapDegrees = 0f,
+                runwayLateralOffsetMeters = 38f,
+                stallWarning = true
+            };
+
+            float stableScore = ApproachScoring.ScoreInstant(phase, stable, AircraftControlState.Neutral(0.4f), out _);
+            float unstableScore = ApproachScoring.ScoreInstant(phase, unstable, AircraftControlState.Neutral(0.4f), out _);
+            ApproachEvaluationSnapshot unstableEval = ApproachScoring.EvaluateTelemetrySample(phase.id, 0f, unstable, AircraftControlState.Neutral(0.4f));
+
+            Assert.That(stableScore, Is.GreaterThan(unstableScore + 30f));
+            Assert.That(unstableEval.goAroundRequired, Is.True);
+        }
+
+        [Test]
+        public void GoAroundDecisionRecognizesInitiatedRecovery()
+        {
+            FlightTelemetrySnapshot unstable = new FlightTelemetrySnapshot
+            {
+                headingDeg = 78f,
+                airspeedKts = 61f,
+                altitudeFt = 240f,
+                verticalSpeedFpm = 180f,
+                bankDeg = 4f,
+                flapDegrees = 20f,
+                runwayLateralOffsetMeters = 2f
+            };
+            AircraftControlState controls = AircraftControlState.Neutral(1f);
+            controls.elevator = 0.15f;
+
+            ApproachEvaluationSnapshot eval = ApproachScoring.EvaluateTelemetrySample("go_around_power_pitch_config", 0f, unstable, controls);
+            Assert.That(eval.goAroundInitiated, Is.True);
+        }
+
+        [Test]
+        public void ApproachDebriefAndTimelineSerializeRequiredFields()
+        {
+            FlightScenarioResult result = FlightScenarioRunner.RunScenario(new FlightScenarioDefinition
+            {
+                id = "timeline_export_replay_markers",
+                name = "Timeline serialization probe",
+                durationSeconds = 8f,
+                initialAirspeedKts = 62f,
+                initialAltitudeFt = 240f,
+                startOnRunway = false,
+                markChecklistComplete = true,
+                isApproachScenario = true,
+                requiresApproachDebrief = true,
+                requiresTimeline = true
+            });
+
+            string approachJson = JsonUtility.ToJson(result.approachDebrief, true);
+            string timelineJson = JsonUtility.ToJson(result.timeline, true);
+            Assert.That(approachJson, Does.Contain("Stabilized Approach"));
+            Assert.That(timelineJson, Does.Contain("samples"));
+            Assert.That(result.timeline.sampleCount, Is.GreaterThan(0));
+        }
     }
 }
 #endif

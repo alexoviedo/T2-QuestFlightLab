@@ -113,8 +113,36 @@ namespace QuestFlightLab.Training
                     detail = $"bank {f.bankDeg:F1} flaps {f.flapDegrees:F0}";
                     return !f.onGround && Mathf.Abs(f.bankDeg) < 35f && f.flapDegrees >= 8f;
                 case "final_alignment":
+                case "final_intercept":
                     detail = $"heading {f.headingDeg:F0} speed {f.airspeedKts:F0} kt";
                     return !f.onGround && f.airspeedKts > 50f && f.airspeedKts < 95f;
+                case "downwind_stabilized_setup":
+                    detail = $"speed {f.airspeedKts:F0} kt trim {f.trimPercent:F2}";
+                    return !f.onGround && f.airspeedKts > 65f && f.airspeedKts < 100f;
+                case "stabilized_approach_gate":
+                    detail = $"speed {f.airspeedKts:F0} kt vsi {f.verticalSpeedFpm:F0} offset {f.runwayLateralOffsetMeters:F1} m";
+                    return !f.onGround && f.airspeedKts > 58f && f.airspeedKts < 78f && Mathf.Abs(f.runwayLateralOffsetMeters) < 18f && Mathf.Abs(f.bankDeg) < 18f;
+                case "continue_landing_decision":
+                    detail = $"stable candidate speed {f.airspeedKts:F0} kt bank {f.bankDeg:F1}";
+                    return !f.stallWarning && f.airspeedKts > 55f && Mathf.Abs(f.bankDeg) < 18f;
+                case "unstable_approach_warning":
+                    detail = $"warnings stall {(f.stallWarning ? "yes" : "no")} vsi {f.verticalSpeedFpm:F0}";
+                    return f.stallWarning || Mathf.Abs(f.runwayLateralOffsetMeters) > 12f || f.verticalSpeedFpm < -1000f;
+                case "go_around_decision":
+                    detail = $"power {f.powerPercent:F0}% vsi {f.verticalSpeedFpm:F0}";
+                    return f.powerPercent > 85f || (!f.stallWarning && f.airspeedKts > 55f);
+                case "go_around_power_pitch_config":
+                    detail = $"power {f.powerPercent:F0}% pitch {f.pitchDeg:F1} flaps {f.flapDegrees:F0}";
+                    return f.powerPercent > 85f && f.pitchDeg > 2f;
+                case "climbout_rejoin_upwind":
+                    detail = $"vsi {f.verticalSpeedFpm:F0} heading {f.headingDeg:F0}";
+                    return f.verticalSpeedFpm > 100f && Mathf.Abs(Mathf.DeltaAngle(f.headingDeg, 78f)) < 35f;
+                case "landing_touchdown_placeholder":
+                    detail = $"alt {f.altitudeFt:F0} speed {f.airspeedKts:F0}";
+                    return f.onGround || (f.altitudeFt < 120f && f.airspeedKts > 45f && !f.stallWarning);
+                case "after_landing_or_reset":
+                    detail = $"on ground {f.onGround} speed {f.airspeedKts:F0}";
+                    return f.onGround || f.airspeedKts < 85f;
                 case "flare_or_go_around":
                     detail = $"altitude {f.altitudeFt:F0} stall {(f.stallWarning ? "warn" : "clear")}";
                     return f.airspeedKts > 40f && !f.stallWarning;

@@ -35,15 +35,20 @@ QuestFlightLab uses these values as prototype targets for a C172S-style powered 
 | Vno | 129 KIAS | C172SP data sheet | Documented, not enforced yet. |
 | Vne | 163 KIAS | Textron and C172SP data sheet | Config target. |
 | Enroute climb | 75-85 KIAS | C172SP data sheet | Vy scenario allows a tolerance around 74-84 kt. |
-| Approach | 60-70 KIAS | C172SP data sheet | Reference only in v0.3. |
+| Approach | 60-70 KIAS | C172SP data sheet | v0.5 stable approach target is 65 KIAS with +10/-5 KIAS prototype tolerance. |
 | Takeoff ground roll | 960 ft / 293 m | Textron | Stored as training target; runway roll remains simplified. |
 | Maximum climb rate | 730 fpm | Textron | v0.3 targets positive climb, not exact rate. |
+| Stable approach gate | 300 ft AGL prototype gate | FAA Airplane Flying Handbook stabilized-approach discussion | Used only by autonomous scoring, not as aircraft-specific procedure data. |
+| Final glide path | 3 degrees nominal | FAA Airplane Flying Handbook approach guidance | Scored by vertical-speed/airspeed trend, not by runway survey geometry. |
+| Final bank limit | 15 degrees or less | FAA Airplane Flying Handbook approach guidance | Used by v0.5 approach scoring. |
 
 ## Training Behavior Targets
 
 - Before takeoff: verify controls, trim, flaps, mixture, carb heat, engine instruments, doors/windows, runway heading/departure brief placeholders.
 - Normal takeoff: line up, smoothly apply throttle, maintain centerline, rotate near Vr, climb toward Vy, maintain runway heading, and perform after-takeoff cleanup placeholder.
 - Turns: shallow turns should show bank and heading change without excessive pitch/bank.
+- Stabilized approach: align with extended centerline, maintain 65 KIAS target band, hold a controlled descent trend, use landing-configuration placeholders, and go around when unstable at the prototype gate.
+- Go-around: apply power, establish safe climb pitch, retract flaps in stages, and recover positive climb without claiming aircraft-specific procedure validation.
 - Stall warning: slow-flight/stall-onset scenarios should record warning before a deep stall.
 - Stall recovery: reduce AoA, add power, retract flaps placeholder, recover positive climb without pretending to model a certified stall recovery.
 

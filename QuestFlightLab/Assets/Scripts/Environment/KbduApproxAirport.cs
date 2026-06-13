@@ -74,8 +74,19 @@ namespace QuestFlightLab.Environment
             Cube(parent, "PatternAltitudeBandPlaceholder", new Vector3(0f, 305f, -430f), new Vector3(1250f, 4f, 18f), referenceMaterial);
             Cube(parent, "TouchdownZoneMarker08", new Vector3(-470f, 0.09f, 0f), new Vector3(80f, 0.015f, 11f), referenceMaterial);
             Cube(parent, "ApproachPathPlaceholder08", new Vector3(-550f, 18f, 0f), new Vector3(160f, 2f, 5f), referenceMaterial);
+            BuildApproachMarkers(parent, gateMaterial, referenceMaterial);
             Cube(parent, "PatternBoxBoundaryNorth", new Vector3(0f, 85f, 255f), new Vector3(1240f, 3f, 6f), material);
             Cube(parent, "PatternBoxBoundarySouth", new Vector3(0f, 85f, -560f), new Vector3(1240f, 3f, 6f), material);
+        }
+
+        public static void BuildApproachMarkers(Transform parent, Material gateMaterial, Material referenceMaterial)
+        {
+            Cube(parent, "ExtendedCenterline08", new Vector3(-760f, 2f, 0f), new Vector3(430f, 1.5f, 2f), referenceMaterial);
+            Cube(parent, "ApproachGate_3Deg_Outer08", new Vector3(-820f, 78f, 0f), new Vector3(88f, 26f, 8f), gateMaterial);
+            Cube(parent, "ApproachGate_3Deg_Mid08", new Vector3(-660f, 48f, 0f), new Vector3(78f, 24f, 7f), gateMaterial);
+            Cube(parent, "ApproachGate_3Deg_Stable300Agl08", new Vector3(-515f, 91f, 0f), new Vector3(72f, 22f, 7f), gateMaterial);
+            Cube(parent, "GoAroundClimboutGate08", new Vector3(-210f, 135f, 35f), new Vector3(80f, 28f, 9f), gateMaterial);
+            Cube(parent, "PapiVasiPlaceholder08", new Vector3(-430f, 0.11f, 18f), new Vector3(36f, 0.02f, 3f), referenceMaterial);
         }
 
         private static void BuildFoothills(Transform parent)

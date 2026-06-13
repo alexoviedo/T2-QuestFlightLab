@@ -6,6 +6,8 @@ v0.3 adds a reference-target document and moves the runtime configuration toward
 
 v0.4 keeps the physics changes targeted: the deterministic pattern profile now supports a longer climb-out, shallower pattern turns, staged flap/power placeholders, and reset/retry evidence. It does not attempt a large aerodynamic rewrite.
 
+v0.5 adds targeted support for approach/go-around training evidence: approach configuration now references the configured approach speed, go-around power with flaps gets a mild deterministic climb/pitch bias, and `TrainingReferenceTargets` includes stable-approach gate, final-approach speed, descent-rate, bank, glide-path, and go-around climb targets. This is still not a landing-gear, tire, flare, or aircraft-specific POH model.
+
 See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 
 ## Approximate Seed Constants
@@ -24,6 +26,11 @@ See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 - Never exceed placeholder: 163 kt
 - Max engine power placeholder: 180 hp
 - Flap settings: 0, 10, 20, 30 deg
+- Final approach placeholder: 65 kt with +10/-5 kt tolerance
+- Stable approach gate placeholder: 300 ft AGL
+- Final descent-rate placeholder: about -650 fpm, accepted band about -300 to -1000 fpm
+- Final bank limit placeholder: 15 deg
+- Go-around climb response placeholder: high power, positive pitch, staged flap reduction
 
 ## v0.2/v0.3 Model Changes
 
@@ -35,10 +42,11 @@ See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 - Pitch and bank attitude stability limits prevent deterministic tests from passing with runaway attitudes.
 - Stall warning is suppressed during ordinary ground roll and records warning count/onset in autonomous evidence.
 - Vy climb, stall recovery, pattern heading-change, instrument, and checklist verification are now explicit scenario evidence.
+- v0.5 adds approach reference-speed telemetry, final-approach scoring fields, go-around decision markers, and timeline/debrief exports.
 
 ## Acceptance Metrics
 
-The v0.4 autonomous scenario runner checks 21 scenarios:
+The v0.5 autonomous scenario runner checks the v0.4 traffic-pattern set plus stabilized approach/go-around scenarios. The v0.4 set was:
 
 - preflight neutral initialization
 - before-takeoff checklist state
@@ -63,6 +71,8 @@ The v0.4 autonomous scenario runner checks 21 scenarios:
 - pattern reset/retry
 
 The 2026-06-12 v0.4 run passed all 21 editor scenarios. This proves deterministic simulator behavior in the Unity editor only. It does not prove final C172 fidelity, real Quest runtime behavior, USB2BLE hardware behavior, or training suitability.
+
+The v0.5 suite adds stable final approach, high/low/fast/sink unstable approaches, go-around sequencing, approach debrief generation, replay timeline markers, approach-status instrument verification, pattern-to-final transition, touchdown placeholder, and reset after go-around. These are regression metrics for simulator iteration, not proof of real landing or go-around training quality.
 
 ## Needed For Serious Fidelity
 

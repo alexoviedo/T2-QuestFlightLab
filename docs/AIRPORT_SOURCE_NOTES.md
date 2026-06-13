@@ -31,3 +31,16 @@ v0.4 adds lightweight generated references for the Basic Traffic Pattern Familia
 - airport label noting the scene is approximate and not for navigation.
 
 These objects support autonomous verification and visual orientation only. They are not charted KBDU geometry and are not suitable for real airport procedures.
+
+## v0.5 Approach And Go-Around References
+
+v0.5 adds lightweight generated references for stabilized approach/go-around scenarios:
+
+- extended centerline for Runway 08,
+- outer, middle, and 300 ft AGL placeholder final approach gates,
+- touchdown-zone marker,
+- go-around/climb-out gate,
+- PAPI/VASI-style placeholder,
+- existing downwind/base/final checkpoints.
+
+These references support deterministic scoring, cockpit instrumentation checks, and debrief evidence. They are approximate visual aids only, not surveyed runway geometry, not a chart, and not for navigation or real KBDU procedure training.

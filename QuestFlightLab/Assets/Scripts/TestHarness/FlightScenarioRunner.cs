@@ -17,12 +17,12 @@ namespace QuestFlightLab.TestHarness
                 unityVersion = Application.unityVersion,
                 metaXrSimulatorStatus = metaXrSimulatorStatus,
                 fixedTimeStepSeconds = 1f / 72f,
-                suiteName = "Flight Sim Core v0.4 Cockpit + Traffic Pattern Scenario Suite",
+                suiteName = "Flight Sim Core v0.5 Stabilized Approach + Go-Around Scenario Suite",
                 limitations =
                 {
                     "Editor scenario runner does not prove Quest Bluetooth, USB2BLE hardware, or headset runtime behavior.",
                     "Flight dynamics are a prototype C172-style approximation, not validated C172 fidelity.",
-                    "Traffic-pattern training prompts and scoring are prototype scaffolds and do not provide real pilot-training credit.",
+                    "Traffic-pattern, stabilized-approach, go-around, replay, and scoring features are prototype scaffolds and do not provide real pilot-training credit.",
                     "Gaussian splat rendering is not part of this simulator evidence."
                 }
             };
@@ -85,7 +85,7 @@ namespace QuestFlightLab.TestHarness
             for (int i = 0; i <= steps; i++)
             {
                 float t = i * definition.timeStepSeconds;
-                bool resetWindow = (definition.id == "runway_reset" || definition.id == "pattern_reset_retry")
+                bool resetWindow = (definition.id == "runway_reset" || definition.id == "pattern_reset_retry" || definition.id == "reset_after_goaround")
                                    && t >= definition.durationSeconds * 0.55f
                                    && t < definition.durationSeconds * 0.55f + definition.timeStepSeconds;
                 if (resetWindow)
@@ -98,7 +98,7 @@ namespace QuestFlightLab.TestHarness
 
                 if (i % sampleStride == 0 || i == steps)
                 {
-                    recorder.AddSample(BuildSample(t, controls, state));
+                    recorder.AddSample(BuildSample(definition, t, controls, state));
                 }
             }
 
@@ -108,6 +108,24 @@ namespace QuestFlightLab.TestHarness
                     definition.id,
                     BuildScoringSamples(result),
                     definition.markChecklistComplete);
+            }
+
+            if (definition.requiresApproachDebrief || definition.isApproachScenario)
+            {
+                result.approachDebrief = ApproachScoring.ScoreApproach(
+                    definition.id,
+                    BuildApproachScoringSamples(result),
+                    definition.markChecklistComplete);
+            }
+
+            if (definition.requiresTimeline || definition.isApproachScenario)
+            {
+                result.timeline = FlightTimelineRecorder.BuildTimeline(result);
+                if (result.approachDebrief != null)
+                {
+                    result.approachDebrief.timelineSampleCount = result.timeline.sampleCount;
+                    result.approachDebrief.replayMarkerCount = result.timeline.markerCount;
+                }
             }
 
             EvaluatePass(definition, result);
@@ -126,48 +144,71 @@ namespace QuestFlightLab.TestHarness
             }
 
             float altitudeM = Mathf.Max(100f, definition.initialAltitudeFt / AircraftUnitConversions.MetersToFeet);
-            Vector3 position = new Vector3(0f, altitudeM, -260f);
+            Vector3 runwayForward = Vector3.ProjectOnPlane(Quaternion.Euler(physics.runwayResetEuler) * Vector3.forward, Vector3.up).normalized;
+            float alongCenterlineMeters = definition.isApproachScenario ? -720f : -260f;
+            Vector3 position = physics.runwayResetPosition + runwayForward * alongCenterlineMeters + Vector3.up * (altitudeM - physics.groundHeightMeters);
             Vector3 euler = new Vector3(-2f, 78f, 0f);
             transform.SetPositionAndRotation(position, Quaternion.Euler(euler));
             Vector3 velocity = transform.forward * (definition.initialAirspeedKts * AircraftUnitConversions.KnotsToMetersPerSecond);
             physics.SetStateForTest(position, euler, velocity);
         }
 
-        private static FlightScenarioSample BuildSample(float timestamp, AircraftControlState controls, AircraftState state)
+        private static FlightScenarioSample BuildSample(FlightScenarioDefinition definition, float timestamp, AircraftControlState controls, AircraftState state)
         {
+            FlightTelemetrySnapshot flight = new FlightTelemetrySnapshot
+            {
+                timestamp = timestamp,
+                airspeedKts = state.airspeedKts,
+                altitudeFt = state.altitudeFt,
+                verticalSpeedFpm = state.verticalSpeedFpm,
+                headingDeg = state.headingDeg,
+                pitchDeg = state.pitchDeg,
+                bankDeg = state.bankDeg,
+                angleOfAttackDeg = state.angleOfAttackDeg,
+                stallWarning = state.stallWarning,
+                onGround = state.onGround,
+                engineRpm = state.engineRpm,
+                powerPercent = state.powerPercent,
+                flapDegrees = state.flapDegrees,
+                trimPercent = state.trimPercent,
+                loadFactorG = state.loadFactorG,
+                stallIntensity = state.stallIntensity,
+                slipSkid = state.slipSkid,
+                referenceSpeedKts = state.referenceSpeedKts,
+                targetSpeedErrorKts = state.targetSpeedErrorKts,
+                groundRollMeters = state.groundRollMeters,
+                runwayLateralOffsetMeters = state.runwayLateralOffsetMeters
+            };
+            string phaseId = definition.isApproachScenario
+                ? StabilizedApproachLesson.PhaseAt(timestamp, definition.durationSeconds).id
+                : "";
+            ApproachEvaluationSnapshot approach = definition.isApproachScenario
+                ? ApproachScoring.EvaluateTelemetrySample(phaseId, timestamp, flight, controls)
+                : new ApproachEvaluationSnapshot();
+
             return new FlightScenarioSample
             {
                 timestamp = timestamp,
                 controls = CloneControls(controls),
-                flight = new FlightTelemetrySnapshot
-                {
-                    timestamp = timestamp,
-                    airspeedKts = state.airspeedKts,
-                    altitudeFt = state.altitudeFt,
-                    verticalSpeedFpm = state.verticalSpeedFpm,
-                    headingDeg = state.headingDeg,
-                    pitchDeg = state.pitchDeg,
-                    bankDeg = state.bankDeg,
-                    angleOfAttackDeg = state.angleOfAttackDeg,
-                    stallWarning = state.stallWarning,
-                    onGround = state.onGround,
-                    engineRpm = state.engineRpm,
-                    powerPercent = state.powerPercent,
-                    flapDegrees = state.flapDegrees,
-                    trimPercent = state.trimPercent,
-                    loadFactorG = state.loadFactorG,
-                    stallIntensity = state.stallIntensity,
-                    slipSkid = state.slipSkid,
-                    referenceSpeedKts = state.referenceSpeedKts,
-                    targetSpeedErrorKts = state.targetSpeedErrorKts,
-                    groundRollMeters = state.groundRollMeters,
-                    runwayLateralOffsetMeters = state.runwayLateralOffsetMeters
-                },
+                flight = flight,
                 leftAileronDeg = controls.aileron * 20f,
                 rightAileronDeg = -controls.aileron * 20f,
                 elevatorDeg = controls.elevator * 24f,
                 rudderDeg = controls.rudder * 28f,
-                flapDeg = state.flapDegrees
+                flapDeg = state.flapDegrees,
+                positionX = state.transform.position.x,
+                positionY = state.transform.position.y,
+                positionZ = state.transform.position.z,
+                approachPhase = approach.phaseId,
+                stableApproach = approach.stable,
+                goAroundRequired = approach.goAroundRequired,
+                goAroundInitiated = approach.goAroundInitiated,
+                gateId = approach.gateId,
+                glidePathDeviationDeg = approach.glidePathDeviationDeg,
+                centerlineDeviationMeters = approach.centerlineDeviationMeters,
+                targetDescentRateFpm = approach.targetDescentRateFpm,
+                scoreDelta = approach.score,
+                approachWarningSummary = approach.warningSummary
             };
         }
 
@@ -220,6 +261,18 @@ namespace QuestFlightLab.TestHarness
                 "lesson_panel_prompt_update" => result.trainingVerification.allRequiredStepsPresent && result.instrumentVerification.valuesUpdated,
                 "airport_gate_checkpoint_verification" => result.airportPatternVerification.allRequiredReferencesPresent,
                 "pattern_reset_retry" => result.samples.Count > 0 && result.samples[^1].flight.onGround && result.debriefReport.phaseScores.Count >= 12,
+                "stabilized_final_approach" => result.approachDebrief.phaseScores.Count >= 12 && !result.approachDebrief.goAroundRequired && result.approachDebrief.totalScore >= 52f && s.maxCenterlineDeviationAbsMeters < 55f,
+                "high_unstable_approach_goaround" => result.approachDebrief.goAroundRequired && result.approachDebrief.goAroundInitiated && result.approachDebrief.goAroundDecisionCorrect,
+                "low_unstable_approach_goaround" => result.approachDebrief.goAroundRequired && result.approachDebrief.goAroundInitiated && result.approachDebrief.goAroundDecisionCorrect,
+                "excessive_sink_rate_goaround" => result.approachDebrief.goAroundRequired && result.approachDebrief.goAroundInitiated && result.approachDebrief.maxDescentDeviationFpm > 100f,
+                "final_speed_deviation" => result.approachDebrief.maxSpeedErrorKts > 6f && result.approachDebrief.phaseScores.Count >= 12 && result.approachDebrief.totalScore < 92f,
+                "go_around_sequence" => result.approachDebrief.goAroundRequired && result.approachDebrief.goAroundInitiated && s.maxThrottle > 0.95f && s.maxVerticalSpeedFpm > 50f,
+                "approach_debrief_generation" => result.approachDebrief.phaseScores.Count >= 12 && !string.IsNullOrEmpty(result.approachDebrief.summary),
+                "timeline_export_replay_markers" => result.timeline.sampleCount > 20 && result.timeline.markerCount >= 1 && result.approachDebrief.timelineSampleCount == result.timeline.sampleCount,
+                "instrument_approach_status_verification" => result.instrumentVerification.allRequiredPresent && result.instrumentVerification.valuesUpdated,
+                "pattern_to_final_transition" => result.debriefReport.phaseScores.Count >= 12 && result.approachDebrief.phaseScores.Count >= 12 && result.airportPatternVerification.allRequiredReferencesPresent,
+                "stable_touchdown_placeholder" => result.approachDebrief.touchdownPlaceholderObserved || s.minAltitudeFt < 90f,
+                "reset_after_goaround" => result.samples.Count > 0 && result.samples[^1].flight.onGround && result.timeline.sampleCount > 0,
                 _ => false
             };
 
@@ -248,6 +301,12 @@ namespace QuestFlightLab.TestHarness
             {
                 reasons.Add($"debrief {result.debriefReport.summary}");
             }
+            if (definition.requiresApproachDebrief || definition.isApproachScenario)
+            {
+                reasons.Add($"approach {result.approachDebrief.summary}");
+                reasons.Add($"timeline samples {result.timeline.sampleCount} markers {result.timeline.markerCount}");
+                reasons.Add($"approach path dev {s.maxGlidePathDeviationAbsDeg:0.0} deg centerline {s.maxCenterlineDeviationAbsMeters:0.0} m");
+            }
 
             result.passed = pass;
             result.passReason = string.Join("; ", reasons);
@@ -272,6 +331,23 @@ namespace QuestFlightLab.TestHarness
                     timestamp = sample.timestamp,
                     controls = sample.controls,
                     flight = sample.flight
+                });
+            }
+
+            return samples;
+        }
+
+        private static List<ApproachScoringSample> BuildApproachScoringSamples(FlightScenarioResult result)
+        {
+            List<ApproachScoringSample> samples = new List<ApproachScoringSample>();
+            foreach (FlightScenarioSample sample in result.samples)
+            {
+                samples.Add(new ApproachScoringSample
+                {
+                    timestamp = sample.timestamp,
+                    controls = sample.controls,
+                    flight = sample.flight,
+                    phaseId = sample.approachPhase
                 });
             }
 

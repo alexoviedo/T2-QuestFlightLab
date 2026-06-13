@@ -12,7 +12,7 @@
 
 1. Replace prototype aero/engine placeholders with better C172/C152 data and validated acceptance metrics.
 2. Expand cockpit/instrument layout from generated text placeholders toward inspectable analog/G1000-style training views.
-3. Tighten the Basic Traffic Pattern Familiarization scaffold with source-backed normal procedures, stabilized approach criteria, go-around criteria, and replay evidence.
+3. Tighten stabilized approach, landing flare, and go-around behavior with aircraft-specific data and better instructor/debrief review.
 4. Add sailplane aerotow, thermals, ridge lift, and towplane operations.
 5. Add dynamic wind/weather.
-6. Add instructor station, multiplayer, logbook, debrief, replay, airport database, and lesson syllabus.
+6. Add instructor station, multiplayer, logbook, airport database, and lesson syllabus.

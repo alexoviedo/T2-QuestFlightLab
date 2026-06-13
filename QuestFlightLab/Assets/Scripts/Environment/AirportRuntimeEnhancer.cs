@@ -23,6 +23,10 @@ namespace QuestFlightLab.Environment
             {
                 KbduApproxAirport.BuildPatternMarkers(root.transform, blue, green, amber);
             }
+            else if (root.transform.Find("ApproachGate_3Deg_Stable300Agl08") == null)
+            {
+                KbduApproxAirport.BuildApproachMarkers(root.transform, green, amber);
+            }
             if (root.transform.Find("AirportLabel") == null)
             {
                 AddAirportLabels(root.transform, white);

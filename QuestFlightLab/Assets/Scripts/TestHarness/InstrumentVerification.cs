@@ -11,8 +11,10 @@ namespace QuestFlightLab.TestHarness
         public bool panelPresent;
         public bool allRequiredPresent;
         public bool valuesUpdated;
+        public bool approachFieldsPresent;
         public int requiredCount;
         public int presentCount;
+        public int approachFieldCount;
         public List<string> missing = new List<string>();
         public string summary = "";
     }
@@ -28,17 +30,27 @@ namespace QuestFlightLab.TestHarness
             }
             bool allPresent = CockpitInstrumentPanel.HasRequiredInstrumentObjects(out List<string> missing);
             int required = CockpitInstrumentPanel.RequiredInstrumentNames.Length;
+            int approachRequired = 0;
+            foreach (string name in CockpitInstrumentPanel.RequiredInstrumentNames)
+            {
+                if (name.Contains("Approach") || name.Contains("GlidePath") || name.Contains("Centerline") || name.Contains("GoAround"))
+                {
+                    approachRequired++;
+                }
+            }
             bool valuesUpdated = allPresent && RequiredTextValuesLookUpdated();
             return new InstrumentVerificationSnapshot
             {
                 panelPresent = panel != null,
                 allRequiredPresent = allPresent,
                 valuesUpdated = valuesUpdated,
+                approachFieldsPresent = allPresent && approachRequired >= 7,
                 requiredCount = required,
                 presentCount = required - missing.Count,
+                approachFieldCount = approachRequired,
                 missing = missing,
                 summary = allPresent && valuesUpdated
-                    ? $"PASS {required}/{required} instruments present and updated"
+                    ? $"PASS {required}/{required} instruments present and updated; approach fields {approachRequired}"
                     : allPresent
                         ? $"PRESENT {required}/{required} instruments but values not refreshed"
                         : $"MISSING {string.Join(";", missing)}"

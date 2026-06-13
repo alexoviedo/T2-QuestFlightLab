@@ -97,6 +97,17 @@ namespace QuestFlightLab.Flight
         public float shallowTurnBankLimitDeg = 30f;
         public float stallRecoveryMinimumAltitudeFt = 1200f;
         public float patternHeadingChangeDeg = 70f;
+        public float finalApproachTargetKts = 65f;
+        public float finalApproachSpeedHighToleranceKts = 10f;
+        public float finalApproachSpeedLowToleranceKts = 5f;
+        public float stableApproachGateAglFt = 300f;
+        public float approachDescentRateTargetFpm = -650f;
+        public float approachDescentRateMinFpm = -1000f;
+        public float approachDescentRateMaxFpm = -300f;
+        public float finalApproachBankLimitDeg = 15f;
+        public float glidePathTargetDeg = 3f;
+        public float goAroundPitchTargetDeg = 7f;
+        public float goAroundMinimumPositiveClimbFpm = 100f;
     }
 
     [CreateAssetMenu(menuName = "Quest Flight Lab/C172 Style Aircraft Config")]

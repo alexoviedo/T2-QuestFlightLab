@@ -30,7 +30,14 @@ namespace QuestFlightLab.UI
             "Instrument_ControlInput",
             "Instrument_YokeIndicator",
             "Instrument_RudderPedals",
-            "Instrument_ToeBrakes"
+            "Instrument_ToeBrakes",
+            "Instrument_ApproachPhase",
+            "Instrument_ApproachTargets",
+            "Instrument_GlidePath",
+            "Instrument_Centerline",
+            "Instrument_ApproachStability",
+            "Instrument_GoAround",
+            "Instrument_ApproachScore"
         };
 
         public FlightTelemetry flightTelemetry;
@@ -51,7 +58,7 @@ namespace QuestFlightLab.UI
             if (existing != null) return existing;
 
             Transform parent = Camera.main != null ? Camera.main.transform : null;
-            GameObject panel = new GameObject("Cockpit Instrument Panel v0.4");
+            GameObject panel = new GameObject("Cockpit Instrument Panel v0.5");
             if (parent != null)
             {
                 panel.transform.SetParent(parent, false);
@@ -103,6 +110,7 @@ namespace QuestFlightLab.UI
             string checklist = trainingMode != null && trainingMode.checklist != null
                 ? trainingMode.checklist.StatusSummary
                 : "checklist n/a";
+            ApproachEvaluationSnapshot approach = ApproachScoring.EvaluateTelemetrySample("stabilized_approach_gate", Time.unscaledTime, f, c);
 
             Set("Instrument_Airspeed", $"ASI {f.airspeedKts:000} kt / ref {f.referenceSpeedKts:000}");
             Set("Instrument_Altitude", $"ALT {f.altitudeFt:00000} ft");
@@ -124,6 +132,13 @@ namespace QuestFlightLab.UI
             Set("Instrument_YokeIndicator", $"YOKE roll {c.aileron:0.00} pitch {c.elevator:0.00}");
             Set("Instrument_RudderPedals", $"PEDALS rudder {c.rudder:0.00}");
             Set("Instrument_ToeBrakes", $"BRAKES L {c.leftToeBrake:0.00} R {c.rightToeBrake:0.00}");
+            Set("Instrument_ApproachPhase", $"APP PHASE {approach.phaseId}");
+            Set("Instrument_ApproachTargets", $"APP TGT {approach.targetAirspeedKts:0} kt / {approach.targetDescentRateFpm:0} fpm");
+            Set("Instrument_GlidePath", $"GLIDE DEV {approach.glidePathDeviationDeg,5:0.0} deg");
+            Set("Instrument_Centerline", $"CENTERLINE {approach.centerlineDeviationMeters,6:0.0} m");
+            Set("Instrument_ApproachStability", $"STABLE {(approach.stable ? "YES" : "NO")} {approach.warningSummary}");
+            Set("Instrument_GoAround", $"GO AROUND {(approach.goAroundRequired ? "REQ" : "no")} / {(approach.goAroundInitiated ? "active" : "standby")}");
+            Set("Instrument_ApproachScore", $"APP SCORE {approach.score:000}");
         }
 
         private void EnsureBindings()

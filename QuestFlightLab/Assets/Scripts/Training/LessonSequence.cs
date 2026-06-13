@@ -34,5 +34,10 @@ namespace QuestFlightLab.Training
         {
             return TrafficPatternLesson.BuildLessonSequence();
         }
+
+        public static LessonSequence StabilizedApproachGoAroundFamiliarization()
+        {
+            return StabilizedApproachLesson.BuildLessonSequence();
+        }
     }
 }
