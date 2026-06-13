@@ -173,7 +173,7 @@ Android gate:
 - Mesh fallback scenario regression: 33/33 passed.
 - PlayMode: 15/15 passed.
 - Android APK build with package present: passed.
-- APK SHA256: `6A95646F6B4F9520FFF87CF99DCF4D53EA8D368CC76350E9A33BBFCE76280359`.
+- Final `main` APK SHA256: `AC3743955EB5FDF3D2BBE1B0DEB293B2638A8138A36EDCA51C130D28208E4804`.
 
 Quest runtime:
 

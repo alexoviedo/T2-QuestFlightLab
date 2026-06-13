@@ -96,7 +96,9 @@ APK:
 
 - Path: `C:\Users\ovied\Dev\T2\T2-QuestFlightLab\QuestFlightLab\Builds\Android\QuestFlightLab-v0.1-dev.apk`
 - Size: 113,256,827 bytes
-- SHA256: `6A95646F6B4F9520FFF87CF99DCF4D53EA8D368CC76350E9A33BBFCE76280359`
+- Final `main` validation SHA256: `AC3743955EB5FDF3D2BBE1B0DEB293B2638A8138A36EDCA51C130D28208E4804`
+
+Earlier branch build SHA256 with the same renderer package present: `6A95646F6B4F9520FFF87CF99DCF4D53EA8D368CC76350E9A33BBFCE76280359`.
 
 The Android build log includes `Packages/org.nesnausk.gaussian-splatting/Runtime/GaussianSplatRenderer.cs`, `GaussianSplatAsset.cs`, `GpuSorting.cs`, and related package runtime scripts in the build report.
 
