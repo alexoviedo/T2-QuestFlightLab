@@ -31,9 +31,15 @@ namespace QuestFlightLab.Flight
                 angleOfAttackDeg = aircraftState.angleOfAttackDeg,
                 stallWarning = aircraftState.stallWarning,
                 onGround = aircraftState.onGround,
-                fps = performanceHud != null ? performanceHud.CurrentFps : 0f
+                fps = performanceHud != null ? performanceHud.CurrentFps : 0f,
+                engineRpm = aircraftState.engineRpm,
+                powerPercent = aircraftState.powerPercent,
+                flapDegrees = aircraftState.flapDegrees,
+                trimPercent = aircraftState.trimPercent,
+                loadFactorG = aircraftState.loadFactorG,
+                groundRollMeters = aircraftState.groundRollMeters,
+                runwayLateralOffsetMeters = aircraftState.runwayLateralOffsetMeters
             };
         }
     }
 }
-

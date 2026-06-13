@@ -22,4 +22,8 @@ Maximum 60 minutes after the mesh/terrain fallback scene builds and runs.
 
 ## Current Result
 
-Deferred during the 2026-06-12 build/device bring-up because Unity activation, Android build, ADB visibility, APK install, and runtime smoke are higher priority for v0.1. The fallback mesh/terrain path is the v0.1 implementation path.
+Deferred during the 2026-06-12 build/device bring-up because Unity activation, Android build, ADB visibility, APK install, and runtime smoke were higher priority for v0.1.
+
+For the v0.2 flight-core chunk, splats remained deferred because the priority was autonomous simulator testing, C172-style dynamics, and build stability. No Unity/Quest splat package was added, no large assets were imported, and no splat viability claim is made.
+
+The optimized mesh/terrain fallback is still the implementation path.

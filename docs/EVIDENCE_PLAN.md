@@ -20,6 +20,29 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_adb_logcat.ps1
 
 Archive the app JSON and logcat output in the setup artifacts directory for the test run.
 
+## Autonomous Simulator Evidence
+
+For simulator-core work that should not require wearing the headset, use the deterministic editor scenario runner:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_editor_scenario_tests.ps1
+```
+
+The runner writes:
+
+- `scenario_results.json`
+- `scenario_results.csv`
+- `flight_core_summary.md`
+- `unity_editor_scenario_tests.log`
+
+The supplemental PlayMode probe is:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlatform PlayMode
+```
+
+This produces a Unity Test Runner XML file when the local Unity Test Framework command-line path is healthy. The editor scenario runner is the primary v0.2 flight-core evidence path.
+
 ## 2026-06-12 Bring-Up Artifact Root
 
 ```text
@@ -35,3 +58,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\runtime_smoke_20260612_1
 ```
 
 This folder contains the Quest runtime smoke screenshot/logs, pulled app evidence JSON, USB2BLE serial transcripts, Quest logcat during input replay, and reduced JSON/CSV summaries proving the Unity Input System observed the Xbox-style gamepad telemetry.
+
+## 2026-06-12 Flight Core Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_core_20260612_173102
+```
+
+This folder contains deterministic Unity editor scenario evidence, PlayMode Test Runner XML, Unity logs, Android build logs, the scenario CSV/JSON, and the v0.2 flight-core summary.

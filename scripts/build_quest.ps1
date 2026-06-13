@@ -1,7 +1,8 @@
 param(
   [string]$UnityExe = 'C:\Program Files\Unity\Hub\Editor\6000.3.8f1\Editor\Unity.exe',
   [string]$ProjectPath = 'C:\Users\ovied\Dev\T2\T2-QuestFlightLab\QuestFlightLab',
-  [switch]$RegenerateScene
+  [switch]$RegenerateScene,
+  [int]$TimeoutSeconds = 900
 )
 
 $ErrorActionPreference = 'Stop'
@@ -22,7 +23,11 @@ function Invoke-UnityMethod {
   Reset-UnityLock
   $log = Join-Path $logDir $LogName
   $args = @('-batchmode', '-quit', '-projectPath', $ProjectPath, '-executeMethod', $Method, '-logFile', $log)
-  $process = Start-Process -FilePath $UnityExe -ArgumentList $args -Wait -PassThru -WindowStyle Hidden
+  $process = Start-Process -FilePath $UnityExe -ArgumentList $args -PassThru -WindowStyle Hidden
+  if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+    Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+    throw "Unity method exceeded ${TimeoutSeconds}s and was stopped: $Method. Log: $log"
+  }
   $exitCode = [int]$process.ExitCode
 
   $logText = ''

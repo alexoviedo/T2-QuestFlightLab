@@ -14,6 +14,13 @@ namespace QuestFlightLab.Flight
         public float pitchDeg;
         public float bankDeg;
         public float angleOfAttackDeg;
+        public float engineRpm;
+        public float powerPercent;
+        public float flapDegrees;
+        public float trimPercent;
+        public float loadFactorG = 1f;
+        public float groundRollMeters;
+        public float runwayLateralOffsetMeters;
         public bool stallWarning;
         public bool onGround;
 
@@ -23,6 +30,13 @@ namespace QuestFlightLab.Flight
             angularVelocityDeg = Vector3.zero;
             stallWarning = false;
             onGround = true;
+            engineRpm = 0f;
+            powerPercent = 0f;
+            flapDegrees = 0f;
+            trimPercent = 0f;
+            loadFactorG = 1f;
+            groundRollMeters = 0f;
+            runwayLateralOffsetMeters = 0f;
             RefreshFromTransform(transform);
         }
 
@@ -32,7 +46,7 @@ namespace QuestFlightLab.Flight
             altitudeFt = aircraftTransform.position.y * 3.28084f;
             verticalSpeedFpm = velocityWorld.y * 196.8504f;
             headingDeg = Mathf.Repeat(aircraftTransform.eulerAngles.y, 360f);
-            pitchDeg = NormalizeAngle(aircraftTransform.eulerAngles.x);
+            pitchDeg = -NormalizeAngle(aircraftTransform.eulerAngles.x);
             bankDeg = NormalizeAngle(aircraftTransform.eulerAngles.z);
         }
 
@@ -43,4 +57,3 @@ namespace QuestFlightLab.Flight
         }
     }
 }
-

@@ -1,4 +1,4 @@
-# Quest Flight Input Lab v0.1
+# Quest Flight Input Lab
 
 Quest Flight Input Lab is a standalone Meta Quest 3 Unity prototype for proving whether USB2BLE's Xbox BLE-compatible persona can act as the primary flight controller for a C172-style training-quality simulator direction.
 
@@ -12,6 +12,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - USB2BLE target persona: `xbox_wireless_controller` advertising as `Xbox Wireless Controller`
 - Initial aircraft: C172-style powered trainer approximation
 - Initial airport reference: approximate Boulder Municipal `KBDU`, powered Runway 08/26 only, not for navigation
+- v0.2 core path: deterministic Unity editor scenario runner plus PlayMode input-mapping probe so simulator changes can be tested without wearing the headset
 
 ## Build
 
@@ -64,3 +65,22 @@ Repo evidence notes:
 
 - `docs/evidence/QUEST_RUNTIME_SMOKE_2026-06-12.md`
 - `docs/evidence/USB2BLE_QUEST_XBOX_INPUT_WITNESS_2026-06-12.md`
+- `docs/evidence/FLIGHT_CORE_AUTONOMOUS_SIM_WITNESS_2026-06-12.md`
+
+Autonomous simulator evidence from the v0.2 flight-core pass is under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_core_20260612_173102
+```
+
+Run the deterministic simulator suite without the headset:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_editor_scenario_tests.ps1
+```
+
+Run the supplemental Unity PlayMode probe:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlatform PlayMode
+```

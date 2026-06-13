@@ -32,6 +32,7 @@ namespace QuestFlightLab.Environment
             Cube(root.transform, "Runway26_Number_Block", new Vector3(560f, 0.065f, 0f), new Vector3(22f, 0.01f, 9f), white);
             Cube(root.transform, "TaxiwayCenterline", new Vector3(0f, 0.07f, -75f), new Vector3(760f, 0.01f, 0.8f), yellow);
 
+            AirportRuntimeEnhancer.AddRunwayMarkingEnhancements(root.transform, white, yellow);
             BuildWindsock(root.transform, new Vector3(-210f, 0f, -125f), red, white);
             BuildPatternMarkers(root.transform, blue);
             BuildFoothills(root.transform);
@@ -78,7 +79,7 @@ namespace QuestFlightLab.Environment
             }
         }
 
-        private static GameObject Cube(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
+        public static GameObject Cube(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
@@ -89,7 +90,7 @@ namespace QuestFlightLab.Environment
             return go;
         }
 
-        private static Material Material(string name, Color color)
+        public static Material Material(string name, Color color)
         {
             Material material = new Material(Shader.Find("Standard"));
             material.name = name;
@@ -98,4 +99,3 @@ namespace QuestFlightLab.Environment
         }
     }
 }
-

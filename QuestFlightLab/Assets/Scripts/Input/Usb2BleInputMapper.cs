@@ -7,6 +7,8 @@ namespace QuestFlightLab.Input
     public class Usb2BleInputMapper : MonoBehaviour
     {
         public GamepadInputReader reader;
+        public DeterministicGamepadInputSource deterministicInput;
+        public bool preferDeterministicInput;
         public bool invertElevator = true;
         public float defaultThrottle = 0.72f;
         public float keyboardThrottleRate = 0.35f;
@@ -20,6 +22,8 @@ namespace QuestFlightLab.Input
 
         private GamepadInputSnapshot _previous;
         private float _throttle;
+        private float _mixture = 1f;
+        private float _carbHeat;
         private float _trim;
         private float _flaps;
         private bool _resetQueued;
@@ -27,13 +31,28 @@ namespace QuestFlightLab.Input
         private void Awake()
         {
             if (reader == null) reader = FindFirstObjectByType<GamepadInputReader>();
+            if (deterministicInput == null) deterministicInput = FindFirstObjectByType<DeterministicGamepadInputSource>();
             _throttle = Mathf.Clamp01(defaultThrottle);
         }
 
         private void Update()
         {
-            GamepadInputSnapshot snapshot = reader != null ? reader.Current : GamepadInputSnapshot.Disconnected(Time.unscaledTime, 0f);
-            ApplyKeyboardPlaceholders();
+            GamepadInputSnapshot snapshot = ShouldUseDeterministicInput()
+                ? deterministicInput.Current
+                : reader != null ? reader.Current : GamepadInputSnapshot.Disconnected(Time.unscaledTime, 0f);
+
+            if (!ShouldUseDeterministicInput())
+            {
+                ApplyKeyboardPlaceholders();
+            }
+            else
+            {
+                _throttle = deterministicInput.Throttle;
+                _mixture = deterministicInput.Mixture;
+                _carbHeat = deterministicInput.CarbHeat;
+                _trim = deterministicInput.Trim;
+                _flaps = deterministicInput.Flaps;
+            }
 
             bool xPressed = WasPressed(snapshot.buttonWest, _previous?.buttonWest ?? false);
             bool yPressed = WasPressed(snapshot.buttonNorth, _previous?.buttonNorth ?? false);
@@ -51,7 +70,7 @@ namespace QuestFlightLab.Input
 
             _trim = Mathf.Clamp(_trim + snapshot.dpadY * trimRate * Time.unscaledDeltaTime, -1f, 1f);
 
-            Current = MapSnapshotForTest(snapshot, invertElevator, _throttle, _trim, _flaps);
+            Current = MapSnapshotForTest(snapshot, invertElevator, _throttle, _trim, _flaps, _mixture, _carbHeat);
             Current.markerPressed = aPressed;
             Current.resetPressed = bPressed;
             Current.pausePressed = startPressed;
@@ -72,7 +91,9 @@ namespace QuestFlightLab.Input
             bool invertElevator = true,
             float throttle = 0.72f,
             float trim = 0f,
-            float flaps = 0f)
+            float flaps = 0f,
+            float mixture = 1f,
+            float carbHeat = 0f)
         {
             if (snapshot == null)
             {
@@ -85,7 +106,8 @@ namespace QuestFlightLab.Input
                 elevator = Mathf.Clamp(invertElevator ? -snapshot.leftStickY : snapshot.leftStickY, -1f, 1f),
                 rudder = Mathf.Clamp(snapshot.rightStickX, -1f, 1f),
                 throttle = Mathf.Clamp01(throttle),
-                mixture = 1f,
+                mixture = Mathf.Clamp01(mixture),
+                carbHeat = Mathf.Clamp01(carbHeat),
                 trim = Mathf.Clamp(trim, -1f, 1f),
                 flaps = Mathf.Clamp01(flaps),
                 leftToeBrake = Mathf.Clamp01(snapshot.leftTrigger),
@@ -107,10 +129,15 @@ namespace QuestFlightLab.Input
             if (keyboard.spaceKey.wasPressedThisFrame) MarkerCount++;
         }
 
+        private bool ShouldUseDeterministicInput()
+        {
+            return deterministicInput != null && deterministicInput.isActiveAndEnabled &&
+                   (preferDeterministicInput || deterministicInput.OverrideLiveInput);
+        }
+
         private static bool WasPressed(bool now, bool previous)
         {
             return now && !previous;
         }
     }
 }
-

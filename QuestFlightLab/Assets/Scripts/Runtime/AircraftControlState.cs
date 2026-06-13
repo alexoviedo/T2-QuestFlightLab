@@ -10,6 +10,7 @@ namespace QuestFlightLab.Runtime
         public float rudder;
         public float throttle;
         public float mixture = 1f;
+        public float carbHeat;
         public float trim;
         public float flaps;
         public float leftToeBrake;
@@ -25,9 +26,9 @@ namespace QuestFlightLab.Runtime
             return new AircraftControlState
             {
                 throttle = throttle,
-                mixture = 1f
+                mixture = 1f,
+                carbHeat = 0f
             };
         }
     }
 }
-

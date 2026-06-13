@@ -15,7 +15,15 @@ Quest Flight Input Lab v0.1 focuses on one proof path:
 - Live telemetry and evidence logs prove input behavior.
 - A Gaussian splat feasibility note exists, but optimized mesh/terrain remains the fallback.
 
+## v0.2 Flight Core Direction
+
+Flight Sim Core v0.2 shifts the next proof path from headset bring-up to autonomous simulator iteration:
+
+- Deterministic Unity editor scenarios exercise neutral controls, control sweeps, taxi, takeoff roll, rotation/climb, turns, rudder, flaps, trim, stall warning, and runway reset.
+- A PlayMode probe verifies the deterministic gamepad source can drive the same mapper used by USB2BLE/Xbox input.
+- The C172-style physics are still approximate, but now include explicit unit conversions, power, mixture/carb heat placeholders, lift/drag parameters, ground roll/braking, flaps/trim effects, and pitch/bank stability limits.
+- The training scaffold exposes a first Basic Takeoff Familiarization sequence and before-takeoff checklist placeholders.
+
 ## Claim Boundary
 
 This prototype is not FAA-approved training, not a BATD/AATD, not pilot-training credit, not a broad Quest compatibility claim, and not final C172 fidelity.
-

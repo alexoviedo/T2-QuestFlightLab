@@ -10,10 +10,9 @@
 
 ## Next Milestones
 
-1. Improve C172/C152 powered trainer fidelity.
-2. Add cockpit layout and checklist flow.
-3. Add flaps, trim, mixture, carb heat, V-speeds, stall behavior.
+1. Keep tightening the autonomous simulator harness so every flight-model change has deterministic scenario evidence.
+2. Improve C172/C152 powered trainer fidelity with better data sources and acceptance metrics.
+3. Expand cockpit layout, checklist flow, flaps, trim, mixture, carb heat, V-speeds, and stall behavior.
 4. Add sailplane aerotow, thermals, ridge lift, and towplane operations.
 5. Add dynamic wind/weather.
 6. Add instructor station, multiplayer, logbook, debrief, replay, airport database, and lesson syllabus.
-

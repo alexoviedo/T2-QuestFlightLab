@@ -16,6 +16,12 @@ namespace QuestFlightLab.Runtime
         public bool stallWarning;
         public bool onGround;
         public float fps;
+        public float engineRpm;
+        public float powerPercent;
+        public float flapDegrees;
+        public float trimPercent;
+        public float loadFactorG;
+        public float groundRollMeters;
+        public float runwayLateralOffsetMeters;
     }
 }
-
