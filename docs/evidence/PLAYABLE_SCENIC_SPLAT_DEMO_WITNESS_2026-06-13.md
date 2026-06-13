@@ -4,9 +4,9 @@
 
 v0.7 integrates one optional procedural scenic Gaussian splat patch into the playable QuestFlightLab demo path while keeping the mesh/terrain airport as the default. The patch is synthetic/project-owned and is intended as a visual-only approach/airport background layer.
 
-Classification: `playable_demo_scenic_splat_blocked_runtime`
+Classification: `playable_demo_scenic_splat_medium_viable`
 
-Reason: editor scenario, PlayMode, real renderer editor smoke, Android APK build, and APK install passed, but fresh v0.7 Quest runtime launch was intercepted by Meta's controller-required launch dialog before Unity received focus. ADB key events did not bypass the dialog.
+Reason: after a Quest shell reboot/recovery, mesh fallback and the procedural scenic splat modes launched on one Quest 3, rendered visible stereo screenshots, wrote runtime evidence JSON, and stayed near the app's 72 Hz target in short captures. Low, medium, and high scenic budgets all loaded without falling back. This is still a synthetic/procedural scenic patch result, not proof of full-airport splat viability or final Quest performance.
 
 ## Build Context
 
@@ -25,6 +25,12 @@ Artifact root:
 
 ```text
 C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\playable_splat_20260613_005918
+```
+
+Post-reboot Quest runtime artifact root:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\playable_splat_runtime_recovery_20260613_015006
 ```
 
 ## Asset Source
@@ -58,9 +64,9 @@ The Unity runtime assets are committed because the APK needs them in `Resources`
 | Mode | Profile | Splats | Default? | Status |
 | --- | --- | ---: | --- | --- |
 | `mesh` | mesh fallback | 0 | yes | default playable path |
-| `scenic_splat_low` | procedural scenic | 25,000 | no | integrated, runtime launch blocked by Meta dialog |
-| `scenic_splat_medium` | procedural scenic | 50,000 | no | integrated, not Quest-tested in v0.7 due launch blocker |
-| `scenic_splat_high` | procedural scenic | 100,000 | no | integrated as optional upper budget, not Quest-tested in v0.7 due launch blocker |
+| `scenic_splat_low` | procedural scenic | 25,000 | no | Quest short runtime pass after reboot |
+| `scenic_splat_medium` | procedural scenic | 50,000 | no | Quest short runtime pass after reboot; current recommended splat demo budget |
+| `scenic_splat_high` | procedural scenic | 100,000 | no | Quest short runtime pass after reboot; keep optional, not default |
 | `splat_5k` | synthetic regression | 5,000 | no | retained |
 | `splat_50k` | synthetic regression | 50,000 | no | retained |
 | `splat_100k` | synthetic regression | 100,000 | no | retained |
@@ -75,11 +81,11 @@ The Unity runtime assets are committed because the APK needs them in `Resources`
 | PlayMode tests | 17/17 passed | `validation\playmode_final` |
 | Android APK build | passed | `apk_hash.txt` |
 | APK install | passed | `apk_install_log.txt` |
-| Quest mesh/scenic runtime | blocked before Unity focus | `quest_mesh_playable`, `quest_scenic_splat_low` |
+| Quest mesh/scenic runtime | passed short post-reboot smoke | `playable_splat_runtime_recovery_20260613_015006` |
 
 PlayMode note: Direct3D11 PlayMode correctly falls back for the real renderer because the Gaussian splat compute kernel preflight reports unsupported DX11 kernels. The D3D12 editor smoke and prior Quest Vulkan runtime gate are the renderer proof paths.
 
-## Quest Runtime Attempt
+## Quest Runtime
 
 The fresh v0.7 APK installed successfully:
 
@@ -88,17 +94,24 @@ Performing Streamed Install
 Success
 ```
 
-The Quest launch attempt did not reach Unity. Logcat showed:
+An initial Quest launch attempt was intercepted by Meta's controller-required launch dialog before Unity received focus. ADB key events did not bypass that dialog. Alex later observed a passthrough/menu recovery issue; the headset was rebooted over ADB and returned to a normal Quest Home state.
+
+After reboot, `adb devices -l` showed:
 
 ```text
-RequiresControllersLaunchInterceptor:
-com.alexoviedo.t2.questflightlab/com.unity3d.player.UnityPlayerGameActivity
-com.oculus.vrshell/.../LaunchCheckControllerRequiredDialogActivity
+2G0YC5ZG8907TD device product:eureka model:Quest_3 device:eureka
 ```
 
-ADB key events (`KEYCODE_DPAD_CENTER`, `KEYCODE_ENTER`, and `KEYCODE_BUTTON_A`) did not bypass the dialog. Screenshots were zero-byte because the app never reached the Unity view during this attempt.
+Post-reboot short runtime captures:
 
-No v0.7 scenic runtime frame timing, stereo quality, or visual-readability claim is made.
+| Mode | Sample | Splats | Fallback | Avg frame ms | Estimated FPS | Screenshot/log/evidence path |
+| --- | --- | ---: | --- | ---: | ---: | --- |
+| `mesh` | mesh fallback | 0 | no | 13.884 | 72.02 | `playable_splat_runtime_recovery_20260613_015006\quest_mesh_playable_after_reboot_long_capture` |
+| `scenic_splat_low` | `scenic_airfield_low_25000` | 25,000 | no | 14.768 | 67.71 | `playable_splat_runtime_recovery_20260613_015006\quest_scenic_splat_low_after_reboot` |
+| `scenic_splat_medium` | `scenic_airfield_medium_50000` | 50,000 | no | 14.728 | 67.90 | `playable_splat_runtime_recovery_20260613_015006\quest_scenic_splat_medium_after_reboot` |
+| `scenic_splat_high` | `scenic_airfield_high_100000` | 100,000 | no | 14.744 | 67.83 | `playable_splat_runtime_recovery_20260613_015006\quest_scenic_splat_high_after_reboot` |
+
+Each post-reboot run captured an ADB screenshot showing the QuestFlightLab scene in both eyes. The mesh/default scene and scenic splat modes kept the cockpit/input UI readable in the captured view. No manual comfort/stereo-quality judgment was performed, so this evidence does not prove headset comfort.
 
 ## Result Interpretation
 
@@ -111,26 +124,20 @@ What v0.7 proves:
 - PlayMode confirms metadata/fallback behavior.
 - Android APK builds with the scenic assets included.
 - APK installs on the Quest 3 connected over ADB.
+- Mesh fallback and procedural scenic splat low/medium/high modes launch after Quest reboot.
+- Scenic splat low/medium/high load the real Gaussian splat renderer with valid assets on Quest Vulkan.
+- The short captures show roughly 68 FPS estimated for scenic modes on this one Quest 3.
 
 What v0.7 does not prove:
 
-- Fresh scenic splat rendering on Quest.
-- Scenic frame timing on Quest.
-- Headset stereo comfort for the scenic patch.
 - Full-airport splat viability.
 - Production photorealistic scenery.
+- Final Quest performance, thermal behavior, or comfort over long sessions.
+- Headset stereo comfort for the scenic patch, because no manual in-headset comfort judgment was recorded.
 - Real airport capture pipeline viability.
 - Broad Quest compatibility.
 - FAA-approved training, legal pilot-training credit, or final C172 fidelity.
 
 ## Next Action
 
-Run one short headset-assisted runtime pass:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode mesh -OutputDir <artifact-root>\quest_mesh_playable_accept
-powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode scenic_splat_low -OutputDir <artifact-root>\quest_scenic_splat_low_accept
-powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode scenic_splat_medium -OutputDir <artifact-root>\quest_scenic_splat_medium_accept
-```
-
-Human action required if the Meta launch check appears: wear the headset briefly, wake Touch controllers, and accept the controller-required launch prompt.
+Keep mesh fallback as the default. Use `scenic_splat_medium` as the next playable demo target budget, with `scenic_splat_high` available only as an opt-in upper-budget smoke mode. The next scenic milestone should improve placement/readability and add an owned real-world capture path, not attempt full-airport splats.
