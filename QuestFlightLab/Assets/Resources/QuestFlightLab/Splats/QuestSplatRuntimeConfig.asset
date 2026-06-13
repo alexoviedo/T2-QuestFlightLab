@@ -15,6 +15,9 @@ MonoBehaviour:
   sample5k: {fileID: 11400000, guid: b9b13b580418aa24eb7f90536c27792a, type: 2}
   sample50k: {fileID: 11400000, guid: 950d6f2df8dc1eb4fb43c27336d8f2dc, type: 2}
   sample100k: {fileID: 11400000, guid: 30e16910bc5adb84b92de2476a237250, type: 2}
+  scenicLowSample: {fileID: 11400000, guid: 3bffe218be86f2a42a415f915a625df4, type: 2}
+  scenicMediumSample: {fileID: 11400000, guid: b3650a9baa1336d45a7fd686bc1b055e, type: 2}
+  scenicHighSample: {fileID: 11400000, guid: 95d925d45ce663446aa35e2d6f04b364, type: 2}
   renderSplatsShader: {fileID: 4800000, guid: ed800126ae8844a67aad1974ddddd59c, type: 3}
   compositeShader: {fileID: 4800000, guid: 7e184af7d01193a408eb916d8acafff9, type: 3}
   debugPointsShader: {fileID: 4800000, guid: b44409fc67214394f8f47e4e2648425e, type: 3}
@@ -26,3 +29,8 @@ MonoBehaviour:
   opacityScale: 1
   sphericalHarmonicsOrder: 0
   sortNthFrame: 1
+  scenicWorldPosition: {x: 0, y: 0, z: 0}
+  scenicEulerAngles: {x: 0, y: 0, z: 0}
+  scenicSplatScale: 1
+  scenicOpacityScale: 0.92
+  scenicSortNthFrame: 1

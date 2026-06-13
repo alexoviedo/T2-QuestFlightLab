@@ -7,6 +7,8 @@ namespace QuestFlightLab.Environment
         public SceneryMode requestedMode = SceneryMode.MeshFallback;
         public bool enableExperimentalSplatProxy;
         public int syntheticSplatCount = 5000;
+        public string splatSampleKey = QuestSplatRuntimeConfig.SyntheticProfile;
+        public string splatBudgetProfile = "synthetic";
 
         public SceneryProviderStatus LastStatus { get; private set; }
 
@@ -28,12 +30,15 @@ namespace QuestFlightLab.Environment
             EnsureProviders();
             if (mode == SceneryMode.MeshFallback)
             {
+                splatProvider.DeactivateProvider();
                 LastStatus = meshProvider.ActivateProvider(null);
                 return LastStatus;
             }
 
             splatProvider.enableExperimentalProxy = enableExperimentalSplatProxy;
             splatProvider.syntheticSplatCount = syntheticSplatCount;
+            splatProvider.runtimeSampleKey = splatSampleKey;
+            splatProvider.runtimeBudgetProfile = splatBudgetProfile;
             SceneryProviderStatus splatStatus = splatProvider.ActivateProvider(transform);
             if (splatStatus.fallbackUsed || splatStatus.activeMode == SceneryMode.MeshFallback.ToString())
             {

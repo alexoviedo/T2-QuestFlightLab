@@ -22,6 +22,8 @@ namespace QuestFlightLab.Environment
         public string requestedMode;
         public string activeMode;
         public string providerName;
+        public string sampleKey;
+        public string budgetProfile;
         public bool fallbackUsed;
         public bool rendererAvailable;
         public bool rendererInstantiated;
@@ -72,8 +74,8 @@ namespace QuestFlightLab.Environment
             yield return null;
 
             string launchMode = ReadLaunchMode();
-            int budget = BudgetForLaunchMode(launchMode);
-            bool splatRequested = budget > 0;
+            RuntimeSplatLaunchProfile launchProfile = RuntimeSplatLaunchProfile.FromLaunchMode(launchMode);
+            bool splatRequested = launchProfile.splatCount > 0;
 
             GameObject probeObject = new GameObject("Quest Splat Runtime Performance Probe");
             probeObject.transform.SetParent(transform, false);
@@ -88,7 +90,9 @@ namespace QuestFlightLab.Environment
 
             if (splatRequested)
             {
-                controller.syntheticSplatCount = budget;
+                controller.syntheticSplatCount = launchProfile.splatCount;
+                controller.splatSampleKey = launchProfile.sampleKey;
+                controller.splatBudgetProfile = launchProfile.budgetProfile;
                 controller.enableExperimentalSplatProxy = false;
                 status = controller.ApplyMode(SceneryMode.ExperimentalSplatRenderer);
             }
@@ -141,6 +145,8 @@ namespace QuestFlightLab.Environment
                 requestedMode = providerStatus.requestedMode,
                 activeMode = providerStatus.activeMode,
                 providerName = providerStatus.providerName,
+                sampleKey = providerStatus.sampleKey,
+                budgetProfile = providerStatus.budgetProfile,
                 fallbackUsed = providerStatus.fallbackUsed,
                 rendererAvailable = providerStatus.rendererAvailable,
                 rendererInstantiated = providerStatus.rendererInstantiated,
@@ -235,16 +241,6 @@ namespace QuestFlightLab.Environment
             return string.IsNullOrWhiteSpace(mode) ? "mesh" : mode.Trim().ToLowerInvariant();
         }
 
-        private static int BudgetForLaunchMode(string mode)
-        {
-            if (string.IsNullOrWhiteSpace(mode)) return 0;
-            string normalized = mode.Trim().ToLowerInvariant().Replace("-", "_");
-            if (normalized == "splat_5k" || normalized == "splat_5000") return 5000;
-            if (normalized == "splat_50k" || normalized == "splat_50000") return 50000;
-            if (normalized == "splat_100k" || normalized == "splat_100000") return 100000;
-            return 0;
-        }
-
         private static string ReadAndroidIntentExtra(string key)
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -274,6 +270,49 @@ namespace QuestFlightLab.Environment
             }
 
             return value.Replace(' ', '_');
+        }
+
+        private struct RuntimeSplatLaunchProfile
+        {
+            public string sampleKey;
+            public string budgetProfile;
+            public int splatCount;
+
+            public static RuntimeSplatLaunchProfile FromLaunchMode(string mode)
+            {
+                string normalized = string.IsNullOrWhiteSpace(mode) ? "mesh" : mode.Trim().ToLowerInvariant().Replace("-", "_");
+                if (normalized == "splat_5k" || normalized == "splat_5000")
+                {
+                    return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.SyntheticProfile, budgetProfile = "synthetic_5k", splatCount = 5000 };
+                }
+
+                if (normalized == "splat_50k" || normalized == "splat_50000")
+                {
+                    return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.SyntheticProfile, budgetProfile = "synthetic_50k", splatCount = 50000 };
+                }
+
+                if (normalized == "splat_100k" || normalized == "splat_100000")
+                {
+                    return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.SyntheticProfile, budgetProfile = "synthetic_100k", splatCount = 100000 };
+                }
+
+                if (normalized == "scenic_splat_low")
+                {
+                    return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.ScenicProfile, budgetProfile = "scenic_splat_low", splatCount = 25000 };
+                }
+
+                if (normalized == "scenic_splat_medium")
+                {
+                    return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.ScenicProfile, budgetProfile = "scenic_splat_medium", splatCount = 50000 };
+                }
+
+                if (normalized == "scenic_splat_high")
+                {
+                    return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.ScenicProfile, budgetProfile = "scenic_splat_high", splatCount = 100000 };
+                }
+
+                return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.SyntheticProfile, budgetProfile = "mesh", splatCount = 0 };
+            }
         }
     }
 }

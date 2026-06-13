@@ -208,6 +208,7 @@ namespace QuestFlightLab.Tests.EditMode
             SplatSceneryProvider provider = go.AddComponent<SplatSceneryProvider>();
             provider.enableExperimentalProxy = false;
             provider.syntheticSplatCount = 5000;
+            provider.runtimeSampleKey = QuestSplatRuntimeConfig.SyntheticProfile;
 
             SceneryProviderStatus status = provider.ActivateProvider(go.transform);
 
@@ -223,6 +224,38 @@ namespace QuestFlightLab.Tests.EditMode
             }
 
             Object.DestroyImmediate(go);
+        }
+
+        [Test]
+        public void QuestSplatRuntimeConfigSelectsScenicProfiles()
+        {
+            QuestSplatRuntimeConfig config = ScriptableObject.CreateInstance<QuestSplatRuntimeConfig>();
+            Object synthetic = ScriptableObject.CreateInstance<QuestSplatRuntimeConfig>();
+            Object scenicLow = ScriptableObject.CreateInstance<QuestSplatRuntimeConfig>();
+            Object scenicMedium = ScriptableObject.CreateInstance<QuestSplatRuntimeConfig>();
+            Object scenicHigh = ScriptableObject.CreateInstance<QuestSplatRuntimeConfig>();
+
+            try
+            {
+                config.sample5k = synthetic;
+                config.scenicLowSample = scenicLow;
+                config.scenicMediumSample = scenicMedium;
+                config.scenicHighSample = scenicHigh;
+
+                Assert.That(config.AssetForProfile("synthetic", 5000), Is.SameAs(synthetic));
+                Assert.That(config.AssetForProfile("scenic", 25000), Is.SameAs(scenicLow));
+                Assert.That(config.AssetForProfile("scenic", 50000), Is.SameAs(scenicMedium));
+                Assert.That(config.AssetForProfile("scenic", 100000), Is.SameAs(scenicHigh));
+                Assert.That(QuestSplatRuntimeConfig.NormalizeProfile("scenic"), Is.EqualTo(QuestSplatRuntimeConfig.ScenicProfile));
+            }
+            finally
+            {
+                Object.DestroyImmediate(config);
+                Object.DestroyImmediate(synthetic);
+                Object.DestroyImmediate(scenicLow);
+                Object.DestroyImmediate(scenicMedium);
+                Object.DestroyImmediate(scenicHigh);
+            }
         }
 
         [Test]

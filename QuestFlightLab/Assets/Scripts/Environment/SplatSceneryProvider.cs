@@ -15,6 +15,8 @@ namespace QuestFlightLab.Environment
         public int syntheticSplatCount = 5000;
         public int maxProxyPointCount = 5000;
         public string sampleAssetPath;
+        public string runtimeSampleKey = QuestSplatRuntimeConfig.SyntheticProfile;
+        public string runtimeBudgetProfile = "synthetic";
         public bool enableRealRenderer = true;
         public string runtimeConfigResourcePath = QuestSplatRuntimeConfig.ResourcePath;
 
@@ -28,6 +30,8 @@ namespace QuestFlightLab.Environment
             SceneryProviderStatus status = Status(nameof(SplatSceneryProvider), Mode, SceneryMode.MeshFallback);
             status.rendererAvailable = rendererAvailable;
             status.sampleAssetPath = sampleAssetPath ?? string.Empty;
+            status.sampleKey = QuestSplatRuntimeConfig.NormalizeProfile(runtimeSampleKey);
+            status.budgetProfile = string.IsNullOrWhiteSpace(runtimeBudgetProfile) ? status.sampleKey : runtimeBudgetProfile;
             status.splatCount = Mathf.Max(0, syntheticSplatCount);
             status.assetBytes = File.Exists(sampleAssetPath) ? new FileInfo(sampleAssetPath).Length : 0L;
             status.estimatedGpuBytes = SceneryPerformanceProbe.EstimateGpuBytes(status.splatCount);
@@ -59,11 +63,9 @@ namespace QuestFlightLab.Environment
         {
             if (activeRuntimeRenderer != null)
             {
-                Destroy(activeRuntimeRenderer);
+                DestroyRuntimeObject(activeRuntimeRenderer);
                 activeRuntimeRenderer = null;
             }
-
-            base.DeactivateProvider();
         }
 
         public static bool IsGaussianSplatRendererAvailable()
@@ -117,11 +119,11 @@ namespace QuestFlightLab.Environment
                     return false;
                 }
 
-                UnityEngine.Object sample = config.AssetForBudget(status.splatCount);
+                UnityEngine.Object sample = config.AssetForProfile(status.sampleKey, status.splatCount);
                 if (sample == null)
                 {
                     status.fallbackUsed = true;
-                    status.warnings.Add($"No runtime GaussianSplatAsset configured for budget {status.splatCount}.");
+                    status.warnings.Add($"No runtime GaussianSplatAsset configured for profile {status.sampleKey} budget {status.splatCount}.");
                     return false;
                 }
 
@@ -141,10 +143,10 @@ namespace QuestFlightLab.Environment
 
                 DestroyExistingRuntimeRenderer();
 
-                activeRuntimeRenderer = new GameObject($"QuestRuntimeGaussianSplat_{status.splatCount}");
+                activeRuntimeRenderer = new GameObject($"QuestRuntimeGaussianSplat_{status.sampleKey}_{status.splatCount}");
                 activeRuntimeRenderer.transform.SetParent(parent, false);
-                activeRuntimeRenderer.transform.position = config.sampleWorldPosition;
-                activeRuntimeRenderer.transform.rotation = Quaternion.Euler(config.sampleEulerAngles);
+                activeRuntimeRenderer.transform.position = config.WorldPositionForProfile(status.sampleKey);
+                activeRuntimeRenderer.transform.rotation = Quaternion.Euler(config.EulerAnglesForProfile(status.sampleKey));
 
                 Component renderer = activeRuntimeRenderer.AddComponent(rendererType);
                 SetField(rendererType, renderer, "m_Asset", sample);
@@ -153,10 +155,10 @@ namespace QuestFlightLab.Environment
                 SetField(rendererType, renderer, "m_ShaderDebugPoints", config.debugPointsShader);
                 SetField(rendererType, renderer, "m_ShaderDebugBoxes", config.debugBoxesShader);
                 SetField(rendererType, renderer, "m_CSSplatUtilities", config.splatUtilitiesCompute);
-                SetField(rendererType, renderer, "m_SplatScale", config.splatScale);
-                SetField(rendererType, renderer, "m_OpacityScale", config.opacityScale);
+                SetField(rendererType, renderer, "m_SplatScale", config.SplatScaleForProfile(status.sampleKey));
+                SetField(rendererType, renderer, "m_OpacityScale", config.OpacityScaleForProfile(status.sampleKey));
                 SetField(rendererType, renderer, "m_SHOrder", config.sphericalHarmonicsOrder);
-                SetField(rendererType, renderer, "m_SortNthFrame", Mathf.Max(1, config.sortNthFrame));
+                SetField(rendererType, renderer, "m_SortNthFrame", Mathf.Max(1, config.SortNthFrameForProfile(status.sampleKey)));
 
                 MethodInfo onEnable = rendererType.GetMethod("OnEnable", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 onEnable?.Invoke(renderer, null);
@@ -177,7 +179,7 @@ namespace QuestFlightLab.Environment
                 }
                 else
                 {
-                    Debug.Log($"[QuestFlightLab][Splats] Runtime Gaussian splat renderer active: {sample.name}, budget {status.splatCount}.");
+                    Debug.Log($"[QuestFlightLab][Splats] Runtime Gaussian splat renderer active: {status.sampleKey}/{sample.name}, budget {status.splatCount}.");
                 }
 
                 return !status.fallbackUsed;
@@ -201,8 +203,21 @@ namespace QuestFlightLab.Environment
         private void DestroyExistingRuntimeRenderer()
         {
             if (activeRuntimeRenderer == null) return;
-            Destroy(activeRuntimeRenderer);
+            DestroyRuntimeObject(activeRuntimeRenderer);
             activeRuntimeRenderer = null;
+        }
+
+        private static void DestroyRuntimeObject(UnityEngine.Object value)
+        {
+            if (value == null) return;
+            if (Application.isPlaying)
+            {
+                Destroy(value);
+            }
+            else
+            {
+                DestroyImmediate(value);
+            }
         }
 
         private static Type FindGaussianSplatRendererType()

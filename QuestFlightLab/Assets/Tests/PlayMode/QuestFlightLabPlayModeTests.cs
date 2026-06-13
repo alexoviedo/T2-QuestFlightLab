@@ -64,6 +64,7 @@ namespace QuestFlightLab.Tests.PlayMode
             SceneryProviderStatus status = controller.ApplyMode(SceneryMode.MeshFallback);
 
             Assert.That(status.activeMode, Is.EqualTo(SceneryMode.MeshFallback.ToString()));
+            Assert.That(status.fallbackUsed, Is.False);
             Assert.That(GameObject.Find(MeshSceneryProvider.AirportRootName), Is.Not.Null);
 
             Object.DestroyImmediate(go);
@@ -71,6 +72,39 @@ namespace QuestFlightLab.Tests.PlayMode
             {
                 Object.DestroyImmediate(GameObject.Find(MeshSceneryProvider.AirportRootName));
             }
+        }
+
+        [Test]
+        public void SceneryModeControllerCarriesScenicBudgetMetadata()
+        {
+            GameObject go = new GameObject("ScenicSplatMetadataPlayModeProbe");
+            SceneryModeController controller = go.AddComponent<SceneryModeController>();
+            controller.syntheticSplatCount = 25000;
+            controller.splatSampleKey = QuestSplatRuntimeConfig.ScenicProfile;
+            controller.splatBudgetProfile = "scenic_splat_low";
+            controller.enableExperimentalSplatProxy = false;
+
+            SceneryProviderStatus status = controller.ApplyMode(SceneryMode.ExperimentalSplatRenderer);
+
+            Assert.That(status.sampleKey, Is.EqualTo(QuestSplatRuntimeConfig.ScenicProfile));
+            Assert.That(status.budgetProfile, Is.EqualTo("scenic_splat_low"));
+            Assert.That(status.splatCount, Is.EqualTo(25000));
+            bool expectedGraphicsFallback = status.warnings.Exists(w => w.Contains("unsupported on Direct3D11"));
+            if (expectedGraphicsFallback)
+            {
+                Assert.That(status.activeMode, Is.EqualTo(SceneryMode.MeshFallback.ToString()));
+                Assert.That(status.fallbackUsed, Is.True);
+            }
+            else if (SplatSceneryProvider.IsGaussianSplatRendererAvailable())
+            {
+                Assert.That(status.activeMode, Is.EqualTo(SceneryMode.ExperimentalSplatRenderer.ToString()), string.Join("; ", status.warnings));
+                Assert.That(status.fallbackUsed, Is.False, string.Join("; ", status.warnings));
+                Assert.That(status.hasValidAsset, Is.True, string.Join("; ", status.warnings));
+                Assert.That(status.hasValidRenderSetup, Is.True, string.Join("; ", status.warnings));
+                Assert.That(status.sampleName, Does.Contain("scenic_airfield_low_25000"));
+            }
+
+            Object.DestroyImmediate(go);
         }
     }
 }

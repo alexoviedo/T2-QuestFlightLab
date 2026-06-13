@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b71fae31e6c7d438e8566dc713e666, type: 3}
+  m_Name: scenic_airfield_high_100000
+  m_EditorClassIdentifier: GaussianSplatting::GaussianSplatting.Runtime.GaussianSplatAsset
+  m_FormatVersion: 20231020
+  m_SplatCount: 100000
+  m_BoundsMin: {x: -304.97678, y: 0.015215959, z: 38.00609}
+  m_BoundsMax: {x: 304.71658, y: 69.574844, z: 519.9837}
+  m_DataHash:
+    serializedVersion: 2
+    Hash: af1b45f49fa48c68789159c1c7c2d6d1
+  m_PosFormat: 2
+  m_ScaleFormat: 2
+  m_SHFormat: 3
+  m_ColorFormat: 2
+  m_PosData: {fileID: 4900000, guid: 659130a6ce0037d4ebf268273de354de, type: 3}
+  m_ColorData: {fileID: 4900000, guid: 2c6e2782db6194c4291a48a67290fce9, type: 3}
+  m_OtherData: {fileID: 4900000, guid: 86223874e4a6fab4d854d806cdee6b95, type: 3}
+  m_SHData: {fileID: 4900000, guid: aa8bc1ff806bd89428349bee9b851561, type: 3}
+  m_ChunkData: {fileID: 4900000, guid: d25f8717977333c49824cdee3be99783, type: 3}
+  m_Cameras: []

@@ -17,17 +17,10 @@ namespace QuestFlightLab.Experimental.Splats.Editor
         public static void BuildRuntimeSamples()
         {
             string sampleDir = System.Environment.GetEnvironmentVariable("QFL_REAL_SPLAT_SAMPLE_DIR");
-            if (string.IsNullOrWhiteSpace(sampleDir))
-            {
-                throw new InvalidOperationException("QFL_REAL_SPLAT_SAMPLE_DIR must point to renderer-compatible synthetic PLY samples.");
-            }
+            string scenicDir = System.Environment.GetEnvironmentVariable("QFL_SCENIC_SPLAT_SAMPLE_DIR");
 
             Directory.CreateDirectory(RuntimeSampleFolder);
             Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath) ?? "Assets/Resources/QuestFlightLab/Splats");
-
-            GaussianSplatAsset sample5k = CreateGaussianSplatAsset(Path.Combine(sampleDir, "synthetic_splats_5000.ply"));
-            GaussianSplatAsset sample50k = CreateGaussianSplatAsset(Path.Combine(sampleDir, "synthetic_splats_50000.ply"));
-            GaussianSplatAsset sample100k = CreateGaussianSplatAsset(Path.Combine(sampleDir, "synthetic_splats_100000.ply"));
 
             QuestSplatRuntimeConfig config = AssetDatabase.LoadAssetAtPath<QuestSplatRuntimeConfig>(ConfigPath);
             if (config == null)
@@ -36,9 +29,23 @@ namespace QuestFlightLab.Experimental.Splats.Editor
                 AssetDatabase.CreateAsset(config, ConfigPath);
             }
 
-            config.sample5k = sample5k;
-            config.sample50k = sample50k;
-            config.sample100k = sample100k;
+            if (!string.IsNullOrWhiteSpace(sampleDir))
+            {
+                config.sample5k = CreateGaussianSplatAsset(Path.Combine(sampleDir, "synthetic_splats_5000.ply"));
+                config.sample50k = CreateGaussianSplatAsset(Path.Combine(sampleDir, "synthetic_splats_50000.ply"));
+                config.sample100k = CreateGaussianSplatAsset(Path.Combine(sampleDir, "synthetic_splats_100000.ply"));
+            }
+            else if (config.sample5k == null || config.sample50k == null || config.sample100k == null)
+            {
+                throw new InvalidOperationException("QFL_REAL_SPLAT_SAMPLE_DIR was not set and existing synthetic runtime assets are incomplete.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(scenicDir))
+            {
+                config.scenicLowSample = CreateGaussianSplatAsset(Path.Combine(scenicDir, "scenic_airfield_low_25000.ply"));
+                config.scenicMediumSample = CreateGaussianSplatAsset(Path.Combine(scenicDir, "scenic_airfield_medium_50000.ply"));
+                config.scenicHighSample = CreateGaussianSplatAsset(Path.Combine(scenicDir, "scenic_airfield_high_100000.ply"));
+            }
             config.renderSplatsShader = LoadShader("RenderGaussianSplats.shader");
             config.compositeShader = LoadShader("GaussianComposite.shader");
             config.debugPointsShader = LoadShader("GaussianDebugRenderPoints.shader");
@@ -50,6 +57,11 @@ namespace QuestFlightLab.Experimental.Splats.Editor
             config.opacityScale = 1.0f;
             config.sphericalHarmonicsOrder = 0;
             config.sortNthFrame = 1;
+            config.scenicWorldPosition = Vector3.zero;
+            config.scenicEulerAngles = Vector3.zero;
+            config.scenicSplatScale = 1.0f;
+            config.scenicOpacityScale = 0.92f;
+            config.scenicSortNthFrame = 1;
 
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();

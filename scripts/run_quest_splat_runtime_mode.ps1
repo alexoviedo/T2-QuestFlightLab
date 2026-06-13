@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('mesh','splat_5k','splat_50k','splat_100k')]
+  [ValidateSet('mesh','splat_5k','splat_50k','splat_100k','scenic_splat_low','scenic_splat_medium','scenic_splat_high')]
   [string]$Mode = 'mesh',
   [string]$AdbExe = 'C:\Program Files\Meta Quest Developer Hub\resources\bin\adb.exe',
   [string]$PackageId = 'com.alexoviedo.t2.questflightlab',

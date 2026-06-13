@@ -15,6 +15,8 @@ namespace QuestFlightLab.Environment
         public bool proxyUsed;
         public string sampleAssetPath;
         public string sampleName;
+        public string sampleKey;
+        public string budgetProfile;
         public int splatCount;
         public long assetBytes;
         public long estimatedGpuBytes;

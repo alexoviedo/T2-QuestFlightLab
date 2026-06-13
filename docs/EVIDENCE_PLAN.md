@@ -79,6 +79,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.
 
 This pulls runtime JSON evidence from `Application.persistentDataPath\QuestFlightLab\scenery_runtime`, captures logcat/activity state, and attempts ADB screenshots. Treat the v0.6c `quest_runtime_viable_small_scenic_patch` result as synthetic-only unless a real owned/licensed visual asset is also tested.
 
+For v0.7 playable scenic splat demo mode, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\prepare_playable_scenic_splat.ps1 -ArtifactDir <artifact-root>\scenic_asset_import
+powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode mesh -OutputDir <artifact-root>\quest_mesh_playable
+powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode scenic_splat_low -OutputDir <artifact-root>\quest_scenic_splat_low
+powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode scenic_splat_medium -OutputDir <artifact-root>\quest_scenic_splat_medium
+powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.ps1 -Mode scenic_splat_high -OutputDir <artifact-root>\quest_scenic_splat_high
+```
+
+This generates raw procedural PLYs in the artifact root, imports small Unity runtime assets, captures Quest logcat/screenshots/evidence JSON, and records whether the scenic modes improve the playable demo without compromising the mesh fallback. The v0.7 asset is procedural and project-owned, not a real airport capture.
+
 The supplemental PlayMode probe is:
 
 ```powershell
@@ -158,3 +170,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_runtime_20260612_2
 ```
 
 This folder contains v0.6c Quest runtime mesh fallback evidence, synthetic 5k/50k/100k splat runtime JSON/logcat/screenshots, the synthetic sample manifest and hashes, and the real visual asset source investigation note. The result is synthetic-only `quest_runtime_viable_small_scenic_patch` on one Quest 3 test; full-airport splats and real capture pipelines remain unproven.
+
+## 2026-06-13 Playable Scenic Splat Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\playable_splat_20260613_005918
+```
+
+This folder contains the v0.7 procedural scenic splat generation manifest, Unity import logs, validation logs, APK hash evidence, and Quest runtime mesh/scenic-mode evidence when the runtime smoke completes.

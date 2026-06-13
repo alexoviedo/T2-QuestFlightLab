@@ -19,6 +19,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v0.6 scenery path: optional Gaussian splat feasibility abstraction and budget/proxy evidence with mesh/terrain fallback still default
 - v0.6b renderer gate: `aras-p/UnityGaussianSplatting` renders synthetic 5k/50k/100k samples in the Unity editor using D3D12, and the Android APK builds with the package present; Quest runtime splat rendering is not yet proven
 - v0.6c Quest splat runtime gate: the same real renderer loads synthetic 5k/50k/100k samples on one Quest 3 with Vulkan/Adreno 740 evidence and stereo ADB screenshots for 50k/100k; mesh/terrain fallback remains default, and real airport-capture viability is not proven
+- v0.7 playable scenery path: an opt-in, project-owned procedural scenic splat patch adds airfield/foothills background modes (`scenic_splat_low`, `scenic_splat_medium`, optional `scenic_splat_high`) while mesh/terrain fallback remains the default playable airport
 
 ## Build
 
@@ -78,6 +79,7 @@ Repo evidence notes:
 - `docs/evidence/GAUSSIAN_SPLAT_FEASIBILITY_SPIKE_2026-06-12.md`
 - `docs/evidence/GAUSSIAN_SPLAT_REAL_RENDERER_SPIKE_2026-06-12.md`
 - `docs/evidence/GAUSSIAN_SPLAT_QUEST_RUNTIME_SPIKE_2026-06-12.md`
+- `docs/evidence/PLAYABLE_SCENIC_SPLAT_DEMO_WITNESS_2026-06-13.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 
@@ -120,6 +122,14 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_runtime_20260612_2
 ```
 
 The v0.6c result is `quest_runtime_viable_small_scenic_patch` for synthetic static/background-style splat patches up to 100k splats on one Quest 3 test. It does not prove real airport captures, full-airport splats, production photorealism, or final Quest performance.
+
+The v0.7 playable scenic splat demo artifacts are under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\playable_splat_20260613_005918
+```
+
+The v0.7 scenic patch is procedural/project-owned and opt-in. It is not a real-world airport capture and does not replace the mesh airport.
 
 Run the deterministic simulator suite without the headset:
 
