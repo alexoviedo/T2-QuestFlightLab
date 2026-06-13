@@ -11,8 +11,8 @@
 ## Next Milestones
 
 1. Replace prototype aero/engine placeholders with better C172/C152 data and validated acceptance metrics.
-2. Expand cockpit/instrument layout from text placeholders toward inspectable analog/G1000-style training views.
-3. Expand checklist and lesson progression with source-backed normal procedures and debrief/replay evidence.
+2. Expand cockpit/instrument layout from generated text placeholders toward inspectable analog/G1000-style training views.
+3. Tighten the Basic Traffic Pattern Familiarization scaffold with source-backed normal procedures, stabilized approach criteria, go-around criteria, and replay evidence.
 4. Add sailplane aerotow, thermals, ridge lift, and towplane operations.
 5. Add dynamic wind/weather.
 6. Add instructor station, multiplayer, logbook, debrief, replay, airport database, and lesson syllabus.

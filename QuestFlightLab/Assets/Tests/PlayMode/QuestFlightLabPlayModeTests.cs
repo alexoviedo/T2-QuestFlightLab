@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using QuestFlightLab.Input;
 using QuestFlightLab.Runtime;
+using QuestFlightLab.TestHarness;
 using UnityEngine;
 
 namespace QuestFlightLab.Tests.PlayMode
@@ -40,6 +41,14 @@ namespace QuestFlightLab.Tests.PlayMode
             Assert.That(mapper.Current.leftToeBrake, Is.EqualTo(0.3f).Within(0.01f));
 
             Object.Destroy(go);
+        }
+
+        [Test]
+        public void CockpitInstrumentPanelPublishesRequiredUpdatedFields()
+        {
+            InstrumentVerificationSnapshot snapshot = InstrumentVerification.Capture();
+            Assert.That(snapshot.allRequiredPresent, Is.True, snapshot.summary);
+            Assert.That(snapshot.valuesUpdated, Is.True, snapshot.summary);
         }
     }
 }

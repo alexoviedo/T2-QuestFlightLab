@@ -1,21 +1,25 @@
 # Training Mode Scaffold
 
-v0.2 adds a small training/checklist scaffold for simulator structure. It is not a real curriculum and does not provide pilot-training credit.
+v0.4 expands the training scaffold from takeoff-only prompts into a Basic Traffic Pattern Familiarization prototype. It is not a real curriculum and does not provide pilot-training credit.
 
 ## Current Lesson
 
-`Basic Takeoff Familiarization`
+`Basic Traffic Pattern Familiarization`
 
-Steps:
+Phases:
 
-- Complete before-takeoff checklist placeholders.
+- Pre-takeoff checklist.
 - Line up on Runway 08/26 centerline.
-- Smooth full-throttle application.
-- Maintain centerline with rudder.
+- Takeoff roll.
 - Rotate near placeholder Vr.
-- Climb near placeholder Vy.
-- Maintain runway heading and positive climb.
-- After-takeoff cleanup placeholder.
+- Climb out / upwind.
+- Crosswind turn.
+- Downwind level-off / configure.
+- Abeam touchdown point / power reduction placeholder.
+- Base turn.
+- Final approach alignment.
+- Flare/touchdown or go-around placeholder.
+- After-landing/reset.
 
 ## Current Checklist
 
@@ -36,10 +40,25 @@ Current placeholder items:
 
 `TrainingModeController` can drive a lesson prompt area in the telemetry panel and evaluate basic simulator-state milestones. The current implementation is for scaffolding and automated-test visibility, not flight instruction.
 
-The v0.3 autonomous scenario runner verifies that the Basic Takeoff Familiarization lesson contains all required step ids and maps takeoff-related scenarios to the relevant lesson steps.
+The v0.4 autonomous scenario runner verifies that the Basic Traffic Pattern Familiarization lesson contains all required phase ids and maps scenario evidence to pattern phases.
+
+## Scoring And Debrief
+
+`LessonScoring` creates a deterministic prototype debrief with:
+
+- total score,
+- phase scores,
+- gate hits,
+- checklist misses,
+- heading/speed/altitude/bank deviations,
+- stall-warning counts,
+- warning list,
+- JSON and Markdown export.
+
+The score is useful for regression testing and simulator iteration. It is not a measure of real pilot proficiency.
 
 ## Future Work
 
 - Replace placeholders with aircraft-specific checklist data from approved source documents.
-- Add lesson scoring that distinguishes simulator task completion from real-world proficiency.
 - Add replay/debrief records once flight-state logging is stable.
+- Add source-backed normal-pattern procedures, stabilized approach criteria, go-around criteria, and instructor/replay review.

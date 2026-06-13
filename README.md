@@ -14,6 +14,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - Initial airport reference: approximate Boulder Municipal `KBDU`, powered Runway 08/26 only, not for navigation
 - v0.2 core path: deterministic Unity editor scenario runner plus PlayMode input-mapping probe so simulator changes can be tested without wearing the headset
 - v0.3 fidelity path: public C172-style reference targets, stronger deterministic flight scenarios, named cockpit/instrument verification, and Basic Takeoff Familiarization checklist evidence
+- v0.4 training path: expanded cockpit/training panel, Basic Traffic Pattern Familiarization scaffold, airport pattern gates, scored debrief reports, and 21-scenario autonomous evidence
 
 ## Build
 
@@ -68,11 +69,18 @@ Repo evidence notes:
 - `docs/evidence/USB2BLE_QUEST_XBOX_INPUT_WITNESS_2026-06-12.md`
 - `docs/evidence/FLIGHT_CORE_AUTONOMOUS_SIM_WITNESS_2026-06-12.md`
 - `docs/evidence/FLIGHT_MODEL_FIDELITY_AUTONOMOUS_WITNESS_2026-06-12.md`
+- `docs/evidence/TRAFFIC_PATTERN_AUTONOMOUS_WITNESS_2026-06-12.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 
 ```text
 C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_core_20260612_173102
+```
+
+Traffic-pattern autonomous evidence from the v0.4 cockpit/training pass is under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_pattern_20260612_194040
 ```
 
 Run the deterministic simulator suite without the headset:

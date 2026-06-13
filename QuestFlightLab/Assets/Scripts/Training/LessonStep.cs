@@ -13,6 +13,10 @@ namespace QuestFlightLab.Training
         public float airspeedToleranceKts;
         public float targetHeadingDeg;
         public float headingToleranceDeg;
+        public float targetAltitudeFt;
+        public float altitudeToleranceFt;
+        public float bankLimitDeg;
+        public float targetFlapDeg = -1f;
         public float minimumSeconds = 2f;
 
         public LessonStep() { }

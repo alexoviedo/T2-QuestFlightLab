@@ -22,8 +22,15 @@ namespace QuestFlightLab.UI
             "Instrument_Flaps",
             "Instrument_Trim",
             "Instrument_StallWarning",
+            "Instrument_Targets",
+            "Instrument_LessonFeedback",
             "Instrument_LessonChecklist",
-            "Instrument_ControlInput"
+            "Instrument_DebriefScore",
+            "Instrument_DebriefWarnings",
+            "Instrument_ControlInput",
+            "Instrument_YokeIndicator",
+            "Instrument_RudderPedals",
+            "Instrument_ToeBrakes"
         };
 
         public FlightTelemetry flightTelemetry;
@@ -44,11 +51,11 @@ namespace QuestFlightLab.UI
             if (existing != null) return existing;
 
             Transform parent = Camera.main != null ? Camera.main.transform : null;
-            GameObject panel = new GameObject("Cockpit Instrument Panel v0.3");
+            GameObject panel = new GameObject("Cockpit Instrument Panel v0.4");
             if (parent != null)
             {
                 panel.transform.SetParent(parent, false);
-                panel.transform.localPosition = new Vector3(-0.95f, -0.58f, 2.05f);
+                panel.transform.localPosition = new Vector3(-1.05f, -0.58f, 2.05f);
                 panel.transform.localRotation = Quaternion.identity;
             }
             else
@@ -77,17 +84,22 @@ namespace QuestFlightLab.UI
 
         private void Awake()
         {
-            if (_lines.Count == 0) BuildTextLines();
-            if (flightTelemetry == null) flightTelemetry = FindFirstObjectByType<FlightTelemetry>();
-            if (mapper == null) mapper = FindFirstObjectByType<Usb2BleInputMapper>();
-            if (trainingMode == null) trainingMode = FindFirstObjectByType<TrainingModeController>();
+            EnsureBindings();
         }
 
         private void Update()
         {
+            RefreshDisplay();
+        }
+
+        public void RefreshDisplay()
+        {
+            EnsureBindings();
             FlightTelemetrySnapshot f = flightTelemetry != null ? flightTelemetry.Current : new FlightTelemetrySnapshot();
             AircraftControlState c = mapper != null ? mapper.Current : AircraftControlState.Neutral();
             string lesson = trainingMode != null ? trainingMode.CurrentPrompt : "lesson scaffold idle";
+            string targets = trainingMode != null ? trainingMode.CurrentTargetSummary : "targets n/a";
+            string feedback = trainingMode != null ? trainingMode.LastEvaluation : "feedback n/a";
             string checklist = trainingMode != null && trainingMode.checklist != null
                 ? trainingMode.checklist.StatusSummary
                 : "checklist n/a";
@@ -103,8 +115,23 @@ namespace QuestFlightLab.UI
             Set("Instrument_Flaps", $"FLAPS {f.flapDegrees:00} deg");
             Set("Instrument_Trim", $"TRIM {c.trim,5:0.00}");
             Set("Instrument_StallWarning", $"STALL {(f.stallWarning ? "WARN" : "clear")} {f.stallIntensity:0.00}");
+            Set("Instrument_Targets", $"TARGET {targets}");
+            Set("Instrument_LessonFeedback", $"FEEDBACK {feedback}");
             Set("Instrument_LessonChecklist", $"TASK {lesson} / {checklist}");
+            Set("Instrument_DebriefScore", "DEBRIEF score pending scenario run");
+            Set("Instrument_DebriefWarnings", "WARNINGS none in live panel");
             Set("Instrument_ControlInput", $"CTL A {c.aileron:0.00} E {c.elevator:0.00} R {c.rudder:0.00}");
+            Set("Instrument_YokeIndicator", $"YOKE roll {c.aileron:0.00} pitch {c.elevator:0.00}");
+            Set("Instrument_RudderPedals", $"PEDALS rudder {c.rudder:0.00}");
+            Set("Instrument_ToeBrakes", $"BRAKES L {c.leftToeBrake:0.00} R {c.rightToeBrake:0.00}");
+        }
+
+        private void EnsureBindings()
+        {
+            if (_lines.Count == 0) BuildTextLines();
+            if (flightTelemetry == null) flightTelemetry = FindFirstObjectByType<FlightTelemetry>();
+            if (mapper == null) mapper = FindFirstObjectByType<Usb2BleInputMapper>();
+            if (trainingMode == null) trainingMode = FindFirstObjectByType<TrainingModeController>();
         }
 
         private void BuildTextLines()
@@ -112,9 +139,21 @@ namespace QuestFlightLab.UI
             _lines.Clear();
             for (int i = 0; i < RequiredInstrumentNames.Length; i++)
             {
-                TextMesh text = CreateLine(RequiredInstrumentNames[i], i);
+                TextMesh text = GetOrCreateLine(RequiredInstrumentNames[i], i);
                 _lines[RequiredInstrumentNames[i]] = text;
             }
+        }
+
+        private TextMesh GetOrCreateLine(string name, int index)
+        {
+            Transform child = transform.Find(name);
+            if (child != null && child.TryGetComponent(out TextMesh existing))
+            {
+                child.localPosition = new Vector3(0f, -index * 0.055f, 0f);
+                return existing;
+            }
+
+            return CreateLine(name, index);
         }
 
         private TextMesh CreateLine(string name, int index)
@@ -127,7 +166,7 @@ namespace QuestFlightLab.UI
             text.anchor = TextAnchor.UpperLeft;
             text.alignment = TextAlignment.Left;
             text.fontSize = 24;
-            text.characterSize = 0.018f;
+            text.characterSize = 0.016f;
             text.lineSpacing = 0.9f;
             text.color = new Color(0.78f, 0.95f, 0.78f);
             return text;

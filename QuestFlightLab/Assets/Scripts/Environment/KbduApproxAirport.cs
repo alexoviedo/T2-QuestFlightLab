@@ -16,6 +16,8 @@ namespace QuestFlightLab.Environment
             Material yellow = Material("Taxiway Yellow", new Color(0.95f, 0.72f, 0.08f));
             Material red = Material("Windsock Red", new Color(0.85f, 0.08f, 0.04f));
             Material blue = Material("Pattern Blue", new Color(0.1f, 0.35f, 0.8f));
+            Material green = Material("Pattern Gate Green", new Color(0.1f, 0.75f, 0.35f));
+            Material amber = Material("Pattern Reference Amber", new Color(1f, 0.62f, 0.08f));
 
             Cube(root.transform, "Terrain", new Vector3(0f, -0.04f, 0f), new Vector3(1800f, 0.08f, 1400f), grass);
             Cube(root.transform, "Runway_08_26_Approx_4100x75ft", new Vector3(0f, 0.015f, 0f), new Vector3(1250f, 0.03f, 23f), asphalt);
@@ -34,7 +36,7 @@ namespace QuestFlightLab.Environment
 
             AirportRuntimeEnhancer.AddRunwayMarkingEnhancements(root.transform, white, yellow);
             BuildWindsock(root.transform, new Vector3(-210f, 0f, -125f), red, white);
-            BuildPatternMarkers(root.transform, blue);
+            BuildPatternMarkers(root.transform, blue, green, amber);
             BuildFoothills(root.transform);
 
             return root;
@@ -57,11 +59,23 @@ namespace QuestFlightLab.Environment
             sock.GetComponent<Renderer>().sharedMaterial = red;
         }
 
-        private static void BuildPatternMarkers(Transform parent, Material material)
+        public static void BuildPatternMarkers(Transform parent, Material material, Material gateMaterial, Material referenceMaterial)
         {
             Cube(parent, "LeftDownwindMarker", new Vector3(0f, 90f, -430f), new Vector3(620f, 2f, 8f), material);
             Cube(parent, "BaseLegMarker08", new Vector3(-620f, 90f, -220f), new Vector3(8f, 2f, 320f), material);
             Cube(parent, "BaseLegMarker26", new Vector3(620f, 90f, -220f), new Vector3(8f, 2f, 320f), material);
+
+            Cube(parent, "PatternGate_Upwind_08", new Vector3(-300f, 150f, 25f), new Vector3(70f, 26f, 6f), gateMaterial);
+            Cube(parent, "PatternGate_Crosswind_08", new Vector3(-610f, 235f, -150f), new Vector3(6f, 34f, 88f), gateMaterial);
+            Cube(parent, "PatternGate_Downwind_Midfield", new Vector3(0f, 300f, -430f), new Vector3(115f, 36f, 8f), gateMaterial);
+            Cube(parent, "PatternGate_Abeam_Touchdown_08", new Vector3(-360f, 300f, -430f), new Vector3(90f, 36f, 8f), gateMaterial);
+            Cube(parent, "PatternGate_Base_08", new Vector3(-620f, 230f, -270f), new Vector3(8f, 34f, 92f), gateMaterial);
+            Cube(parent, "PatternGate_Final_08", new Vector3(-420f, 105f, 0f), new Vector3(78f, 30f, 7f), gateMaterial);
+            Cube(parent, "PatternAltitudeBandPlaceholder", new Vector3(0f, 305f, -430f), new Vector3(1250f, 4f, 18f), referenceMaterial);
+            Cube(parent, "TouchdownZoneMarker08", new Vector3(-470f, 0.09f, 0f), new Vector3(80f, 0.015f, 11f), referenceMaterial);
+            Cube(parent, "ApproachPathPlaceholder08", new Vector3(-550f, 18f, 0f), new Vector3(160f, 2f, 5f), referenceMaterial);
+            Cube(parent, "PatternBoxBoundaryNorth", new Vector3(0f, 85f, 255f), new Vector3(1240f, 3f, 6f), material);
+            Cube(parent, "PatternBoxBoundarySouth", new Vector3(0f, 85f, -560f), new Vector3(1240f, 3f, 6f), material);
         }
 
         private static void BuildFoothills(Transform parent)

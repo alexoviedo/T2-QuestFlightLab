@@ -28,6 +28,10 @@ Flight Sim Core v0.2 shifts the next proof path from headset bring-up to autonom
 
 Flight Model Fidelity v0.3 adds public C172-style reference targets, a more data-driven config, richer autonomous scenarios, named cockpit/instrument verification, stall warning/recovery evidence, and a stronger Basic Takeoff Familiarization scaffold.
 
+## v0.4 Traffic Pattern Direction
+
+Flight Sim Core v0.4 adds a more complete generated cockpit/training panel, Basic Traffic Pattern Familiarization scaffold, airport pattern gates/checkpoints, scored debrief reports, and 21-scenario autonomous evidence. This is still a deterministic training-quality prototype direction, not a validated instructional system.
+
 ## Claim Boundary
 
 This prototype is not FAA-approved training, not a BATD/AATD, not pilot-training credit, not a broad Quest compatibility claim, and not final C172 fidelity.

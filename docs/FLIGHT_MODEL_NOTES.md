@@ -4,6 +4,8 @@ v0.2 still uses a prototype C172-style approximation, but the model is now struc
 
 v0.3 adds a reference-target document and moves the runtime configuration toward named groups: `C172ReferenceSpeeds`, `AeroCoefficients`, `EnginePropModelConfig`, `ControlStabilityConfig`, `LandingGearConfig`, and `TrainingReferenceTargets`.
 
+v0.4 keeps the physics changes targeted: the deterministic pattern profile now supports a longer climb-out, shallower pattern turns, staged flap/power placeholders, and reset/retry evidence. It does not attempt a large aerodynamic rewrite.
+
 See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 
 ## Approximate Seed Constants
@@ -36,7 +38,7 @@ See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 
 ## Acceptance Metrics
 
-The autonomous scenario runner currently checks 14 scenarios:
+The v0.4 autonomous scenario runner checks 21 scenarios:
 
 - preflight neutral initialization
 - before-takeoff checklist state
@@ -52,8 +54,15 @@ The autonomous scenario runner currently checks 14 scenarios:
 - stall recovery
 - pattern leg heading-change placeholder
 - runway reset
+- Basic Traffic Pattern Familiarization
+- traffic pattern phase progression
+- traffic pattern scoring/debrief
+- instrument/UI verification
+- lesson panel prompt update
+- airport gate/checkpoint verification
+- pattern reset/retry
 
-The 2026-06-12 v0.3 run passed all 14 editor scenarios. This proves deterministic simulator behavior in the Unity editor only. It does not prove final C172 fidelity, real Quest runtime behavior, USB2BLE hardware behavior, or training suitability.
+The 2026-06-12 v0.4 run passed all 21 editor scenarios. This proves deterministic simulator behavior in the Unity editor only. It does not prove final C172 fidelity, real Quest runtime behavior, USB2BLE hardware behavior, or training suitability.
 
 ## Needed For Serious Fidelity
 

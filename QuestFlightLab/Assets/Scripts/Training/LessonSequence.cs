@@ -29,5 +29,10 @@ namespace QuestFlightLab.Training
                 }
             };
         }
+
+        public static LessonSequence BasicTrafficPatternFamiliarization()
+        {
+            return TrafficPatternLesson.BuildLessonSequence();
+        }
     }
 }

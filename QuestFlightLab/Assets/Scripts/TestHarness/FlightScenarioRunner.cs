@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using QuestFlightLab.Flight;
 using QuestFlightLab.Runtime;
+using QuestFlightLab.Training;
 using UnityEngine;
 
 namespace QuestFlightLab.TestHarness
@@ -16,12 +17,12 @@ namespace QuestFlightLab.TestHarness
                 unityVersion = Application.unityVersion,
                 metaXrSimulatorStatus = metaXrSimulatorStatus,
                 fixedTimeStepSeconds = 1f / 72f,
-                suiteName = "Flight Model Fidelity v0.3 Autonomous Scenario Suite",
+                suiteName = "Flight Sim Core v0.4 Cockpit + Traffic Pattern Scenario Suite",
                 limitations =
                 {
                     "Editor scenario runner does not prove Quest Bluetooth, USB2BLE hardware, or headset runtime behavior.",
                     "Flight dynamics are a prototype C172-style approximation, not validated C172 fidelity.",
-                    "Training prompts are a scaffold and do not provide real pilot-training credit.",
+                    "Traffic-pattern training prompts and scoring are prototype scaffolds and do not provide real pilot-training credit.",
                     "Gaussian splat rendering is not part of this simulator evidence."
                 }
             };
@@ -57,6 +58,16 @@ namespace QuestFlightLab.TestHarness
             };
             result.instrumentVerification = InstrumentVerification.Capture();
             result.trainingVerification = TrainingVerification.Capture(definition.id);
+            result.airportPatternVerification = definition.requiresAirportPatternVerification
+                ? AirportPatternVerification.Capture()
+                : new AirportPatternVerificationSnapshot
+                {
+                    airportRootPresent = true,
+                    allRequiredReferencesPresent = true,
+                    requiredCount = 0,
+                    presentCount = 0,
+                    summary = "not required for this scenario"
+                };
 
             GameObject aircraft = new GameObject($"ScenarioAircraft_{definition.id}");
             AircraftState state = aircraft.AddComponent<AircraftState>();
@@ -74,7 +85,10 @@ namespace QuestFlightLab.TestHarness
             for (int i = 0; i <= steps; i++)
             {
                 float t = i * definition.timeStepSeconds;
-                if (definition.id == "runway_reset" && t >= definition.durationSeconds * 0.55f && t < definition.durationSeconds * 0.55f + definition.timeStepSeconds)
+                bool resetWindow = (definition.id == "runway_reset" || definition.id == "pattern_reset_retry")
+                                   && t >= definition.durationSeconds * 0.55f
+                                   && t < definition.durationSeconds * 0.55f + definition.timeStepSeconds;
+                if (resetWindow)
                 {
                     physics.ResetToRunway();
                 }
@@ -86,6 +100,14 @@ namespace QuestFlightLab.TestHarness
                 {
                     recorder.AddSample(BuildSample(t, controls, state));
                 }
+            }
+
+            if (definition.requiresDebrief || definition.isTrafficPatternScenario)
+            {
+                result.debriefReport = LessonScoring.ScoreTrafficPattern(
+                    definition.id,
+                    BuildScoringSamples(result),
+                    definition.markChecklistComplete);
             }
 
             EvaluatePass(definition, result);
@@ -191,10 +213,21 @@ namespace QuestFlightLab.TestHarness
                 "stall_recovery" => s.stallWarningObserved && result.samples.Count > 0 && !result.samples[^1].flight.stallWarning && result.samples[^1].flight.airspeedKts > 45f && s.minAltitudeFt > 1200f,
                 "pattern_leg_heading_change" => HeadingSpan(s) > 20f && Mathf.Max(Mathf.Abs(s.minBankDeg), Mathf.Abs(s.maxBankDeg)) < 35f && s.minAltitudeFt > 850f,
                 "runway_reset" => s.maxGroundRollMeters > 0f && result.samples.Count > 0 && result.samples[^1].flight.onGround,
+                "basic_traffic_pattern_full" => result.debriefReport.passed && result.debriefReport.totalScore >= 70f && s.maxAirspeedKts > 55f && s.maxGroundRollMeters > 120f && result.airportPatternVerification.allRequiredReferencesPresent,
+                "traffic_pattern_phase_progression" => result.debriefReport.phaseScores.Count >= 12 && result.debriefReport.gateHitCount >= 7 && result.debriefReport.totalScore >= 62f,
+                "traffic_pattern_scoring_debrief" => result.debriefReport.phaseScores.Count >= 12 && result.debriefReport.totalScore >= 60f && !string.IsNullOrEmpty(result.debriefReport.summary),
+                "instrument_ui_verification" => result.instrumentVerification.allRequiredPresent && result.instrumentVerification.valuesUpdated,
+                "lesson_panel_prompt_update" => result.trainingVerification.allRequiredStepsPresent && result.instrumentVerification.valuesUpdated,
+                "airport_gate_checkpoint_verification" => result.airportPatternVerification.allRequiredReferencesPresent,
+                "pattern_reset_retry" => result.samples.Count > 0 && result.samples[^1].flight.onGround && result.debriefReport.phaseScores.Count >= 12,
                 _ => false
             };
 
-            pass = pass && result.instrumentVerification.allRequiredPresent && result.trainingVerification.allRequiredStepsPresent;
+            pass = pass
+                   && result.instrumentVerification.allRequiredPresent
+                   && result.instrumentVerification.valuesUpdated
+                   && result.trainingVerification.allRequiredStepsPresent
+                   && result.airportPatternVerification.allRequiredReferencesPresent;
 
             reasons.Add($"initial/final speed {s.initialAirspeedKts:0.0}/{s.finalAirspeedKts:0.0} kt");
             reasons.Add($"speed {s.minAirspeedKts:0.0}-{s.maxAirspeedKts:0.0} kt");
@@ -207,6 +240,14 @@ namespace QuestFlightLab.TestHarness
             reasons.Add($"stall {(s.stallWarningObserved ? $"observed x{s.stallWarningSamples} at {s.stallWarningOnsetSeconds:0.0}s" : "not observed")}");
             reasons.Add($"instruments {result.instrumentVerification.summary}");
             reasons.Add($"training {result.trainingVerification.summary}");
+            if (definition.requiresAirportPatternVerification)
+            {
+                reasons.Add($"airport {result.airportPatternVerification.summary}");
+            }
+            if (definition.requiresDebrief || definition.isTrafficPatternScenario)
+            {
+                reasons.Add($"debrief {result.debriefReport.summary}");
+            }
 
             result.passed = pass;
             result.passReason = string.Join("; ", reasons);
@@ -219,6 +260,22 @@ namespace QuestFlightLab.TestHarness
         private static float HeadingSpan(FlightScenarioStats stats)
         {
             return Mathf.Abs(Mathf.DeltaAngle(stats.minHeadingDeg, stats.maxHeadingDeg));
+        }
+
+        private static List<PatternScoringSample> BuildScoringSamples(FlightScenarioResult result)
+        {
+            List<PatternScoringSample> samples = new List<PatternScoringSample>();
+            foreach (FlightScenarioSample sample in result.samples)
+            {
+                samples.Add(new PatternScoringSample
+                {
+                    timestamp = sample.timestamp,
+                    controls = sample.controls,
+                    flight = sample.flight
+                });
+            }
+
+            return samples;
         }
     }
 }

@@ -23,17 +23,21 @@ namespace QuestFlightLab.TestHarness
         {
             "before_takeoff",
             "line_up",
-            "smooth_throttle",
-            "maintain_centerline",
-            "rotate",
-            "climb_vy",
-            "maintain_runway_heading",
-            "after_takeoff_cleanup"
+            "takeoff_roll",
+            "rotate_vr",
+            "upwind_climb",
+            "crosswind_turn",
+            "downwind_level_configure",
+            "abeam_power_reduction",
+            "base_turn",
+            "final_alignment",
+            "flare_or_go_around",
+            "after_landing_reset"
         };
 
         public static TrainingVerificationSnapshot Capture(string scenarioId)
         {
-            LessonSequence lesson = LessonSequence.BasicTakeoffFamiliarization();
+            LessonSequence lesson = LessonSequence.BasicTrafficPatternFamiliarization();
             HashSet<string> available = new HashSet<string>(lesson.steps.Select(step => step.id));
             List<string> missing = RequiredStepIds.Where(id => !available.Contains(id)).ToList();
             string matched = MapScenarioToStep(scenarioId);
@@ -57,10 +61,14 @@ namespace QuestFlightLab.TestHarness
             return scenarioId switch
             {
                 "before_takeoff_checklist" => "before_takeoff",
-                "takeoff_roll_to_vr" => "smooth_throttle",
-                "rotation_climb_to_altitude" => "rotate",
-                "vy_climb_stabilization" => "climb_vy",
-                "pattern_leg_heading_change" => "maintain_runway_heading",
+                "traffic_pattern_phase_progression" => "crosswind_turn",
+                "traffic_pattern_scoring_debrief" => "final_alignment",
+                "basic_traffic_pattern_full" => "basic_traffic_pattern",
+                "lesson_panel_prompt_update" => "downwind_level_configure",
+                "takeoff_roll_to_vr" => "takeoff_roll",
+                "rotation_climb_to_altitude" => "rotate_vr",
+                "vy_climb_stabilization" => "upwind_climb",
+                "pattern_leg_heading_change" => "crosswind_turn",
                 _ => "not lesson-gated"
             };
         }

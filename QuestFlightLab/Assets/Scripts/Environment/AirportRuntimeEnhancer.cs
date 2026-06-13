@@ -8,12 +8,25 @@ namespace QuestFlightLab.Environment
         public static void EnhanceExistingScene()
         {
             GameObject root = GameObject.Find("KBDU_Approx_Airport_NotForNavigation");
-            if (root == null || root.transform.Find("RunwayEdgeLineLeft") != null) return;
+            if (root == null) return;
 
             Material white = KbduApproxAirport.Material("Runway White Runtime", new Color(0.9f, 0.9f, 0.86f));
             Material yellow = KbduApproxAirport.Material("Taxiway Yellow Runtime", new Color(0.95f, 0.72f, 0.08f));
-            AddRunwayMarkingEnhancements(root.transform, white, yellow);
-            AddAirportLabels(root.transform, white);
+            Material blue = KbduApproxAirport.Material("Pattern Blue Runtime", new Color(0.1f, 0.35f, 0.8f));
+            Material green = KbduApproxAirport.Material("Pattern Gate Green Runtime", new Color(0.1f, 0.75f, 0.35f));
+            Material amber = KbduApproxAirport.Material("Pattern Reference Amber Runtime", new Color(1f, 0.62f, 0.08f));
+            if (root.transform.Find("RunwayEdgeLineLeft") == null)
+            {
+                AddRunwayMarkingEnhancements(root.transform, white, yellow);
+            }
+            if (root.transform.Find("PatternGate_Upwind_08") == null)
+            {
+                KbduApproxAirport.BuildPatternMarkers(root.transform, blue, green, amber);
+            }
+            if (root.transform.Find("AirportLabel") == null)
+            {
+                AddAirportLabels(root.transform, white);
+            }
             if (root.GetComponent<AirportDebugLabelToggle>() == null)
             {
                 root.AddComponent<AirportDebugLabelToggle>();
@@ -41,6 +54,7 @@ namespace QuestFlightLab.Environment
             CreateLabel(root, "AirportLabel", "KBDU APPROX - NOT FOR NAVIGATION", new Vector3(-500f, 8f, -118f), material, 8f);
             CreateLabel(root, "Runway08Label", "08", new Vector3(-555f, 1.2f, 15f), material, 5f);
             CreateLabel(root, "Runway26Label", "26", new Vector3(535f, 1.2f, -18f), material, 5f);
+            CreateLabel(root, "PatternGateLabel", "TRAINING PATTERN GATES - APPROX", new Vector3(-210f, 95f, -470f), material, 6f);
         }
 
         private static void CreateLabel(Transform root, string name, string text, Vector3 position, Material material, float characterSize)

@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
+using QuestFlightLab.Training;
 using UnityEngine;
 
 namespace QuestFlightLab.TestHarness
@@ -12,13 +14,23 @@ namespace QuestFlightLab.TestHarness
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, "scenario_results.json"), JsonUtility.ToJson(suite, true));
             File.WriteAllText(Path.Combine(directory, "scenario_results.csv"), BuildScenarioCsv(suite));
-            File.WriteAllText(Path.Combine(directory, "flight_core_summary.md"), BuildSummaryMarkdown(suite));
+            string summary = BuildSummaryMarkdown(suite);
+            File.WriteAllText(Path.Combine(directory, "flight_core_summary.md"), summary);
+            File.WriteAllText(Path.Combine(directory, "flight_pattern_summary.md"), summary);
+
+            FlightScenarioResult debriefScenario = suite.scenarios.FirstOrDefault(s => s.id == "basic_traffic_pattern_full")
+                                                  ?? suite.scenarios.FirstOrDefault(s => s.debriefReport != null && s.debriefReport.phaseScores.Count > 0);
+            if (debriefScenario != null)
+            {
+                File.WriteAllText(Path.Combine(directory, "debrief_report.json"), JsonUtility.ToJson(debriefScenario.debriefReport, true));
+                File.WriteAllText(Path.Combine(directory, "debrief_report.md"), LessonScoring.BuildMarkdown(debriefScenario.debriefReport));
+            }
         }
 
         private static string BuildScenarioCsv(FlightScenarioSuiteResult suite)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("id,name,passed,initial_airspeed_kts,final_airspeed_kts,max_airspeed_kts,altitude_delta_ft,max_altitude_ft,heading_change_deg,max_vsi_fpm,min_pitch_deg,max_pitch_deg,min_bank_deg,max_bank_deg,max_flap_deg,stall_warning_count,stall_onset_s,max_stall_intensity,max_reference_speed_error_abs_kts,instruments_present,training_steps_present,max_ground_roll_m,max_runway_offset_abs_m,reason");
+            sb.AppendLine("id,name,passed,initial_airspeed_kts,final_airspeed_kts,max_airspeed_kts,altitude_delta_ft,max_altitude_ft,heading_change_deg,max_vsi_fpm,min_pitch_deg,max_pitch_deg,min_bank_deg,max_bank_deg,max_flap_deg,stall_warning_count,stall_onset_s,max_stall_intensity,max_reference_speed_error_abs_kts,instruments_present,training_steps_present,airport_refs_present,debrief_score,debrief_phases,debrief_warnings,max_ground_roll_m,max_runway_offset_abs_m,reason");
             foreach (FlightScenarioResult r in suite.scenarios)
             {
                 FlightScenarioStats s = r.stats;
@@ -43,6 +55,10 @@ namespace QuestFlightLab.TestHarness
                     .Append(F(s.maxReferenceSpeedErrorAbsKts)).Append(',')
                     .Append(r.instrumentVerification.allRequiredPresent).Append(',')
                     .Append(r.trainingVerification.allRequiredStepsPresent).Append(',')
+                    .Append(r.airportPatternVerification.allRequiredReferencesPresent).Append(',')
+                    .Append(F(r.debriefReport != null ? r.debriefReport.totalScore : 0f)).Append(',')
+                    .Append(r.debriefReport != null ? r.debriefReport.completedPhases : 0).Append(',')
+                    .Append(r.debriefReport != null ? r.debriefReport.warnings.Count : 0).Append(',')
                     .Append(F(s.maxGroundRollMeters)).Append(',')
                     .Append(F(s.maxRunwayOffsetAbsMeters)).Append(',')
                     .Append(Escape(r.passReason)).AppendLine();
@@ -53,7 +69,7 @@ namespace QuestFlightLab.TestHarness
         private static string BuildSummaryMarkdown(FlightScenarioSuiteResult suite)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("# Flight Core Autonomous Scenario Summary");
+            sb.AppendLine("# Flight Pattern Autonomous Scenario Summary");
             sb.AppendLine();
             sb.AppendLine($"Started UTC: {suite.startedUtc}");
             sb.AppendLine($"Unity: {suite.unityVersion}");
@@ -61,8 +77,8 @@ namespace QuestFlightLab.TestHarness
             sb.AppendLine($"Meta XR Simulator: {suite.metaXrSimulatorStatus}");
             sb.AppendLine($"Result: {suite.passedCount}/{suite.scenarioCount} scenarios passed");
             sb.AppendLine();
-            sb.AppendLine("| Scenario | Pass | Speed | Alt Delta | Heading | Instruments | Training |");
-            sb.AppendLine("| --- | --- | --- | --- | --- | --- | --- |");
+            sb.AppendLine("| Scenario | Pass | Speed | Alt Delta | Heading | Instruments | Training | Airport | Debrief |");
+            sb.AppendLine("| --- | --- | --- | --- | --- | --- | --- | --- | --- |");
             foreach (FlightScenarioResult r in suite.scenarios)
             {
                 FlightScenarioStats s = r.stats;
@@ -80,6 +96,10 @@ namespace QuestFlightLab.TestHarness
                     .Append(r.instrumentVerification.allRequiredPresent ? "PASS" : "FAIL")
                     .Append(" | ")
                     .Append(r.trainingVerification.allRequiredStepsPresent ? "PASS" : "FAIL")
+                    .Append(" | ")
+                    .Append(r.airportPatternVerification.allRequiredReferencesPresent ? "PASS" : "FAIL")
+                    .Append(" | ")
+                    .Append(r.debriefReport != null && r.debriefReport.phaseScores.Count > 0 ? $"{r.debriefReport.totalScore:0}" : "n/a")
                     .AppendLine(" |");
             }
             sb.AppendLine();

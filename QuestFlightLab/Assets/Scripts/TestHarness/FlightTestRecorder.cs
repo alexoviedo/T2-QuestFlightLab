@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using QuestFlightLab.Runtime;
+using QuestFlightLab.Training;
 
 namespace QuestFlightLab.TestHarness
 {
@@ -77,6 +78,8 @@ namespace QuestFlightLab.TestHarness
         public FlightScenarioStats stats = new FlightScenarioStats();
         public InstrumentVerificationSnapshot instrumentVerification = new InstrumentVerificationSnapshot();
         public TrainingVerificationSnapshot trainingVerification = new TrainingVerificationSnapshot();
+        public AirportPatternVerificationSnapshot airportPatternVerification = new AirportPatternVerificationSnapshot();
+        public DebriefReport debriefReport = new DebriefReport();
         public List<string> warnings = new List<string>();
         public List<string> errors = new List<string>();
         public List<FlightScenarioSample> samples = new List<FlightScenarioSample>();

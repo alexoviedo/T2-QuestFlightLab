@@ -18,3 +18,16 @@ The scene represents powered Runway 08/26, an apron, a taxiway, a windsock, and 
 The generated mesh fallback remains the implementation path. Runtime helpers add clearer runway 08/26 markings, threshold bars, edge lines, hold-short bars, airport/debug labels, windsock, apron/taxiway geometry, traffic-pattern markers, and a runway reset/start reference.
 
 v0.3 adds a runtime toggle component for debug labels so training runs can hide or show approximate airport labels. The layout is approximate and intentionally lightweight. It is suitable for simulator iteration and input/flight-state testing, not for navigation or airport procedure training.
+
+## v0.4 Pattern Training References
+
+v0.4 adds lightweight generated references for the Basic Traffic Pattern Familiarization scaffold:
+
+- upwind, crosswind, downwind, abeam, base, and final gates,
+- pattern-altitude band placeholder,
+- touchdown-zone marker,
+- approach-path/PAPI-style placeholder,
+- pattern-box boundary markers,
+- airport label noting the scene is approximate and not for navigation.
+
+These objects support autonomous verification and visual orientation only. They are not charted KBDU geometry and are not suitable for real airport procedures.

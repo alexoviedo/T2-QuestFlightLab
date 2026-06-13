@@ -33,9 +33,14 @@ The runner writes:
 - `scenario_results.json`
 - `scenario_results.csv`
 - `flight_core_summary.md`
+- `flight_pattern_summary.md`
+- `debrief_report.json`
+- `debrief_report.md`
 - `unity_editor_scenario_tests.log`
 
 For v0.3 the scenario evidence also includes instrument/cockpit verification, training/checklist verification, stall warning count/onset, initial/final airspeed, altitude delta, heading change, and reference-speed error metrics.
+
+For v0.4 the scenario evidence also includes traffic-pattern phase scoring, debrief warnings, airport/pattern reference verification, lesson prompt verification, and instrument value-refresh verification.
 
 The supplemental PlayMode probe is:
 
@@ -76,3 +81,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_fidelity_20260612
 ```
 
 This folder contains the v0.3 implementation review, Unity scenario runner logs, scenario JSON/CSV/summary, PlayMode XML, Android build logs, and APK hash evidence.
+
+## 2026-06-12 Traffic Pattern Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_pattern_20260612_194040
+```
+
+This folder contains the v0.4 implementation review, Unity scenario runner logs, scenario JSON/CSV/summary, traffic-pattern debrief JSON/Markdown, PlayMode XML, Android build logs, and APK hash evidence.
