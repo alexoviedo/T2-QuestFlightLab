@@ -40,7 +40,7 @@ namespace QuestFlightLab.UI
             FlightTelemetrySnapshot f = flightTelemetry != null ? flightTelemetry.Current : new FlightTelemetrySnapshot();
 
             _buffer.Clear();
-            _buffer.AppendLine("QUEST FLIGHT INPUT LAB v0.2 CORE");
+            _buffer.AppendLine("QUEST FLIGHT INPUT LAB v0.3 FIDELITY");
             _buffer.AppendLine("Gamepad input + deterministic simulator harness");
             _buffer.AppendLine();
             _buffer.AppendLine(g.connected
@@ -63,6 +63,7 @@ namespace QuestFlightLab.UI
             _buffer.AppendLine();
             _buffer.AppendLine($"Airspeed {f.airspeedKts,6:F1} kt  Alt {f.altitudeFt,7:F0} ft  VSI {f.verticalSpeedFpm,7:F0} fpm");
             _buffer.AppendLine($"HDG {f.headingDeg,6:F0}  Pitch {f.pitchDeg,6:F1}  Bank {f.bankDeg,6:F1}  AoA {f.angleOfAttackDeg,6:F1}");
+            _buffer.AppendLine($"Ref {f.referenceSpeedKts,5:F0} kt  Err {f.targetSpeedErrorKts,6:F1} kt  Slip {f.slipSkid,5:F2}  Stall {f.stallIntensity,4:F2}");
             _buffer.AppendLine($"FPS {f.fps,5:F0}  G {f.loadFactorG,4:F2}  Stall warning: {(f.stallWarning ? "ON" : "off")}  Ground: {(f.onGround ? "yes" : "no")}");
             _buffer.AppendLine($"Ground roll {f.groundRollMeters,6:F0} m  Runway offset {f.runwayLateralOffsetMeters,6:F1} m");
             if (trainingMode != null)

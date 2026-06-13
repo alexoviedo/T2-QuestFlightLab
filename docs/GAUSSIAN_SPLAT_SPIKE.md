@@ -27,3 +27,5 @@ Deferred during the 2026-06-12 build/device bring-up because Unity activation, A
 For the v0.2 flight-core chunk, splats remained deferred because the priority was autonomous simulator testing, C172-style dynamics, and build stability. No Unity/Quest splat package was added, no large assets were imported, and no splat viability claim is made.
 
 The optimized mesh/terrain fallback is still the implementation path.
+
+v0.3 did not attempt a splat package/sample because the priority was C172-style reference targets, instruments, training evidence, and a green Android build. Splats remain experimental and should be revisited only after the simulator core has stronger repeatable metrics.

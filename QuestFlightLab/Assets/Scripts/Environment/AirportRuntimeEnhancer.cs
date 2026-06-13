@@ -14,6 +14,10 @@ namespace QuestFlightLab.Environment
             Material yellow = KbduApproxAirport.Material("Taxiway Yellow Runtime", new Color(0.95f, 0.72f, 0.08f));
             AddRunwayMarkingEnhancements(root.transform, white, yellow);
             AddAirportLabels(root.transform, white);
+            if (root.GetComponent<AirportDebugLabelToggle>() == null)
+            {
+                root.AddComponent<AirportDebugLabelToggle>();
+            }
         }
 
         public static void AddRunwayMarkingEnhancements(Transform root, Material white, Material yellow)
@@ -52,6 +56,38 @@ namespace QuestFlightLab.Environment
             mesh.characterSize = characterSize;
             mesh.fontSize = 32;
             mesh.color = material.color;
+        }
+    }
+
+    public class AirportDebugLabelToggle : MonoBehaviour
+    {
+        public bool debugLabelsVisible = true;
+
+        private bool _lastState;
+
+        private void Awake()
+        {
+            _lastState = !debugLabelsVisible;
+            ApplyIfChanged();
+        }
+
+        private void Update()
+        {
+            ApplyIfChanged();
+        }
+
+        private void ApplyIfChanged()
+        {
+            if (_lastState == debugLabelsVisible) return;
+            _lastState = debugLabelsVisible;
+
+            foreach (TextMesh label in GetComponentsInChildren<TextMesh>(true))
+            {
+                if (label.name.Contains("Label"))
+                {
+                    label.gameObject.SetActive(debugLabelsVisible);
+                }
+            }
         }
     }
 }

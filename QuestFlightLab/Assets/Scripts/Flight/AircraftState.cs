@@ -14,6 +14,10 @@ namespace QuestFlightLab.Flight
         public float pitchDeg;
         public float bankDeg;
         public float angleOfAttackDeg;
+        public float stallIntensity;
+        public float slipSkid;
+        public float referenceSpeedKts;
+        public float targetSpeedErrorKts;
         public float engineRpm;
         public float powerPercent;
         public float flapDegrees;
@@ -29,6 +33,10 @@ namespace QuestFlightLab.Flight
             velocityWorld = velocity;
             angularVelocityDeg = Vector3.zero;
             stallWarning = false;
+            stallIntensity = 0f;
+            slipSkid = 0f;
+            referenceSpeedKts = 0f;
+            targetSpeedErrorKts = 0f;
             onGround = true;
             engineRpm = 0f;
             powerPercent = 0f;

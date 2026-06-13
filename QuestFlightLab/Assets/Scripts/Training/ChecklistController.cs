@@ -9,16 +9,16 @@ namespace QuestFlightLab.Training
         public List<ChecklistItem> beforeTakeoff = new List<ChecklistItem>();
 
         public bool IsComplete => beforeTakeoff.Count > 0 && beforeTakeoff.All(item => item.completed);
+        public string StatusSummary => $"{beforeTakeoff.Count(item => item.completed)}/{beforeTakeoff.Count} before-takeoff items";
 
         private void Awake()
         {
             if (beforeTakeoff.Count == 0)
             {
-                beforeTakeoff.Add(new ChecklistItem("Flight controls free and correct placeholder"));
-                beforeTakeoff.Add(new ChecklistItem("Trim set for takeoff placeholder"));
-                beforeTakeoff.Add(new ChecklistItem("Flaps set for takeoff placeholder"));
-                beforeTakeoff.Add(new ChecklistItem("Mixture rich placeholder"));
-                beforeTakeoff.Add(new ChecklistItem("Carb heat cold placeholder"));
+                foreach (string label in DefaultBeforeTakeoffItemLabels())
+                {
+                    beforeTakeoff.Add(new ChecklistItem(label));
+                }
             }
         }
 
@@ -26,8 +26,23 @@ namespace QuestFlightLab.Training
         {
             foreach (ChecklistItem item in beforeTakeoff)
             {
-                item.completed = true;
+                item.SetCompleted(true);
             }
+        }
+
+        public static string[] DefaultBeforeTakeoffItemLabels()
+        {
+            return new[]
+            {
+                "Flight controls free and correct placeholder",
+                "Elevator trim set for takeoff placeholder",
+                "Flaps set for takeoff placeholder",
+                "Mixture rich placeholder",
+                "Carb heat cold placeholder",
+                "Engine instruments in green placeholder",
+                "Doors/windows secure placeholder",
+                "Runway heading and departure plan briefed placeholder"
+            };
         }
     }
 }

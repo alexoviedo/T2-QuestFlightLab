@@ -12,7 +12,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_editor_scenario_tests.ps1
 
 This launches Unity batchmode, executes `QuestFlightLab.Editor.FlightCoreBatchRunner.RunDefaultScenarios`, and writes JSON, CSV, markdown, and Unity logs to a setup artifact folder.
 
-The current suite covers neutral controls, control sweep, taxi/brake, takeoff roll, rotation/climb, shallow turns, rudder yaw, flap deployment, trim, stall warning, and runway reset.
+The current v0.3 suite covers preflight neutral initialization, before-takeoff checklist state, taxi/brake, takeoff roll to Vr, rotation/climb, Vy climb stabilization, shallow turns, rudder yaw, flap deployment, trim, slow-flight/stall warning onset, stall recovery, pattern heading-change placeholder, and runway reset.
+
+Each scenario exports initial/final speed, altitude delta, heading change, pitch/bank extrema, stall warning count/onset, control ranges, instrument verification, and training scaffold verification.
 
 ## Supplemental PlayMode Probe
 
@@ -34,6 +36,7 @@ Meta XR Simulator was not detected in the Unity editor domain during the 2026-06
 - Deterministic gamepad-like controls can drive the same aircraft-control data path.
 - The prototype flight model responds consistently across scripted scenarios.
 - Scenario telemetry and pass/fail evidence can be generated without the headset.
+- The named cockpit instrument panel objects and Basic Takeoff Familiarization scaffold are present in the autonomous evidence path.
 
 ## What This Does Not Prove
 

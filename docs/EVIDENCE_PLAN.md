@@ -35,6 +35,8 @@ The runner writes:
 - `flight_core_summary.md`
 - `unity_editor_scenario_tests.log`
 
+For v0.3 the scenario evidence also includes instrument/cockpit verification, training/checklist verification, stall warning count/onset, initial/final airspeed, altitude delta, heading change, and reference-speed error metrics.
+
 The supplemental PlayMode probe is:
 
 ```powershell
@@ -66,3 +68,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_core_20260612_173
 ```
 
 This folder contains deterministic Unity editor scenario evidence, PlayMode Test Runner XML, Unity logs, Android build logs, the scenario CSV/JSON, and the v0.2 flight-core summary.
+
+## 2026-06-12 Flight Fidelity Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_fidelity_20260612_185938
+```
+
+This folder contains the v0.3 implementation review, Unity scenario runner logs, scenario JSON/CSV/summary, PlayMode XML, Android build logs, and APK hash evidence.

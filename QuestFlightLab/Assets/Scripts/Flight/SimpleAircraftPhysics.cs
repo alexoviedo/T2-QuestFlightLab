@@ -77,7 +77,13 @@ namespace QuestFlightLab.Flight
             if (dt <= 0f) return;
             c ??= AircraftControlState.Neutral();
 
-            float mass = Mathf.Max(1f, config.massKg);
+            C172ReferenceSpeeds speeds = config.Speeds;
+            AeroCoefficients aero = config.Aero;
+            EnginePropModelConfig engine = config.Engine;
+            ControlStabilityConfig control = config.Control;
+            LandingGearConfig gear = config.Gear;
+
+            float mass = Mathf.Max(1f, speeds.maxGrossWeightKg > 0f ? speeds.maxGrossWeightKg : config.massKg);
             float speed = _velocityWorld.magnitude;
             Vector3 localVelocity = transform.InverseTransformDirection(_velocityWorld);
             float forwardSpeed = Mathf.Max(0.1f, Mathf.Abs(localVelocity.z));
@@ -85,25 +91,33 @@ namespace QuestFlightLab.Flight
             float aoaDeg = aoaRad * Mathf.Rad2Deg;
             float flapDeg = GetFlapDegrees(c.flaps);
             float flapFraction = Mathf.InverseLerp(0f, 30f, flapDeg);
-            float trim = Mathf.Clamp(c.trim, -config.maxTrim, config.maxTrim);
+            float trim = Mathf.Clamp(c.trim, -control.maxTrim, control.maxTrim);
             float effectiveAoADeg = aoaDeg
-                                    + c.elevator * config.elevatorAoAAuthorityDeg
-                                    + trim * config.trimAoAAuthorityDeg;
+                                    + c.elevator * control.elevatorAoAAuthorityDeg
+                                    + trim * control.trimAoAAuthorityDeg;
 
-            float q = 0.5f * config.airDensityKgM3 * speed * speed;
+            float q = 0.5f * aero.airDensityKgM3 * speed * speed;
             float liftCoefficient = ComputeLiftCoefficient(effectiveAoADeg, flapFraction, out bool stalledByAoA);
-            float stallKts = Mathf.Lerp(config.stallSpeedCleanKts, config.stallSpeedLandingKts, flapFraction);
-            bool stall = state.airspeedKts > 8f && (state.airspeedKts < stallKts * 0.96f || stalledByAoA);
-            if (stall) liftCoefficient *= config.postStallLiftMultiplier;
+            float stallKts = Mathf.Lerp(speeds.stallCleanKts, speeds.stallLandingKts, flapFraction);
+            bool evaluateStall = !state.onGround || transform.position.y > groundHeightMeters + 0.5f;
+            bool lowSpeedWarning = evaluateStall && state.airspeedKts > 8f && state.airspeedKts < stallKts + aero.stallWarningSpeedMarginKts;
+            bool aoaWarning = evaluateStall && effectiveAoADeg > aero.stallWarningAoADeg;
+            bool stall = evaluateStall && state.airspeedKts > 8f && (state.airspeedKts < stallKts * 0.98f || stalledByAoA);
+            float stallIntensity = Mathf.Clamp01(Mathf.Max(
+                Mathf.InverseLerp(stallKts + aero.stallWarningSpeedMarginKts, stallKts * 0.85f, state.airspeedKts),
+                Mathf.InverseLerp(aero.stallWarningAoADeg, aero.stallBreakAoADeg + 4f, effectiveAoADeg)));
+            if (!evaluateStall) stallIntensity = 0f;
+            if (stall) liftCoefficient *= Mathf.Lerp(1f, aero.postStallLiftMultiplier, Mathf.Max(0.45f, stallIntensity));
 
             float sideSlip = Mathf.Clamp(localVelocity.x / Mathf.Max(1f, speed), -1f, 1f);
-            float dragCoefficient = config.dragCoefficientBase
-                                    + config.inducedDragFactor * liftCoefficient * liftCoefficient
-                                    + flapFraction * config.flapDragBonus
-                                    + Mathf.Abs(sideSlip) * config.sideSlipDragFactor;
+            float dragCoefficient = aero.dragCoefficientBase
+                                    + aero.inducedDragFactor * liftCoefficient * liftCoefficient
+                                    + flapFraction * aero.flapDragBonus
+                                    + Mathf.Abs(sideSlip) * aero.sideSlipDragFactor
+                                    + stallIntensity * 0.08f;
 
             float groundEffect = state.onGround
-                ? Mathf.Clamp01(1f - transform.position.y / Mathf.Max(0.1f, config.groundEffectHeightM)) * 0.08f
+                ? Mathf.Clamp01(1f - transform.position.y / Mathf.Max(0.1f, gear.groundEffectHeightM)) * 0.08f
                 : 0f;
             Vector3 lift = transform.up * (q * config.wingAreaM2 * liftCoefficient * (1f + groundEffect));
             Vector3 drag = speed > 0.01f ? -_velocityWorld.normalized * (q * config.wingAreaM2 * dragCoefficient) : Vector3.zero;
@@ -116,15 +130,14 @@ namespace QuestFlightLab.Flight
             {
                 float brake = Mathf.Clamp01((c.leftToeBrake + c.rightToeBrake) * 0.5f);
                 Vector3 horizontalVelocity = Vector3.ProjectOnPlane(_velocityWorld, Vector3.up);
-                Vector3 forwardHorizontal = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
                 Vector3 lateralVelocity = Vector3.Project(horizontalVelocity, transform.right);
                 Vector3 rollingResistance = horizontalVelocity.sqrMagnitude > 0.01f
-                    ? -horizontalVelocity.normalized * (mass * 9.81f * config.runwayFrictionCoefficient)
+                    ? -horizontalVelocity.normalized * (mass * 9.81f * gear.runwayFrictionCoefficient)
                     : Vector3.zero;
                 Vector3 braking = horizontalVelocity.sqrMagnitude > 0.01f
-                    ? -horizontalVelocity.normalized * (brake * config.brakeStrengthNewtons)
+                    ? -horizontalVelocity.normalized * (brake * gear.brakeStrengthNewtons)
                     : Vector3.zero;
-                Vector3 lateralFriction = -lateralVelocity * (mass * config.lateralGroundFriction);
+                Vector3 lateralFriction = -lateralVelocity * (mass * gear.lateralGroundFriction);
                 force += rollingResistance + braking + lateralFriction;
 
                 if (speed < 0.4f && c.throttle < 0.05f && brake > 0.2f)
@@ -143,47 +156,54 @@ namespace QuestFlightLab.Flight
             float coordinatedYaw = 0f;
             if (speed > 8f)
             {
-                coordinatedYaw = Mathf.Sin(-bankDeg * Mathf.Deg2Rad) * 9.81f / speed * Mathf.Rad2Deg * config.coordinatedTurnCoupling;
+                coordinatedYaw = Mathf.Sin(-bankDeg * Mathf.Deg2Rad) * 9.81f / speed * Mathf.Rad2Deg * control.coordinatedTurnCoupling;
             }
 
             Vector3 localAngularTarget = new Vector3(
-                -(c.elevator + trim * 0.35f) * config.pitchRateMaxDegPerSec * authority - flapFraction * config.flapPitchMomentDegPerSec,
-                (c.rudder * config.yawRateMaxDegPerSec * Mathf.Max(authority, groundAuthority) + coordinatedYaw),
-                -c.aileron * config.rollRateMaxDegPerSec * authority);
+                -(c.elevator + trim * 0.35f) * control.pitchRateMaxDegPerSec * authority - flapFraction * control.flapPitchMomentDegPerSec,
+                (c.rudder * control.yawRateMaxDegPerSec * Mathf.Max(authority, groundAuthority) + coordinatedYaw),
+                -c.aileron * control.rollRateMaxDegPerSec * authority);
 
             float pitchDeg = state.pitchDeg;
-            localAngularTarget.x += pitchDeg * config.pitchAttitudeStability;
-            localAngularTarget.z += -bankDeg * config.rollAttitudeStability;
+            localAngularTarget.x += pitchDeg * control.pitchAttitudeStability;
+            localAngularTarget.z += -bankDeg * control.rollAttitudeStability;
+
+            if (!state.onGround && c.throttle > 0.7f && state.airspeedKts > speeds.rotationKts)
+            {
+                float target = speeds.bestRateClimbKts;
+                float speedError = Mathf.Clamp(state.airspeedKts - target, -20f, 20f);
+                localAngularTarget.x += -speedError * 0.16f;
+            }
 
             if (!state.onGround)
             {
-                if (pitchDeg > config.maxPrototypePitchDeg)
+                if (pitchDeg > control.maxPrototypePitchDeg)
                 {
-                    localAngularTarget.x = Mathf.Max(localAngularTarget.x, (pitchDeg - config.maxPrototypePitchDeg) * 2f);
+                    localAngularTarget.x = Mathf.Max(localAngularTarget.x, (pitchDeg - control.maxPrototypePitchDeg) * 2f);
                 }
-                else if (pitchDeg < -config.maxPrototypePitchDeg)
+                else if (pitchDeg < -control.maxPrototypePitchDeg)
                 {
-                    localAngularTarget.x = Mathf.Min(localAngularTarget.x, (pitchDeg + config.maxPrototypePitchDeg) * 2f);
+                    localAngularTarget.x = Mathf.Min(localAngularTarget.x, (pitchDeg + control.maxPrototypePitchDeg) * 2f);
                 }
 
-                if (bankDeg > config.maxPrototypeBankDeg)
+                if (bankDeg > control.maxPrototypeBankDeg)
                 {
-                    localAngularTarget.z = Mathf.Min(localAngularTarget.z, -(bankDeg - config.maxPrototypeBankDeg) * 2f);
+                    localAngularTarget.z = Mathf.Min(localAngularTarget.z, -(bankDeg - control.maxPrototypeBankDeg) * 2f);
                 }
-                else if (bankDeg < -config.maxPrototypeBankDeg)
+                else if (bankDeg < -control.maxPrototypeBankDeg)
                 {
-                    localAngularTarget.z = Mathf.Max(localAngularTarget.z, (-bankDeg - config.maxPrototypeBankDeg) * 2f);
+                    localAngularTarget.z = Mathf.Max(localAngularTarget.z, (-bankDeg - control.maxPrototypeBankDeg) * 2f);
                 }
             }
 
             if (state.onGround)
             {
-                bool canRotate = state.airspeedKts > config.rotationSpeedKts - 4f && c.elevator > 0.15f;
+                bool canRotate = state.airspeedKts > speeds.rotationKts - 4f && c.elevator > 0.15f;
                 localAngularTarget.x = canRotate ? -c.elevator * 10f : 0f;
                 localAngularTarget.z = 0f;
             }
 
-            Vector3 damping = new Vector3(config.pitchDamping, config.yawDamping, config.rollDamping);
+            Vector3 damping = new Vector3(control.pitchDamping, control.yawDamping, control.rollDamping);
             _angularVelocityDeg.x = Mathf.Lerp(_angularVelocityDeg.x, localAngularTarget.x, dt * damping.x);
             _angularVelocityDeg.y = Mathf.Lerp(_angularVelocityDeg.y, localAngularTarget.y, dt * damping.y);
             _angularVelocityDeg.z = Mathf.Lerp(_angularVelocityDeg.z, localAngularTarget.z, dt * damping.z);
@@ -192,7 +212,7 @@ namespace QuestFlightLab.Flight
             {
                 _angularVelocityDeg.x = Mathf.Min(_angularVelocityDeg.x, 5f);
                 _angularVelocityDeg.z *= 0.15f;
-                _angularVelocityDeg.y += c.rudder * config.nosewheelSteerDegPerSec * groundAuthority * dt;
+                _angularVelocityDeg.y += c.rudder * gear.nosewheelSteerDegPerSec * groundAuthority * dt;
             }
 
             Quaternion delta = Quaternion.Euler(_angularVelocityDeg * dt);
@@ -203,7 +223,7 @@ namespace QuestFlightLab.Flight
                 float pitch = AircraftState.NormalizeAngle(transform.eulerAngles.x);
                 pitch = Mathf.Clamp(pitch, -9f, 1.5f);
                 transform.rotation = Quaternion.Euler(pitch, transform.eulerAngles.y, 0f);
-                if (state.airspeedKts > config.rotationSpeedKts && c.elevator > 0.25f)
+                if (state.airspeedKts > speeds.rotationKts && c.elevator > 0.25f)
                 {
                     _velocityWorld.y = Mathf.Max(_velocityWorld.y, 1.6f + c.elevator * 2.8f);
                 }
@@ -225,8 +245,12 @@ namespace QuestFlightLab.Flight
             state.velocityWorld = _velocityWorld;
             state.angularVelocityDeg = _angularVelocityDeg;
             state.angleOfAttackDeg = aoaDeg;
-            state.stallWarning = stall;
-            state.engineRpm = Mathf.Lerp(config.idleRpm, config.maxRpm, Mathf.Clamp01(c.throttle));
+            state.stallWarning = lowSpeedWarning || aoaWarning || stall;
+            state.stallIntensity = stallIntensity;
+            state.slipSkid = sideSlip;
+            state.referenceSpeedKts = state.onGround ? speeds.rotationKts : (c.throttle > 0.7f ? speeds.bestRateClimbKts : speeds.bestGlideKts);
+            state.targetSpeedErrorKts = state.airspeedKts - state.referenceSpeedKts;
+            state.engineRpm = Mathf.Lerp(engine.idleRpm, engine.maxRpm, Mathf.Clamp01(c.throttle));
             state.powerPercent = ComputePowerPercent(c);
             state.flapDegrees = flapDeg;
             state.trimPercent = trim;
@@ -244,29 +268,32 @@ namespace QuestFlightLab.Flight
 
         private float ComputeLiftCoefficient(float effectiveAoADeg, float flapFraction, out bool stalled)
         {
-            float aoaFromZeroRad = (effectiveAoADeg - config.zeroLiftAoADeg) * Mathf.Deg2Rad;
-            float raw = config.liftCoefficientBase + config.liftCurveSlopePerRad * aoaFromZeroRad + flapFraction * config.flapLiftBonus;
-            float critical = config.criticalAoADeg + flapFraction * 2.5f;
+            AeroCoefficients aero = config.Aero;
+            float aoaFromZeroRad = (effectiveAoADeg - aero.zeroLiftAoADeg) * Mathf.Deg2Rad;
+            float raw = aero.liftCoefficientBase + aero.liftCurveSlopePerRad * aoaFromZeroRad + flapFraction * aero.flapLiftBonus;
+            float critical = aero.stallBreakAoADeg + flapFraction * 2.5f;
             stalled = Mathf.Abs(effectiveAoADeg) > critical;
-            float maxCl = config.maximumLiftCoefficient + flapFraction * 0.35f;
+            float maxCl = Mathf.Lerp(aero.maximumLiftCoefficientClean, aero.maximumLiftCoefficientLanding, flapFraction);
             return Mathf.Clamp(raw, -maxCl * 0.7f, maxCl);
         }
 
         private float ComputeThrustNewtons(AircraftControlState c, float speedMps)
         {
+            EnginePropModelConfig engine = config.Engine;
             float throttle = Mathf.Clamp01(c.throttle);
-            float mixture = Mathf.Lerp(config.minimumMixturePower, 1f, Mathf.Clamp01(c.mixture));
-            float carbHeat = 1f - Mathf.Clamp01(c.carbHeat) * config.carbHeatPowerLoss;
-            float powerW = config.maxEnginePowerHp * AircraftUnitConversions.HorsepowerToWatts * throttle * mixture * carbHeat;
-            float propThrust = powerW * config.propEfficiency / Mathf.Max(14f, speedMps);
-            float staticBlend = Mathf.Lerp(config.staticThrustNewtons, config.maxThrustNewtons, Mathf.InverseLerp(0f, 32f, speedMps));
+            float mixture = Mathf.Lerp(engine.minimumMixturePower, 1f, Mathf.Clamp01(c.mixture));
+            float carbHeat = 1f - Mathf.Clamp01(c.carbHeat) * engine.carbHeatPowerLoss;
+            float powerW = engine.maxEnginePowerHp * AircraftUnitConversions.HorsepowerToWatts * throttle * mixture * carbHeat;
+            float propThrust = powerW * engine.propEfficiency / Mathf.Max(14f, speedMps);
+            float staticBlend = Mathf.Lerp(engine.staticThrustNewtons, engine.maxThrustNewtons, Mathf.InverseLerp(0f, 32f, speedMps));
             return Mathf.Clamp(propThrust, 0f, staticBlend);
         }
 
         private float ComputePowerPercent(AircraftControlState c)
         {
-            float mixture = Mathf.Lerp(config.minimumMixturePower, 1f, Mathf.Clamp01(c.mixture));
-            float carbHeat = 1f - Mathf.Clamp01(c.carbHeat) * config.carbHeatPowerLoss;
+            EnginePropModelConfig engine = config.Engine;
+            float mixture = Mathf.Lerp(engine.minimumMixturePower, 1f, Mathf.Clamp01(c.mixture));
+            float carbHeat = 1f - Mathf.Clamp01(c.carbHeat) * engine.carbHeatPowerLoss;
             return Mathf.Clamp01(c.throttle * mixture * carbHeat) * 100f;
         }
 

@@ -13,6 +13,10 @@ namespace QuestFlightLab.Runtime
         public float pitchDeg;
         public float bankDeg;
         public float angleOfAttackDeg;
+        public float stallIntensity;
+        public float slipSkid;
+        public float referenceSpeedKts;
+        public float targetSpeedErrorKts;
         public bool stallWarning;
         public bool onGround;
         public float fps;

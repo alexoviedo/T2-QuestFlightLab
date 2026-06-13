@@ -13,6 +13,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - Initial aircraft: C172-style powered trainer approximation
 - Initial airport reference: approximate Boulder Municipal `KBDU`, powered Runway 08/26 only, not for navigation
 - v0.2 core path: deterministic Unity editor scenario runner plus PlayMode input-mapping probe so simulator changes can be tested without wearing the headset
+- v0.3 fidelity path: public C172-style reference targets, stronger deterministic flight scenarios, named cockpit/instrument verification, and Basic Takeoff Familiarization checklist evidence
 
 ## Build
 
@@ -66,6 +67,7 @@ Repo evidence notes:
 - `docs/evidence/QUEST_RUNTIME_SMOKE_2026-06-12.md`
 - `docs/evidence/USB2BLE_QUEST_XBOX_INPUT_WITNESS_2026-06-12.md`
 - `docs/evidence/FLIGHT_CORE_AUTONOMOUS_SIM_WITNESS_2026-06-12.md`
+- `docs/evidence/FLIGHT_MODEL_FIDELITY_AUTONOMOUS_WITNESS_2026-06-12.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 

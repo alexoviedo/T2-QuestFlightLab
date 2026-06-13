@@ -18,22 +18,31 @@ namespace QuestFlightLab.TestHarness
         private static string BuildScenarioCsv(FlightScenarioSuiteResult suite)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("id,name,passed,max_airspeed_kts,max_altitude_ft,max_vsi_fpm,min_pitch_deg,max_pitch_deg,min_bank_deg,max_bank_deg,max_flap_deg,stall_warning,max_ground_roll_m,max_runway_offset_abs_m,reason");
+            sb.AppendLine("id,name,passed,initial_airspeed_kts,final_airspeed_kts,max_airspeed_kts,altitude_delta_ft,max_altitude_ft,heading_change_deg,max_vsi_fpm,min_pitch_deg,max_pitch_deg,min_bank_deg,max_bank_deg,max_flap_deg,stall_warning_count,stall_onset_s,max_stall_intensity,max_reference_speed_error_abs_kts,instruments_present,training_steps_present,max_ground_roll_m,max_runway_offset_abs_m,reason");
             foreach (FlightScenarioResult r in suite.scenarios)
             {
                 FlightScenarioStats s = r.stats;
                 sb.Append(r.id).Append(',')
                     .Append(Escape(r.name)).Append(',')
                     .Append(r.passed).Append(',')
+                    .Append(F(s.initialAirspeedKts)).Append(',')
+                    .Append(F(s.finalAirspeedKts)).Append(',')
                     .Append(F(s.maxAirspeedKts)).Append(',')
+                    .Append(F(s.altitudeDeltaFt)).Append(',')
                     .Append(F(s.maxAltitudeFt)).Append(',')
+                    .Append(F(s.headingChangeDeg)).Append(',')
                     .Append(F(s.maxVerticalSpeedFpm)).Append(',')
                     .Append(F(s.minPitchDeg)).Append(',')
                     .Append(F(s.maxPitchDeg)).Append(',')
                     .Append(F(s.minBankDeg)).Append(',')
                     .Append(F(s.maxBankDeg)).Append(',')
                     .Append(F(s.maxFlapDegrees)).Append(',')
-                    .Append(s.stallWarningObserved).Append(',')
+                    .Append(s.stallWarningSamples).Append(',')
+                    .Append(F(s.stallWarningOnsetSeconds)).Append(',')
+                    .Append(F(s.maxStallIntensity)).Append(',')
+                    .Append(F(s.maxReferenceSpeedErrorAbsKts)).Append(',')
+                    .Append(r.instrumentVerification.allRequiredPresent).Append(',')
+                    .Append(r.trainingVerification.allRequiredStepsPresent).Append(',')
                     .Append(F(s.maxGroundRollMeters)).Append(',')
                     .Append(F(s.maxRunwayOffsetAbsMeters)).Append(',')
                     .Append(Escape(r.passReason)).AppendLine();
@@ -52,17 +61,36 @@ namespace QuestFlightLab.TestHarness
             sb.AppendLine($"Meta XR Simulator: {suite.metaXrSimulatorStatus}");
             sb.AppendLine($"Result: {suite.passedCount}/{suite.scenarioCount} scenarios passed");
             sb.AppendLine();
-            sb.AppendLine("| Scenario | Pass | Key Result |");
-            sb.AppendLine("| --- | --- | --- |");
+            sb.AppendLine("| Scenario | Pass | Speed | Alt Delta | Heading | Instruments | Training |");
+            sb.AppendLine("| --- | --- | --- | --- | --- | --- | --- |");
             foreach (FlightScenarioResult r in suite.scenarios)
             {
+                FlightScenarioStats s = r.stats;
                 sb.Append("| ")
                     .Append(r.name)
                     .Append(" | ")
                     .Append(r.passed ? "PASS" : "FAIL")
                     .Append(" | ")
-                    .Append(r.passReason.Replace("|", "/"))
+                    .Append($"{s.initialAirspeedKts:0}->{s.finalAirspeedKts:0} kt")
+                    .Append(" | ")
+                    .Append($"{s.altitudeDeltaFt:0} ft")
+                    .Append(" | ")
+                    .Append($"{s.headingChangeDeg:0} deg")
+                    .Append(" | ")
+                    .Append(r.instrumentVerification.allRequiredPresent ? "PASS" : "FAIL")
+                    .Append(" | ")
+                    .Append(r.trainingVerification.allRequiredStepsPresent ? "PASS" : "FAIL")
                     .AppendLine(" |");
+            }
+            sb.AppendLine();
+            sb.AppendLine("Scenario details:");
+            foreach (FlightScenarioResult r in suite.scenarios)
+            {
+                sb.Append("- ")
+                    .Append(r.name)
+                    .Append(": ")
+                    .Append(r.passReason.Replace("|", "/"))
+                    .AppendLine();
             }
             sb.AppendLine();
             sb.AppendLine("Limitations:");

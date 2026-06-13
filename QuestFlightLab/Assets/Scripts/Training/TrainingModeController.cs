@@ -76,11 +76,12 @@ namespace QuestFlightLab.Training
                     detail = checklistDone ? "checklist placeholder complete" : "waiting for checklist placeholder";
                     return checklistDone;
                 case "align_runway":
+                case "line_up":
                     detail = $"runway offset {f.runwayLateralOffsetMeters:F1} m";
                     return f.onGround && Mathf.Abs(f.runwayLateralOffsetMeters) < 8f;
                 case "smooth_throttle":
                     detail = $"power {f.powerPercent:F0}%";
-                    return f.powerPercent > 80f;
+                    return f.powerPercent > 85f;
                 case "maintain_centerline":
                     detail = $"offset {f.runwayLateralOffsetMeters:F1} m rudder {c.rudder:F2}";
                     return f.onGround && f.airspeedKts > 20f && Mathf.Abs(f.runwayLateralOffsetMeters) < 12f;
@@ -91,8 +92,12 @@ namespace QuestFlightLab.Training
                     detail = $"airspeed {f.airspeedKts:F0} kt vsi {f.verticalSpeedFpm:F0} fpm";
                     return !f.onGround && f.verticalSpeedFpm > 150f && f.airspeedKts > 60f;
                 case "maintain_heading":
+                case "maintain_runway_heading":
                     detail = $"heading {f.headingDeg:F0} vsi {f.verticalSpeedFpm:F0} fpm";
-                    return !f.onGround && f.verticalSpeedFpm > 100f;
+                    return !f.onGround && f.verticalSpeedFpm > 100f && Mathf.Abs(Mathf.DeltaAngle(f.headingDeg, 78f)) < 15f;
+                case "after_takeoff_cleanup":
+                    detail = $"flaps {f.flapDegrees:F0} stall {(f.stallWarning ? "warn" : "clear")}";
+                    return !f.onGround && f.verticalSpeedFpm > 100f && f.flapDegrees < 12f && !f.stallWarning;
                 default:
                     detail = "no evaluator";
                     return false;

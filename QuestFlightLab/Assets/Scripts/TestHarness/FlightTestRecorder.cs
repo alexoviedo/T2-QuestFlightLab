@@ -22,12 +22,20 @@ namespace QuestFlightLab.TestHarness
     {
         public float minAirspeedKts = float.MaxValue;
         public float maxAirspeedKts = float.MinValue;
+        public float initialAirspeedKts;
+        public float finalAirspeedKts;
         public float minAltitudeFt = float.MaxValue;
         public float maxAltitudeFt = float.MinValue;
+        public float initialAltitudeFt;
+        public float finalAltitudeFt;
+        public float altitudeDeltaFt;
         public float minVerticalSpeedFpm = float.MaxValue;
         public float maxVerticalSpeedFpm = float.MinValue;
         public float minHeadingDeg = float.MaxValue;
         public float maxHeadingDeg = float.MinValue;
+        public float initialHeadingDeg;
+        public float finalHeadingDeg;
+        public float headingChangeDeg;
         public float minPitchDeg = float.MaxValue;
         public float maxPitchDeg = float.MinValue;
         public float minBankDeg = float.MaxValue;
@@ -48,6 +56,10 @@ namespace QuestFlightLab.TestHarness
         public float maxGroundRollMeters;
         public float maxRunwayOffsetAbsMeters;
         public float maxLoadFactorG;
+        public float maxStallIntensity;
+        public int stallWarningSamples;
+        public float stallWarningOnsetSeconds = -1f;
+        public float maxReferenceSpeedErrorAbsKts;
         public bool stallWarningObserved;
         public int sampleCount;
     }
@@ -63,6 +75,8 @@ namespace QuestFlightLab.TestHarness
         public float durationSeconds;
         public float timeStepSeconds;
         public FlightScenarioStats stats = new FlightScenarioStats();
+        public InstrumentVerificationSnapshot instrumentVerification = new InstrumentVerificationSnapshot();
+        public TrainingVerificationSnapshot trainingVerification = new TrainingVerificationSnapshot();
         public List<string> warnings = new List<string>();
         public List<string> errors = new List<string>();
         public List<FlightScenarioSample> samples = new List<FlightScenarioSample>();
@@ -99,15 +113,27 @@ namespace QuestFlightLab.TestHarness
         {
             _result.samples.Add(sample);
             FlightScenarioStats s = _result.stats;
+            if (s.sampleCount == 0)
+            {
+                s.initialAirspeedKts = sample.flight.airspeedKts;
+                s.initialAltitudeFt = sample.flight.altitudeFt;
+                s.initialHeadingDeg = sample.flight.headingDeg;
+            }
+
             s.sampleCount++;
             s.minAirspeedKts = Min(s.minAirspeedKts, sample.flight.airspeedKts);
             s.maxAirspeedKts = Max(s.maxAirspeedKts, sample.flight.airspeedKts);
+            s.finalAirspeedKts = sample.flight.airspeedKts;
             s.minAltitudeFt = Min(s.minAltitudeFt, sample.flight.altitudeFt);
             s.maxAltitudeFt = Max(s.maxAltitudeFt, sample.flight.altitudeFt);
+            s.finalAltitudeFt = sample.flight.altitudeFt;
+            s.altitudeDeltaFt = s.finalAltitudeFt - s.initialAltitudeFt;
             s.minVerticalSpeedFpm = Min(s.minVerticalSpeedFpm, sample.flight.verticalSpeedFpm);
             s.maxVerticalSpeedFpm = Max(s.maxVerticalSpeedFpm, sample.flight.verticalSpeedFpm);
             s.minHeadingDeg = Min(s.minHeadingDeg, sample.flight.headingDeg);
             s.maxHeadingDeg = Max(s.maxHeadingDeg, sample.flight.headingDeg);
+            s.finalHeadingDeg = sample.flight.headingDeg;
+            s.headingChangeDeg = Math.Abs(DeltaAngle(s.initialHeadingDeg, s.finalHeadingDeg));
             s.minPitchDeg = Min(s.minPitchDeg, sample.flight.pitchDeg);
             s.maxPitchDeg = Max(s.maxPitchDeg, sample.flight.pitchDeg);
             s.minBankDeg = Min(s.minBankDeg, sample.flight.bankDeg);
@@ -128,10 +154,22 @@ namespace QuestFlightLab.TestHarness
             s.maxGroundRollMeters = Max(s.maxGroundRollMeters, sample.flight.groundRollMeters);
             s.maxRunwayOffsetAbsMeters = Max(s.maxRunwayOffsetAbsMeters, System.Math.Abs(sample.flight.runwayLateralOffsetMeters));
             s.maxLoadFactorG = Max(s.maxLoadFactorG, sample.flight.loadFactorG);
+            s.maxStallIntensity = Max(s.maxStallIntensity, sample.flight.stallIntensity);
+            s.maxReferenceSpeedErrorAbsKts = Max(s.maxReferenceSpeedErrorAbsKts, System.Math.Abs(sample.flight.targetSpeedErrorKts));
+            if (sample.flight.stallWarning)
+            {
+                s.stallWarningSamples++;
+                if (s.stallWarningOnsetSeconds < 0f) s.stallWarningOnsetSeconds = sample.timestamp;
+            }
             s.stallWarningObserved |= sample.flight.stallWarning;
         }
 
         private static float Min(float a, float b) => a < b ? a : b;
         private static float Max(float a, float b) => a > b ? a : b;
+        private static float DeltaAngle(float from, float to)
+        {
+            float delta = (to - from + 540f) % 360f - 180f;
+            return delta;
+        }
     }
 }

@@ -24,6 +24,10 @@ Flight Sim Core v0.2 shifts the next proof path from headset bring-up to autonom
 - The C172-style physics are still approximate, but now include explicit unit conversions, power, mixture/carb heat placeholders, lift/drag parameters, ground roll/braking, flaps/trim effects, and pitch/bank stability limits.
 - The training scaffold exposes a first Basic Takeoff Familiarization sequence and before-takeoff checklist placeholders.
 
+## v0.3 Fidelity Direction
+
+Flight Model Fidelity v0.3 adds public C172-style reference targets, a more data-driven config, richer autonomous scenarios, named cockpit/instrument verification, stall warning/recovery evidence, and a stronger Basic Takeoff Familiarization scaffold.
+
 ## Claim Boundary
 
 This prototype is not FAA-approved training, not a BATD/AATD, not pilot-training credit, not a broad Quest compatibility claim, and not final C172 fidelity.

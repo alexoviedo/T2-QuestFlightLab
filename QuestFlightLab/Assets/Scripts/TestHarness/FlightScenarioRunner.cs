@@ -16,6 +16,7 @@ namespace QuestFlightLab.TestHarness
                 unityVersion = Application.unityVersion,
                 metaXrSimulatorStatus = metaXrSimulatorStatus,
                 fixedTimeStepSeconds = 1f / 72f,
+                suiteName = "Flight Model Fidelity v0.3 Autonomous Scenario Suite",
                 limitations =
                 {
                     "Editor scenario runner does not prove Quest Bluetooth, USB2BLE hardware, or headset runtime behavior.",
@@ -54,6 +55,8 @@ namespace QuestFlightLab.TestHarness
                 durationSeconds = definition.durationSeconds,
                 timeStepSeconds = definition.timeStepSeconds
             };
+            result.instrumentVerification = InstrumentVerification.Capture();
+            result.trainingVerification = TrainingVerification.Capture(definition.id);
 
             GameObject aircraft = new GameObject($"ScenarioAircraft_{definition.id}");
             AircraftState state = aircraft.AddComponent<AircraftState>();
@@ -131,6 +134,10 @@ namespace QuestFlightLab.TestHarness
                     flapDegrees = state.flapDegrees,
                     trimPercent = state.trimPercent,
                     loadFactorG = state.loadFactorG,
+                    stallIntensity = state.stallIntensity,
+                    slipSkid = state.slipSkid,
+                    referenceSpeedKts = state.referenceSpeedKts,
+                    targetSpeedErrorKts = state.targetSpeedErrorKts,
                     groundRollMeters = state.groundRollMeters,
                     runwayLateralOffsetMeters = state.runwayLateralOffsetMeters
                 },
@@ -170,27 +177,36 @@ namespace QuestFlightLab.TestHarness
 
             bool pass = definition.id switch
             {
-                "neutral_controls" => s.maxAirspeedKts < 8f && s.maxRunwayOffsetAbsMeters < 3f,
-                "control_surface_sweep" => s.minAileron < -0.85f && s.maxAileron > 0.85f && s.minElevator < -0.85f && s.maxElevator > 0.85f && s.minRudder < -0.85f && s.maxRudder > 0.85f,
-                "taxi_throttle_brake" => s.maxAirspeedKts > 5f && s.maxLeftToeBrake > 0.8f && s.maxRightToeBrake > 0.8f,
-                "takeoff_roll" => s.maxAirspeedKts > 38f && s.maxGroundRollMeters > 80f,
-                "rotation_climb" => s.maxAirspeedKts > 52f && s.maxAltitudeFt > 15f && s.maxVerticalSpeedFpm > 100f && s.maxPitchDeg < 24f,
-                "shallow_turns" => HeadingSpan(s) > 6f && s.maxBankDeg > 5f && s.minBankDeg < -5f && Mathf.Max(Mathf.Abs(s.minBankDeg), Mathf.Abs(s.maxBankDeg)) < 42f && s.minAltitudeFt > 850f,
-                "rudder_yaw" => HeadingSpan(s) > 4f && s.maxRudder > 0.5f && s.minRudder < -0.5f,
-                "flap_deployment" => s.maxFlapDegrees >= 25f,
-                "trim_effect" => s.maxTrim > 0.5f && s.minTrim < -0.3f && (s.maxPitchDeg - s.minPitchDeg) > 2f,
-                "stall_approach" => s.stallWarningObserved && s.minAltitudeFt > 1200f && Mathf.Max(Mathf.Abs(s.minPitchDeg), Mathf.Abs(s.maxPitchDeg)) < 45f,
+                "preflight_neutral_initialization" => s.maxAirspeedKts < 8f && s.maxRunwayOffsetAbsMeters < 3f,
+                "before_takeoff_checklist" => result.trainingVerification.allRequiredStepsPresent && s.maxAirspeedKts < 5f,
+                "taxi_brake_check" => s.maxAirspeedKts > 5f && s.maxLeftToeBrake > 0.8f && s.maxRightToeBrake > 0.8f && s.maxAirspeedKts < 35f,
+                "takeoff_roll_to_vr" => s.maxAirspeedKts > 52f && s.maxAirspeedKts < 85f && s.maxGroundRollMeters > 120f && s.maxRunwayOffsetAbsMeters < 15f,
+                "rotation_climb_to_altitude" => s.maxAirspeedKts > 52f && s.altitudeDeltaFt > 80f && s.maxVerticalSpeedFpm > 200f && s.maxPitchDeg < 18f,
+                "vy_climb_stabilization" => s.altitudeDeltaFt > 80f && s.maxVerticalSpeedFpm > 200f && s.minAirspeedKts > 55f && s.maxReferenceSpeedErrorAbsKts < 24f && !s.stallWarningObserved,
+                "shallow_left_right_turns" => HeadingSpan(s) > 6f && s.maxBankDeg > 5f && s.minBankDeg < -5f && Mathf.Max(Mathf.Abs(s.minBankDeg), Mathf.Abs(s.maxBankDeg)) < 35f && s.minAltitudeFt > 850f,
+                "rudder_yaw_response" => HeadingSpan(s) > 4f && s.maxRudder > 0.5f && s.minRudder < -0.5f,
+                "flap_deployment_effect" => s.maxFlapDegrees >= 25f && s.maxPitchDeg - s.minPitchDeg > 2f,
+                "trim_nose_up_down" => s.maxTrim > 0.5f && s.minTrim < -0.3f && (s.maxPitchDeg - s.minPitchDeg) > 4f,
+                "slow_flight_stall_warning_onset" => s.stallWarningObserved && s.stallWarningOnsetSeconds >= 0f && s.minAltitudeFt > 1500f && Mathf.Max(Mathf.Abs(s.minPitchDeg), Mathf.Abs(s.maxPitchDeg)) < 38f,
+                "stall_recovery" => s.stallWarningObserved && result.samples.Count > 0 && !result.samples[^1].flight.stallWarning && result.samples[^1].flight.airspeedKts > 45f && s.minAltitudeFt > 1200f,
+                "pattern_leg_heading_change" => HeadingSpan(s) > 20f && Mathf.Max(Mathf.Abs(s.minBankDeg), Mathf.Abs(s.maxBankDeg)) < 35f && s.minAltitudeFt > 850f,
                 "runway_reset" => s.maxGroundRollMeters > 0f && result.samples.Count > 0 && result.samples[^1].flight.onGround,
                 _ => false
             };
 
+            pass = pass && result.instrumentVerification.allRequiredPresent && result.trainingVerification.allRequiredStepsPresent;
+
+            reasons.Add($"initial/final speed {s.initialAirspeedKts:0.0}/{s.finalAirspeedKts:0.0} kt");
             reasons.Add($"speed {s.minAirspeedKts:0.0}-{s.maxAirspeedKts:0.0} kt");
-            reasons.Add($"alt {s.minAltitudeFt:0}-{s.maxAltitudeFt:0} ft");
+            reasons.Add($"alt {s.minAltitudeFt:0}-{s.maxAltitudeFt:0} ft delta {s.altitudeDeltaFt:0}");
             reasons.Add($"vsi {s.minVerticalSpeedFpm:0}-{s.maxVerticalSpeedFpm:0} fpm");
+            reasons.Add($"heading change {HeadingSpan(s):0.0} deg");
             reasons.Add($"pitch {s.minPitchDeg:0.0}/{s.maxPitchDeg:0.0}");
             reasons.Add($"bank {s.minBankDeg:0.0}/{s.maxBankDeg:0.0}");
             reasons.Add($"flaps max {s.maxFlapDegrees:0} deg");
-            reasons.Add($"stall {(s.stallWarningObserved ? "observed" : "not observed")}");
+            reasons.Add($"stall {(s.stallWarningObserved ? $"observed x{s.stallWarningSamples} at {s.stallWarningOnsetSeconds:0.0}s" : "not observed")}");
+            reasons.Add($"instruments {result.instrumentVerification.summary}");
+            reasons.Add($"training {result.trainingVerification.summary}");
 
             result.passed = pass;
             result.passReason = string.Join("; ", reasons);
