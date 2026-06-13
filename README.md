@@ -17,6 +17,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v0.4 training path: expanded cockpit/training panel, Basic Traffic Pattern Familiarization scaffold, airport pattern gates, scored debrief reports, and 21-scenario autonomous evidence
 - v0.5 approach path: source-backed stabilized approach/go-around prototype targets, approach-status cockpit fields, replay timeline export, approach debrief scoring, and autonomous stable/unstable approach evidence
 - v0.6 scenery path: optional Gaussian splat feasibility abstraction and budget/proxy evidence with mesh/terrain fallback still default
+- v0.6b renderer gate: `aras-p/UnityGaussianSplatting` renders synthetic 5k/50k/100k samples in the Unity editor using D3D12, and the Android APK builds with the package present; Quest runtime splat rendering is not yet proven
 
 ## Build
 
@@ -74,6 +75,7 @@ Repo evidence notes:
 - `docs/evidence/TRAFFIC_PATTERN_AUTONOMOUS_WITNESS_2026-06-12.md`
 - `docs/evidence/STABILIZED_APPROACH_GO_AROUND_AUTONOMOUS_WITNESS_2026-06-12.md`
 - `docs/evidence/GAUSSIAN_SPLAT_FEASIBILITY_SPIKE_2026-06-12.md`
+- `docs/evidence/GAUSSIAN_SPLAT_REAL_RENDERER_SPIKE_2026-06-12.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 
@@ -100,6 +102,14 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_spike_20260612_213
 ```
 
 The v0.6 result is `defer_to_later` for true Quest Gaussian splats: no production splat renderer is installed, the optional path fails safe, and the mesh/terrain fallback remains the green build path.
+
+The v0.6b real-renderer gate is under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_renderer_20260612_220658
+```
+
+The v0.6b result is `android_build_only`: the real renderer works in Unity editor smoke tests up to 100k synthetic splats and the APK builds with the package present, but no Quest runtime splat rendering or frame timing has been proven.
 
 Run the deterministic simulator suite without the headset:
 

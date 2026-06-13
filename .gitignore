@@ -37,6 +37,7 @@ sysinfo.txt
 # Gaussian splat experiment payloads
 *.ply
 *.spz
+QuestFlightLab/Assets/Experimental/Splats/Generated/
 
 # OS/editor noise
 .DS_Store

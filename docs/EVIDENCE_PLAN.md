@@ -58,6 +58,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_splat_spike.ps1 -Artifact
 
 This writes `splat_editor_results.json`, `splat_editor_results.csv`, `splat_spike_summary.md`, and `unity_splat_spike.log`. The spike evidence records scenery mode, renderer detection, fallback status, synthetic sample sizes, estimated splat memory budgets, and a conservative viability classification.
 
+For v0.6b real Gaussian renderer feasibility, use:
+
+```powershell
+python tools\generate_tiny_splat_samples.py --output-dir <artifact-root>\real_samples --counts 5000 50000 100000 --schema unity-3dgs-binary
+powershell -ExecutionPolicy Bypass -File .\scripts\run_real_splat_renderer_spike.ps1 -ArtifactDir <artifact-root>\real_renderer_editor -SampleDir <artifact-root>\real_samples -ForceD3D12
+```
+
+This writes real renderer JSON/CSV/Markdown evidence, screenshots, sample hashes, package resolution logs, scenario regression evidence, PlayMode XML, Android build logs, and APK hash evidence. Treat `android_build_only` as an explicit non-Quest-runtime classification.
+
 The supplemental PlayMode probe is:
 
 ```powershell
@@ -121,3 +130,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_spike_20260612_213
 ```
 
 This folder contains the v0.6 splat spike logs, synthetic PLY samples generated outside the repo, editor spike JSON/CSV/Markdown, v0.5 scenario regression evidence, PlayMode XML, Android build logs, and APK hash evidence. The result defers true Quest Gaussian splat viability until a real renderer package and headset runtime frame timing are tested.
+
+## 2026-06-12 Real Gaussian Renderer Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_renderer_20260612_220658
+```
+
+This folder contains the v0.6b renderer selection note, package probe logs, renderer-compatible binary PLY samples and hashes, real editor renderer screenshots/results, mesh fallback scenario regression evidence, PlayMode XML, Android build logs, and APK hash evidence. The result is `android_build_only`: editor renderer smoke and Android build pass, Quest runtime splat rendering not yet proven.

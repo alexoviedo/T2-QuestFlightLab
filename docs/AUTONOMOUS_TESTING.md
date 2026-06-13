@@ -44,6 +44,24 @@ This launches Unity batchmode, executes `QuestFlightLab.Editor.SplatSpikeBatchRu
 
 The v0.6 splat probe is budget/plumbing evidence only. It does not replace the deterministic flight scenario runner and does not prove Quest splat rendering.
 
+## Real Gaussian Renderer Probe
+
+Run the v0.6b real renderer gate without the headset:
+
+```powershell
+python tools\generate_tiny_splat_samples.py --output-dir <artifact-root>\real_samples --counts 5000 50000 100000 --schema unity-3dgs-binary
+powershell -ExecutionPolicy Bypass -File .\scripts\run_real_splat_renderer_spike.ps1 -ArtifactDir <artifact-root>\real_renderer_editor -SampleDir <artifact-root>\real_samples -ForceD3D12
+```
+
+This executes `QuestFlightLab.Experimental.Splats.Editor.RealSplatRendererBatchRunner.Run`, creates temporary `GaussianSplatAsset` sidecars under ignored `Assets/Experimental/Splats/Generated/`, instantiates the real `GaussianSplatRenderer`, renders editor screenshots, and writes:
+
+- `real_splat_editor_results.json`
+- `real_splat_editor_results.csv`
+- `real_splat_editor_summary.md`
+- `unity_real_splat_renderer.log`
+
+The D3D12 editor smoke proves renderer/package integration in the editor. Android build validation proves the package can remain present in the APK build. It still does not prove Quest runtime splat rendering or performance.
+
 ## Meta XR Simulator
 
 Meta XR Simulator was not detected in the Unity editor domain during the 2026-06-12 v0.2 run. If Meta XR Simulator is added later, it should be treated as a headset-interaction approximation, not proof of Quest hardware, Bluetooth, or USB2BLE behavior.
@@ -56,6 +74,7 @@ Meta XR Simulator was not detected in the Unity editor domain during the 2026-06
 - Scenario telemetry and pass/fail evidence can be generated without the headset.
 - The named cockpit instrument panel objects, Basic Traffic Pattern Familiarization scaffold, Stabilized Approach + Go-Around scaffold, airport pattern/final references, debrief reports, and replay timeline path are present in the autonomous evidence path.
 - The optional v0.6 scenery provider path can fail safe to mesh fallback when no Gaussian splat renderer is installed.
+- The v0.6b real Gaussian renderer package can create/render synthetic splat assets in editor D3D12 and remain present during Android APK build validation.
 
 ## What This Does Not Prove
 
@@ -66,3 +85,4 @@ Meta XR Simulator was not detected in the Unity editor domain during the 2026-06
 - Final C172 fidelity.
 - FAA-approved training, BATD/AATD qualification, or pilot-training credit.
 - Production Gaussian splat rendering, full-airport splat viability, or Quest splat performance.
+- Quest Gaussian splat runtime viability unless a headset smoke explicitly runs and captures frame/log evidence.

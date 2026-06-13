@@ -50,3 +50,5 @@ These references support deterministic scoring, cockpit instrumentation checks, 
 v0.6 adds an optional scenery-provider abstraction so future scenic rendering experiments can be isolated from the airport/training geometry. The default `MeshFallback` provider still uses the generated KBDU mesh/terrain scene and remains the only validated scenery path for the simulator slice.
 
 The Gaussian splat path is experimental, off by default, and currently classified as deferred for true Quest rendering. The v0.6 synthetic PLY samples are artifact-only budget/proxy fixtures, not airport source data, not surveyed scenery, and not a replacement for the mesh fallback.
+
+v0.6b adds a real Unity Gaussian splat renderer package and artifact-only synthetic renderer samples. These samples are abstract point-cloud smoke tests, not KBDU scenery captures, not airport source data, and not suitable for navigation or procedure training. The approximate mesh airport remains the default validated environment.

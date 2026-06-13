@@ -133,34 +133,88 @@ Budget evidence:
 
 The GPU estimate uses the public `UnityGaussianSplatting` memory note of roughly 48 bytes per splat for sorting/cache planning. It is a planning estimate, not runtime memory proof.
 
+## v0.6b Real Renderer Gate
+
+v0.6b tested a real renderer package:
+
+- Renderer: [`aras-p/UnityGaussianSplatting`](https://github.com/aras-p/UnityGaussianSplatting)
+- Package URL: `https://github.com/aras-p/UnityGaussianSplatting.git?path=/package#v1.1.1`
+- Package commit: `9310dce438da726244ace17eaf6f768826435fa4`
+- Package name: `org.nesnausk.gaussian-splatting`
+- License: MIT for the viewer/package code; splat capture/source licensing remains a separate concern.
+
+Artifact root:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_renderer_20260612_220658
+```
+
+The v0.6b sample generator adds `--schema unity-3dgs-binary`, producing binary little-endian PLY files with the properties required by UnityGaussianSplatting:
+
+- `x`, `y`, `z`
+- `nx`, `ny`, `nz`
+- `f_dc_0`, `f_dc_1`, `f_dc_2`
+- `opacity`
+- `scale_0`, `scale_1`, `scale_2`
+- `rot_0`, `rot_1`, `rot_2`, `rot_3`
+
+Editor smoke used D3D12 because upstream documents D3D12/Metal/Vulkan as known-good graphics APIs and says DX11 is not supported.
+
+| Splats | Input PLY MB | Generated Asset MB | Editor Result | Pixels | Avg Render ms |
+| ---: | ---: | ---: | --- | ---: | ---: |
+| 5,000 | 0.325 | 0.337 | `editor_render_pass` | 53,163 | 107.046 |
+| 50,000 | 3.243 | 2.361 | `editor_render_pass` | 57,154 | 0.214 |
+| 100,000 | 6.485 | 4.721 | `editor_render_pass` | 57,863 | 0.181 |
+
+The first 5k render includes one-time setup/import/render warmup cost and should not be read as steady-state performance.
+
+Android gate:
+
+- Mesh fallback scenario regression: 33/33 passed.
+- PlayMode: 15/15 passed.
+- Android APK build with package present: passed.
+- APK SHA256: `6A95646F6B4F9520FFF87CF99DCF4D53EA8D368CC76350E9A33BBFCE76280359`.
+
+Quest runtime:
+
+- Not attempted for v0.6b.
+- No Quest splat visibility, stereo quality, or frame timing claim is made.
+
 ## Classification
 
-`defer_to_later`
+v0.6 classification: `defer_to_later`
 
 Reason:
 
-- No true Unity Gaussian splat renderer package is installed in this project.
+- At the time of v0.6, no true Unity Gaussian splat renderer package was installed in this project.
 - The v0.6 proxy point cloud is only a budget/plumbing check.
 - The mesh fallback remains green through scenario, PlayMode, and APK build validation.
 - A real Quest splat viability claim requires a renderer package, tiny real splat asset, Android build, Quest runtime logs, and frame timing.
 
+v0.6b classification: `android_build_only`
+
+Reason:
+
+- The real renderer package resolves and compiles.
+- Synthetic 5k/50k/100k samples render in the Unity editor with D3D12.
+- The Android APK builds with the package present.
+- No Quest runtime splat render was attempted, so this is not Quest viability.
+
 ## Next Splat Milestone
 
-The next splat chunk should be isolated from flight-model/training work:
+The next splat chunk should remain isolated from flight-model/training work:
 
-1. Add `aras-p/UnityGaussianSplatting` in a branch or throwaway worktree.
-2. Import or generate one tiny renderer-compatible PLY/SPZ.
-3. Confirm Unity Editor rendering.
-4. Confirm Android compile/build.
-5. Run Quest 3 runtime with mesh fallback toggle available.
-6. Test 5k, 50k, 100k, then stop early if frame/build/runtime quality regresses.
-7. Only after a tiny Quest runtime pass, investigate LOD/chunking/SPZ.
+1. Bind a tiny generated/committed-or-runtime-generated `GaussianSplatAsset` into an experimental scene or toggle.
+2. Build and install on Quest 3.
+3. Capture logcat, screenshot, and frame timing.
+4. Confirm mesh fallback can still be selected.
+5. Test 5k first, then 50k and 100k only if runtime remains stable.
+6. Only after a tiny Quest runtime pass, investigate LOD/chunking/SPZ.
 
 ## Limitations
 
 - No full-airport splat viability is proven.
 - No production photorealism claim is made.
 - No final Quest performance claim is made.
-- No Gaussian splat package is committed.
 - No large splat assets are committed.
 - Mesh/terrain fallback remains the default shipping path.

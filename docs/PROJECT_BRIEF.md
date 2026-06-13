@@ -40,6 +40,10 @@ Flight Sim Core v0.5 adds source-backed stabilized approach/go-around prototype 
 
 Flight Sim Core v0.6 adds an optional scenery-provider abstraction and a bounded Gaussian splat feasibility harness. The result keeps mesh/terrain as the default scenery path and classifies true Unity/Quest Gaussian splats as deferred until a real renderer package, tiny compatible asset, Android build, and Quest runtime frame timing are proven.
 
+## v0.6b Real Renderer Gate
+
+Flight Sim Core v0.6b adds `aras-p/UnityGaussianSplatting` v1.1.1 as an isolated experimental renderer package, a renderer-compatible binary 3DGS sample generator path, and a real editor renderer smoke. Synthetic 5k, 50k, and 100k samples render in the Unity editor when forced to D3D12, and the Android APK builds with the package present. This is classified as `android_build_only`, not Quest splat viability, because no headset runtime splat render/frame timing was attempted.
+
 ## Claim Boundary
 
 This prototype is not FAA-approved training, not a BATD/AATD, not pilot-training credit, not a broad Quest compatibility claim, and not final C172 fidelity.
