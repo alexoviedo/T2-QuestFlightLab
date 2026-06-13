@@ -44,3 +44,9 @@ v0.5 adds lightweight generated references for stabilized approach/go-around sce
 - existing downwind/base/final checkpoints.
 
 These references support deterministic scoring, cockpit instrumentation checks, and debrief evidence. They are approximate visual aids only, not surveyed runway geometry, not a chart, and not for navigation or real KBDU procedure training.
+
+## v0.6 Scenery Fallback And Splat Spike
+
+v0.6 adds an optional scenery-provider abstraction so future scenic rendering experiments can be isolated from the airport/training geometry. The default `MeshFallback` provider still uses the generated KBDU mesh/terrain scene and remains the only validated scenery path for the simulator slice.
+
+The Gaussian splat path is experimental, off by default, and currently classified as deferred for true Quest rendering. The v0.6 synthetic PLY samples are artifact-only budget/proxy fixtures, not airport source data, not surveyed scenery, and not a replacement for the mesh fallback.

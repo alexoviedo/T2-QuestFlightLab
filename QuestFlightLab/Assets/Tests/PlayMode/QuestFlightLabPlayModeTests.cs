@@ -1,5 +1,6 @@
 #if UNITY_INCLUDE_TESTS
 using NUnit.Framework;
+using QuestFlightLab.Environment;
 using QuestFlightLab.Input;
 using QuestFlightLab.Runtime;
 using QuestFlightLab.TestHarness;
@@ -51,6 +52,25 @@ namespace QuestFlightLab.Tests.PlayMode
             Assert.That(snapshot.valuesUpdated, Is.True, snapshot.summary);
             Assert.That(snapshot.approachFieldsPresent, Is.True, snapshot.summary);
             Assert.That(snapshot.approachFieldCount, Is.GreaterThanOrEqualTo(7));
+        }
+
+        [Test]
+        public void SceneryModeControllerDefaultsToMeshFallback()
+        {
+            GameObject existingAirport = GameObject.Find(MeshSceneryProvider.AirportRootName);
+            GameObject go = new GameObject("SceneryModeControllerPlayModeProbe");
+            SceneryModeController controller = go.AddComponent<SceneryModeController>();
+
+            SceneryProviderStatus status = controller.ApplyMode(SceneryMode.MeshFallback);
+
+            Assert.That(status.activeMode, Is.EqualTo(SceneryMode.MeshFallback.ToString()));
+            Assert.That(GameObject.Find(MeshSceneryProvider.AirportRootName), Is.Not.Null);
+
+            Object.DestroyImmediate(go);
+            if (existingAirport == null)
+            {
+                Object.DestroyImmediate(GameObject.Find(MeshSceneryProvider.AirportRootName));
+            }
         }
     }
 }

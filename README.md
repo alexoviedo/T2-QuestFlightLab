@@ -16,6 +16,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v0.3 fidelity path: public C172-style reference targets, stronger deterministic flight scenarios, named cockpit/instrument verification, and Basic Takeoff Familiarization checklist evidence
 - v0.4 training path: expanded cockpit/training panel, Basic Traffic Pattern Familiarization scaffold, airport pattern gates, scored debrief reports, and 21-scenario autonomous evidence
 - v0.5 approach path: source-backed stabilized approach/go-around prototype targets, approach-status cockpit fields, replay timeline export, approach debrief scoring, and autonomous stable/unstable approach evidence
+- v0.6 scenery path: optional Gaussian splat feasibility abstraction and budget/proxy evidence with mesh/terrain fallback still default
 
 ## Build
 
@@ -72,6 +73,7 @@ Repo evidence notes:
 - `docs/evidence/FLIGHT_MODEL_FIDELITY_AUTONOMOUS_WITNESS_2026-06-12.md`
 - `docs/evidence/TRAFFIC_PATTERN_AUTONOMOUS_WITNESS_2026-06-12.md`
 - `docs/evidence/STABILIZED_APPROACH_GO_AROUND_AUTONOMOUS_WITNESS_2026-06-12.md`
+- `docs/evidence/GAUSSIAN_SPLAT_FEASIBILITY_SPIKE_2026-06-12.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 
@@ -90,6 +92,14 @@ Stabilized approach/go-around autonomous evidence from the v0.5 pass is under:
 ```text
 C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_approach_20260612_200229
 ```
+
+Gaussian splat feasibility artifacts from the v0.6 spike are under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_spike_20260612_213624
+```
+
+The v0.6 result is `defer_to_later` for true Quest Gaussian splats: no production splat renderer is installed, the optional path fails safe, and the mesh/terrain fallback remains the green build path.
 
 Run the deterministic simulator suite without the headset:
 

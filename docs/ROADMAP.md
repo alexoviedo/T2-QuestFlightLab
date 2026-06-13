@@ -13,6 +13,7 @@
 1. Replace prototype aero/engine placeholders with better C172/C152 data and validated acceptance metrics.
 2. Expand cockpit/instrument layout from generated text placeholders toward inspectable analog/G1000-style training views.
 3. Tighten stabilized approach, landing flare, and go-around behavior with aircraft-specific data and better instructor/debrief review.
-4. Add sailplane aerotow, thermals, ridge lift, and towplane operations.
-5. Add dynamic wind/weather.
-6. Add instructor station, multiplayer, logbook, airport database, and lesson syllabus.
+4. Revisit Gaussian splats in an isolated branch/worktree with a real Unity renderer package, tiny renderer-compatible asset, Android build gate, Quest runtime frame timing, and mesh fallback toggle.
+5. Add sailplane aerotow, thermals, ridge lift, and towplane operations.
+6. Add dynamic wind/weather.
+7. Add instructor station, multiplayer, logbook, airport database, and lesson syllabus.

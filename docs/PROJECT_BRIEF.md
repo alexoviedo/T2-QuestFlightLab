@@ -36,6 +36,10 @@ Flight Sim Core v0.4 adds a more complete generated cockpit/training panel, Basi
 
 Flight Sim Core v0.5 adds source-backed stabilized approach/go-around prototype targets, a Stabilized Approach + Go-Around Familiarization lesson scaffold, final-approach airport gates, cockpit approach-status fields, replay timeline export, approach debrief scoring, and autonomous stable/unstable approach evidence. This improves the simulator seed without claiming aircraft-specific procedure fidelity or real-world training credit.
 
+## v0.6 Scenery Spike Direction
+
+Flight Sim Core v0.6 adds an optional scenery-provider abstraction and a bounded Gaussian splat feasibility harness. The result keeps mesh/terrain as the default scenery path and classifies true Unity/Quest Gaussian splats as deferred until a real renderer package, tiny compatible asset, Android build, and Quest runtime frame timing are proven.
+
 ## Claim Boundary
 
 This prototype is not FAA-approved training, not a BATD/AATD, not pilot-training credit, not a broad Quest compatibility claim, and not final C172 fidelity.

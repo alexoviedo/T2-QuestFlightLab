@@ -49,6 +49,15 @@ For v0.4 the scenario evidence also includes traffic-pattern phase scoring, debr
 
 For v0.5 the scenario evidence also includes stabilized approach criteria, go-around decision flags, speed/altitude/descent/glide-path/centerline deviations, approach-status instrument verification, replay timeline samples, replay markers, and approach debrief recommendations.
 
+For v0.6 Gaussian splat feasibility, use:
+
+```powershell
+python tools\generate_tiny_splat_samples.py --output-dir <artifact-root>\samples --counts 5000 50000 100000
+powershell -ExecutionPolicy Bypass -File .\scripts\run_splat_spike.ps1 -ArtifactDir <artifact-root> -SampleDir <artifact-root>\samples
+```
+
+This writes `splat_editor_results.json`, `splat_editor_results.csv`, `splat_spike_summary.md`, and `unity_splat_spike.log`. The spike evidence records scenery mode, renderer detection, fallback status, synthetic sample sizes, estimated splat memory budgets, and a conservative viability classification.
+
 The supplemental PlayMode probe is:
 
 ```powershell
@@ -104,3 +113,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\flight_approach_20260612
 ```
 
 This folder contains the v0.5 implementation review, Unity scenario runner logs, scenario JSON/CSV/summary, approach debrief JSON/Markdown, replay timeline JSON/CSV, PlayMode XML, Android build logs, and APK hash evidence when validation completes.
+
+## 2026-06-12 Gaussian Splat Spike Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\splat_spike_20260612_213624
+```
+
+This folder contains the v0.6 splat spike logs, synthetic PLY samples generated outside the repo, editor spike JSON/CSV/Markdown, v0.5 scenario regression evidence, PlayMode XML, Android build logs, and APK hash evidence. The result defers true Quest Gaussian splat viability until a real renderer package and headset runtime frame timing are tested.

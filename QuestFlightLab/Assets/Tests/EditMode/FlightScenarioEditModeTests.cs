@@ -1,5 +1,6 @@
 #if UNITY_INCLUDE_TESTS
 using NUnit.Framework;
+using QuestFlightLab.Environment;
 using QuestFlightLab.TestHarness;
 using QuestFlightLab.Training;
 using QuestFlightLab.Runtime;
@@ -178,6 +179,60 @@ namespace QuestFlightLab.Tests.EditMode
             Assert.That(approachJson, Does.Contain("Stabilized Approach"));
             Assert.That(timelineJson, Does.Contain("samples"));
             Assert.That(result.timeline.sampleCount, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void MeshSceneryProviderKeepsFallbackActive()
+        {
+            GameObject existingAirport = GameObject.Find(MeshSceneryProvider.AirportRootName);
+            GameObject go = new GameObject("MeshSceneryProviderTest");
+            MeshSceneryProvider provider = go.AddComponent<MeshSceneryProvider>();
+
+            SceneryProviderStatus status = provider.ActivateProvider(null);
+
+            Assert.That(status.activeMode, Is.EqualTo(SceneryMode.MeshFallback.ToString()));
+            Assert.That(status.fallbackUsed, Is.False);
+            Assert.That(GameObject.Find(MeshSceneryProvider.AirportRootName), Is.Not.Null);
+
+            Object.DestroyImmediate(go);
+            if (existingAirport == null)
+            {
+                Object.DestroyImmediate(GameObject.Find(MeshSceneryProvider.AirportRootName));
+            }
+        }
+
+        [Test]
+        public void SplatSceneryProviderFailsSafeWithoutRendererDependency()
+        {
+            GameObject go = new GameObject("SplatSceneryProviderTest");
+            SplatSceneryProvider provider = go.AddComponent<SplatSceneryProvider>();
+            provider.enableExperimentalProxy = false;
+            provider.syntheticSplatCount = 5000;
+
+            SceneryProviderStatus status = provider.ActivateProvider(go.transform);
+
+            if (SplatSceneryProvider.IsGaussianSplatRendererAvailable())
+            {
+                Assert.That(status.rendererAvailable, Is.True);
+            }
+            else
+            {
+                Assert.That(status.fallbackUsed, Is.True);
+                Assert.That(status.activeMode, Is.EqualTo(SceneryMode.MeshFallback.ToString()));
+                Assert.That(status.warnings.Exists(w => w.Contains("No Unity Gaussian splat renderer package")), Is.True);
+            }
+
+            Object.DestroyImmediate(go);
+        }
+
+        [Test]
+        public void SplatBudgetEstimatesIncludeQuestSpikeBudgets()
+        {
+            var estimates = SceneryEvidenceLogger.BuildBudgetEstimates(string.Empty);
+            Assert.That(estimates.Count, Is.EqualTo(5));
+            Assert.That(estimates.Exists(e => e.splatCount == 50000), Is.True);
+            Assert.That(estimates.Exists(e => e.splatCount == 400000), Is.True);
+            Assert.That(estimates.Find(e => e.splatCount == 400000).estimatedGpuMegabytes, Is.GreaterThan(18f));
         }
     }
 }

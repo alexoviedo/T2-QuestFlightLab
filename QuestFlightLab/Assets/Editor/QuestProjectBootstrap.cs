@@ -85,6 +85,10 @@ namespace QuestFlightLab.Editor
             mapper.defaultThrottle = 0.72f;
 
             KbduApproxAirport.Build(null);
+            GameObject scenery = new GameObject("Scenery Mode Controller");
+            SceneryModeController sceneryMode = scenery.AddComponent<SceneryModeController>();
+            sceneryMode.requestedMode = SceneryMode.MeshFallback;
+            sceneryMode.enableExperimentalSplatProxy = false;
 
             GameObject aircraft = CreateTrainerAircraft(aircraftMat, blueMat, glassMat, out ControlSurfaceAnimator animator);
             AircraftState aircraftState = aircraft.AddComponent<AircraftState>();
@@ -136,7 +140,9 @@ namespace QuestFlightLab.Editor
                 "Assets/Scripts/Input/Usb2BleInputMapper.cs",
                 "Assets/Scripts/Input/InputEvidenceLogger.cs",
                 "Assets/Scripts/Flight/SimpleAircraftPhysics.cs",
-                "Assets/Scripts/Aircraft/ControlSurfaceAnimator.cs"
+                "Assets/Scripts/Aircraft/ControlSurfaceAnimator.cs",
+                "Assets/Scripts/Environment/SceneryModeController.cs",
+                "Assets/Scripts/Environment/SplatSceneryProvider.cs"
             };
 
             foreach (string file in requiredFiles)

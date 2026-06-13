@@ -26,6 +26,24 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlat
 
 This verifies the deterministic input source and mapper path, traffic-pattern lesson/scoring support, approach scoring/timeline serialization, airport reference verification, and cockpit panel binding through Unity Test Runner XML evidence. The explicit editor scenario runner remains the primary simulator-core evidence because it exports richer flight telemetry.
 
+## Gaussian Splat Spike Probe
+
+Run the optional scenery spike without the headset:
+
+```powershell
+python tools\generate_tiny_splat_samples.py --output-dir <artifact-root>\samples --counts 5000 50000 100000
+powershell -ExecutionPolicy Bypass -File .\scripts\run_splat_spike.ps1 -ArtifactDir <artifact-root> -SampleDir <artifact-root>\samples
+```
+
+This launches Unity batchmode, executes `QuestFlightLab.Editor.SplatSpikeBatchRunner.RunSplatSpike`, verifies mesh fallback activation, verifies the experimental splat provider fails safe when no renderer package is present, and writes:
+
+- `splat_editor_results.json`
+- `splat_editor_results.csv`
+- `splat_spike_summary.md`
+- `unity_splat_spike.log`
+
+The v0.6 splat probe is budget/plumbing evidence only. It does not replace the deterministic flight scenario runner and does not prove Quest splat rendering.
+
 ## Meta XR Simulator
 
 Meta XR Simulator was not detected in the Unity editor domain during the 2026-06-12 v0.2 run. If Meta XR Simulator is added later, it should be treated as a headset-interaction approximation, not proof of Quest hardware, Bluetooth, or USB2BLE behavior.
@@ -37,6 +55,7 @@ Meta XR Simulator was not detected in the Unity editor domain during the 2026-06
 - The prototype flight model responds consistently across scripted scenarios.
 - Scenario telemetry and pass/fail evidence can be generated without the headset.
 - The named cockpit instrument panel objects, Basic Traffic Pattern Familiarization scaffold, Stabilized Approach + Go-Around scaffold, airport pattern/final references, debrief reports, and replay timeline path are present in the autonomous evidence path.
+- The optional v0.6 scenery provider path can fail safe to mesh fallback when no Gaussian splat renderer is installed.
 
 ## What This Does Not Prove
 
@@ -46,3 +65,4 @@ Meta XR Simulator was not detected in the Unity editor domain during the 2026-06
 - Broad Quest compatibility.
 - Final C172 fidelity.
 - FAA-approved training, BATD/AATD qualification, or pilot-training credit.
+- Production Gaussian splat rendering, full-airport splat viability, or Quest splat performance.

@@ -34,9 +34,12 @@ sysinfo.txt
 *.gradle
 .gradle/
 
+# Gaussian splat experiment payloads
+*.ply
+*.spz
+
 # OS/editor noise
 .DS_Store
 Thumbs.db
 .vs/
 .vscode/
-
