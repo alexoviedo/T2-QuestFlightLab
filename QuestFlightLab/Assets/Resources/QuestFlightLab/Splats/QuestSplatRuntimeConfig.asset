@@ -30,7 +30,7 @@ MonoBehaviour:
   sphericalHarmonicsOrder: 0
   sortNthFrame: 1
   scenicWorldPosition: {x: 0, y: 0, z: 0}
-  scenicEulerAngles: {x: 0, y: 0, z: 0}
+  scenicEulerAngles: {x: 0, y: 90, z: 0}
   scenicSplatScale: 1
-  scenicOpacityScale: 0.92
+  scenicOpacityScale: 0.58
   scenicSortNthFrame: 1

@@ -18,6 +18,28 @@ The first Quest 3 runtime smoke passed on 2026-06-12 after the app was rebuilt w
 
 Quest launch can still be intercepted while the headset is doffed or Touch controllers are asleep. If the app appears not to focus after install, put on the headset once, wake the Touch controllers, and accept or continue past the launch prompt.
 
+## Playable Visual Demo Launch
+
+After installing the APK, launch the current recommended visual baseline with:
+
+```powershell
+.\scripts\launch_quest_playtest.ps1 -Mode playable_demo -CaptureLogcat -DurationSeconds 85
+```
+
+This starts the short demo pilot sequence, compact playtest HUD, cockpit/pilot view, and enhanced mesh/procedural airport baseline.
+
+`scenic_splat_medium` is currently safe-gated on Quest XR. It falls back to the mesh/procedural visual baseline and writes:
+
+```text
+Real Gaussian splat renderer disabled: XR stereo/world-lock check failed
+```
+
+For bounded renderer debugging only:
+
+```powershell
+.\scripts\launch_quest_playtest.ps1 -Mode scenic_splat_medium -DemoMode short_playtest -SplatDiagnostic -CaptureLogcat
+```
+
 ## Device Deploy Setup
 
 1. Enable Developer Mode for the Quest account/device.

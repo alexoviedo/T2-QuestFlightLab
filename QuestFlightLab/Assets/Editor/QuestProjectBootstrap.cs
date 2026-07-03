@@ -199,11 +199,13 @@ namespace QuestFlightLab.Editor
             Type xrOriginType = Type.GetType("Unity.XR.CoreUtils.XROrigin, Unity.XR.CoreUtils");
             GameObject origin = new GameObject("XR Origin");
             Transform cameraParent = origin.transform;
+            Component xrOrigin = null;
+            GameObject offset = null;
 
             if (xrOriginType != null)
             {
-                origin.AddComponent(xrOriginType);
-                GameObject offset = new GameObject("Camera Offset");
+                xrOrigin = origin.AddComponent(xrOriginType);
+                offset = new GameObject("Camera Offset");
                 offset.transform.SetParent(origin.transform, false);
                 offset.transform.localPosition = Vector3.zero;
                 cameraParent = offset.transform;
@@ -222,7 +224,34 @@ namespace QuestFlightLab.Editor
             Type trackedPoseType = Type.GetType("UnityEngine.InputSystem.XR.TrackedPoseDriver, Unity.InputSystem");
             if (trackedPoseType != null) cameraGo.AddComponent(trackedPoseType);
 
+            if (xrOrigin != null)
+            {
+                AssignXrOriginMember(xrOriginType, xrOrigin, "Camera", camera);
+                AssignXrOriginMember(xrOriginType, xrOrigin, "m_Camera", camera);
+                AssignXrOriginMember(xrOriginType, xrOrigin, "CameraFloorOffsetObject", offset);
+                AssignXrOriginMember(xrOriginType, xrOrigin, "m_CameraFloorOffsetObject", offset);
+            }
+
             return cameraGo.transform;
+        }
+
+        private static void AssignXrOriginMember(Type type, Component component, string memberName, UnityEngine.Object value)
+        {
+            if (type == null || component == null || value == null) return;
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            PropertyInfo property = type.GetProperty(memberName, flags);
+            if (property != null && property.CanWrite && property.PropertyType.IsInstanceOfType(value))
+            {
+                property.SetValue(component, value);
+                return;
+            }
+
+            FieldInfo field = type.GetField(memberName, flags);
+            if (field != null && field.FieldType.IsInstanceOfType(value))
+            {
+                field.SetValue(component, value);
+            }
         }
 
         private static GameObject CreateTrainerAircraft(Material aircraftMat, Material blueMat, Material glassMat, out ControlSurfaceAnimator animator)

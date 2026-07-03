@@ -49,6 +49,11 @@ namespace QuestFlightLab.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureRuntimePanel()
         {
+            if (QuestLaunchOptions.PlaytestHudEnabled() && !QuestLaunchOptions.VerboseHudEnabled())
+            {
+                return;
+            }
+
             CreateOrFindPanel();
         }
 

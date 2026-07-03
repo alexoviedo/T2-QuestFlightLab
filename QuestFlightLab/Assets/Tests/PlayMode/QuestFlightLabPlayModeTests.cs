@@ -1,9 +1,11 @@
 #if UNITY_INCLUDE_TESTS
 using NUnit.Framework;
 using QuestFlightLab.Environment;
+using QuestFlightLab.Flight;
 using QuestFlightLab.Input;
 using QuestFlightLab.Runtime;
 using QuestFlightLab.TestHarness;
+using QuestFlightLab.UI;
 using UnityEngine;
 
 namespace QuestFlightLab.Tests.PlayMode
@@ -105,6 +107,81 @@ namespace QuestFlightLab.Tests.PlayMode
             }
 
             Object.DestroyImmediate(go);
+        }
+
+        [Test]
+        public void PlaytestHudSuppressesVerbosePanelsAndRendersCompactText()
+        {
+            GameObject cameraGo = new GameObject("Main Camera");
+            cameraGo.tag = "MainCamera";
+            Camera camera = cameraGo.AddComponent<Camera>();
+
+            GameObject telemetryRoot = new GameObject("Telemetry Panel");
+            TelemetryPanel telemetry = telemetryRoot.AddComponent<TelemetryPanel>();
+            telemetry.panelRoot = telemetryRoot;
+
+            GameObject cockpitRoot = new GameObject("Cockpit Instrument Panel v0.5");
+            cockpitRoot.AddComponent<CockpitInstrumentPanel>();
+
+            GameObject menuRoot = new GameObject("Touch Controller Menu Placeholder");
+            menuRoot.AddComponent<TouchMenuPlaceholder>();
+
+            GameObject performanceRoot = new GameObject("Performance HUD");
+            PerformanceHud performanceHud = performanceRoot.AddComponent<PerformanceHud>();
+            GameObject fpsText = new GameObject("FpsText");
+            fpsText.transform.SetParent(performanceRoot.transform, false);
+            performanceHud.text = fpsText.AddComponent<TextMesh>();
+
+            GameObject hudRoot = new GameObject("Playtest HUD Probe");
+            PlaytestHud hud = hudRoot.AddComponent<PlaytestHud>();
+            hud.InitializeForTest(camera);
+
+            Assert.That(telemetryRoot.activeSelf, Is.False);
+            Assert.That(cockpitRoot.activeSelf, Is.False);
+            Assert.That(menuRoot.activeSelf, Is.False);
+            Assert.That(performanceRoot.activeSelf, Is.False);
+            Assert.That(hud.HiddenVerbosePanelCount, Is.GreaterThanOrEqualTo(4));
+            Assert.That(hud.VisibleLineCount, Is.LessThanOrEqualTo(6));
+            Assert.That(hud.LastRenderedText, Does.Contain("QUEST PLAYTEST"));
+
+            Object.DestroyImmediate(hudRoot);
+            Object.DestroyImmediate(cameraGo);
+            Object.DestroyImmediate(telemetryRoot);
+            Object.DestroyImmediate(cockpitRoot);
+            Object.DestroyImmediate(menuRoot);
+            Object.DestroyImmediate(performanceRoot);
+        }
+
+        [Test]
+        public void ShortPlaytestDemoPilotSequenceProvidesTakeoffControls()
+        {
+            AircraftControlState sweep = ShortPlaytestDemoPilot.ControlsForElapsedSeconds(5f, out string sweepPhase);
+            AircraftControlState roll = ShortPlaytestDemoPilot.ControlsForElapsedSeconds(30f, out string rollPhase);
+            AircraftControlState rotate = ShortPlaytestDemoPilot.ControlsForElapsedSeconds(52f, out string rotatePhase);
+
+            Assert.That(sweepPhase, Is.EqualTo("control surface sweep"));
+            Assert.That(Mathf.Abs(sweep.aileron), Is.GreaterThan(0.1f));
+            Assert.That(rollPhase, Is.EqualTo("takeoff roll"));
+            Assert.That(roll.throttle, Is.EqualTo(1f).Within(0.01f));
+            Assert.That(rotatePhase, Is.EqualTo("rotate/climb"));
+            Assert.That(rotate.elevator, Is.GreaterThan(0.25f));
+        }
+
+        [Test]
+        public void ShortPlaytestDemoPilotVisualEnvelopeClimbsAndBanks()
+        {
+            bool hasPose = ShortPlaytestDemoPilot.TryGetVisualFlightPoseForElapsedSeconds(
+                72f,
+                new Vector3(-560f, 1.25f, 0f),
+                Quaternion.Euler(0f, 90f, 0f),
+                out Vector3 position,
+                out Vector3 euler,
+                out Vector3 velocityWorld);
+
+            Assert.That(hasPose, Is.True);
+            Assert.That(position.y, Is.GreaterThan(20f));
+            Assert.That(Mathf.Abs(euler.z), Is.GreaterThan(2f));
+            Assert.That(velocityWorld.magnitude, Is.GreaterThan(25f));
         }
     }
 }

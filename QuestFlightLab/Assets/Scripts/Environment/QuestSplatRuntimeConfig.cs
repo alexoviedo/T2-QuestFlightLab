@@ -28,10 +28,10 @@ namespace QuestFlightLab.Environment
         public int sphericalHarmonicsOrder = 0;
         public int sortNthFrame = 1;
 
-        public Vector3 scenicWorldPosition = new Vector3(0f, 0f, 0f);
-        public Vector3 scenicEulerAngles = Vector3.zero;
+        public Vector3 scenicWorldPosition = Vector3.zero;
+        public Vector3 scenicEulerAngles = new Vector3(0f, 90f, 0f);
         public float scenicSplatScale = 1.0f;
-        public float scenicOpacityScale = 0.92f;
+        public float scenicOpacityScale = 0.58f;
         public int scenicSortNthFrame = 1;
 
         public Object AssetForBudget(int budget)

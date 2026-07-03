@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using QuestFlightLab.Runtime;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
@@ -11,6 +12,8 @@ namespace QuestFlightLab.Environment
 {
     public class SplatSceneryProvider : SceneryVisualProvider
     {
+        public const string QuestXrStereoWorldLockWarning = "Real Gaussian splat renderer disabled: XR stereo/world-lock check failed";
+
         public bool enableExperimentalProxy;
         public int syntheticSplatCount = 5000;
         public int maxProxyPointCount = 5000;
@@ -44,6 +47,23 @@ namespace QuestFlightLab.Environment
 
             if (rendererAvailable && enableRealRenderer)
             {
+                if (ShouldDisableRealRendererForCurrentRuntime())
+                {
+                    status.fallbackUsed = true;
+                    status.activeMode = SceneryMode.MeshFallback.ToString();
+                    status.loadError = "blocked_xr_stereo_composite";
+                    status.placementNotes = "UnityGaussianSplatting v1.1.1 rendered as a one-eye/headset-locked composite in Quest captures; normal playtest mode gates it off until a stereo/world-lock renderer fix is proven.";
+                    status.warnings.Add(QuestXrStereoWorldLockWarning);
+                    status.warnings.Add("Use qfl_splat_diagnostic=true only for bounded developer XR splat renderer experiments.");
+                    Debug.LogWarning($"[QuestFlightLab][Splats] {QuestXrStereoWorldLockWarning}. Mesh fallback remains active.");
+                    return status;
+                }
+
+                if (QuestLaunchOptions.SplatDiagnosticEnabled())
+                {
+                    status.warnings.Add("Developer splat diagnostic mode is enabled; real Gaussian renderer may be visually unsafe in Quest XR.");
+                }
+
                 if (TryCreateRuntimeRenderer(parent, status))
                 {
                     return status;
@@ -57,6 +77,29 @@ namespace QuestFlightLab.Environment
 
             Debug.Log("[QuestFlightLab][Splats] Splat renderer unavailable. Mesh fallback remains required.");
             return status;
+        }
+
+        public static bool ShouldDisableRealRendererForQuestXr(bool isAndroid, string deviceModel, bool diagnosticEnabled)
+        {
+            if (!isAndroid || diagnosticEnabled) return false;
+            return LooksLikeQuestDevice(deviceModel);
+        }
+
+        private static bool ShouldDisableRealRendererForCurrentRuntime()
+        {
+            return ShouldDisableRealRendererForQuestXr(
+                Application.platform == RuntimePlatform.Android,
+                SystemInfo.deviceModel,
+                QuestLaunchOptions.SplatDiagnosticEnabled());
+        }
+
+        private static bool LooksLikeQuestDevice(string deviceModel)
+        {
+            if (string.IsNullOrWhiteSpace(deviceModel)) return false;
+            string normalized = deviceModel.Trim().ToLowerInvariant();
+            return normalized.Contains("quest") ||
+                   normalized.Contains("oculus") ||
+                   normalized.Contains("meta");
         }
 
         public override void DeactivateProvider()
@@ -147,6 +190,7 @@ namespace QuestFlightLab.Environment
                 activeRuntimeRenderer.transform.SetParent(parent, false);
                 activeRuntimeRenderer.transform.position = config.WorldPositionForProfile(status.sampleKey);
                 activeRuntimeRenderer.transform.rotation = Quaternion.Euler(config.EulerAnglesForProfile(status.sampleKey));
+                RecordPlacementStatus(status, config, sample, activeRuntimeRenderer.transform);
 
                 Component renderer = activeRuntimeRenderer.AddComponent(rendererType);
                 SetField(rendererType, renderer, "m_Asset", sample);
@@ -179,7 +223,7 @@ namespace QuestFlightLab.Environment
                 }
                 else
                 {
-                    Debug.Log($"[QuestFlightLab][Splats] Runtime Gaussian splat renderer active: {status.sampleKey}/{sample.name}, budget {status.splatCount}.");
+                    Debug.Log($"[QuestFlightLab][Splats] Runtime Gaussian splat renderer active: {status.sampleKey}/{sample.name}, budget {status.splatCount}, pos={status.rendererWorldPosition}, euler={status.rendererEulerAngles}.");
                 }
 
                 return !status.fallbackUsed;
@@ -261,6 +305,69 @@ namespace QuestFlightLab.Environment
             }
 
             return total;
+        }
+
+        private static void RecordPlacementStatus(
+            SceneryProviderStatus status,
+            QuestSplatRuntimeConfig config,
+            UnityEngine.Object sample,
+            Transform rendererTransform)
+        {
+            status.rendererWorldPosition = rendererTransform.position;
+            status.rendererEulerAngles = rendererTransform.eulerAngles;
+            status.rendererSplatScale = config.SplatScaleForProfile(status.sampleKey);
+
+            if (TryReadVector3Field(sample, "m_BoundsMin", out Vector3 localMin) &&
+                TryReadVector3Field(sample, "m_BoundsMax", out Vector3 localMax))
+            {
+                status.rendererLocalBoundsMin = localMin;
+                status.rendererLocalBoundsMax = localMax;
+                TransformLocalBounds(rendererTransform, localMin, localMax, out Vector3 worldMin, out Vector3 worldMax);
+                status.rendererWorldBoundsMin = worldMin;
+                status.rendererWorldBoundsMax = worldMax;
+            }
+
+            if (QuestSplatRuntimeConfig.IsScenicProfile(status.sampleKey))
+            {
+                status.placementNotes = "Procedural scenic patch is yaw-calibrated to the mesh runway and kept downfield as a distant runway-edge/background layer so it does not carpet the cockpit or runway start. It is visual-only, synthetic, and not surveyed terrain registration.";
+            }
+        }
+
+        private static bool TryReadVector3Field(UnityEngine.Object obj, string fieldName, out Vector3 value)
+        {
+            value = Vector3.zero;
+            if (obj == null) return false;
+
+            FieldInfo field = obj.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field == null) return false;
+            object raw = field.GetValue(obj);
+            if (!(raw is Vector3 vector)) return false;
+
+            value = vector;
+            return true;
+        }
+
+        private static void TransformLocalBounds(Transform transform, Vector3 localMin, Vector3 localMax, out Vector3 worldMin, out Vector3 worldMax)
+        {
+            worldMin = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+            worldMax = new Vector3(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity);
+
+            for (int x = 0; x < 2; x++)
+            {
+                for (int y = 0; y < 2; y++)
+                {
+                    for (int z = 0; z < 2; z++)
+                    {
+                        Vector3 local = new Vector3(
+                            x == 0 ? localMin.x : localMax.x,
+                            y == 0 ? localMin.y : localMax.y,
+                            z == 0 ? localMin.z : localMax.z);
+                        Vector3 world = transform.TransformPoint(local);
+                        worldMin = Vector3.Min(worldMin, world);
+                        worldMax = Vector3.Max(worldMax, world);
+                    }
+                }
+            }
         }
 
         private static bool ComputeKernelsSupported(ComputeShader computeShader, SceneryProviderStatus status)

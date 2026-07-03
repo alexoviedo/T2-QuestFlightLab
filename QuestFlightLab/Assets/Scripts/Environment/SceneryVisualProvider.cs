@@ -17,6 +17,14 @@ namespace QuestFlightLab.Environment
         public string sampleName;
         public string sampleKey;
         public string budgetProfile;
+        public Vector3 rendererWorldPosition;
+        public Vector3 rendererEulerAngles;
+        public Vector3 rendererLocalBoundsMin;
+        public Vector3 rendererLocalBoundsMax;
+        public Vector3 rendererWorldBoundsMin;
+        public Vector3 rendererWorldBoundsMax;
+        public float rendererSplatScale;
+        public string placementNotes;
         public int splatCount;
         public long assetBytes;
         public long estimatedGpuBytes;

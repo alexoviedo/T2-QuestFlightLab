@@ -58,9 +58,9 @@ namespace QuestFlightLab.Experimental.Splats.Editor
             config.sphericalHarmonicsOrder = 0;
             config.sortNthFrame = 1;
             config.scenicWorldPosition = Vector3.zero;
-            config.scenicEulerAngles = Vector3.zero;
+            config.scenicEulerAngles = new Vector3(0f, 90f, 0f);
             config.scenicSplatScale = 1.0f;
-            config.scenicOpacityScale = 0.92f;
+            config.scenicOpacityScale = 0.58f;
             config.scenicSortNthFrame = 1;
 
             EditorUtility.SetDirty(config);

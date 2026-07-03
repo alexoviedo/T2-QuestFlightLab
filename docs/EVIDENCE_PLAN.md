@@ -91,6 +91,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_quest_splat_runtime_mode.
 
 This generates raw procedural PLYs in the artifact root, imports small Unity runtime assets, captures Quest logcat/screenshots/evidence JSON, and records whether the scenic modes improve the playable demo without compromising the mesh fallback. The v0.7 asset is procedural and project-owned, not a real airport capture.
 
+For v0.8 playable visual recovery, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_editor_scenario_tests.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlatform EditMode
+powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlatform PlayMode
+powershell -ExecutionPolicy Bypass -File .\scripts\build_quest.ps1
+.\scripts\launch_quest_playtest.ps1 -Mode playable_demo -CaptureLogcat -DurationSeconds 85
+.\scripts\launch_quest_playtest.ps1 -Mode scenic_splat_medium -DemoMode short_playtest -CaptureLogcat
+```
+
+This captures the recommended mesh/procedural visual baseline, demo-pilot motion evidence, head-pose diagnostics, and the Quest XR splat safety gate. Treat `scenic_splat_medium` as `blocked_xr_stereo_composite` unless `-SplatDiagnostic` is used and new headset captures prove stereo/world-locked output.
+
 The supplemental PlayMode probe is:
 
 ```powershell
@@ -178,3 +191,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\playable_splat_20260613_
 ```
 
 This folder contains the v0.7 procedural scenic splat generation manifest, Unity import logs, validation logs, APK hash evidence, and Quest runtime mesh/scenic-mode evidence when the runtime smoke completes.
+
+## 2026-07-03 Visual Recovery Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\visual_recovery_20260703_030335
+```
+
+This folder contains the v0.8 before/after headset screenshots, logcat, head-pose diagnostics, demo-pilot evidence, splat-gate evidence, APK hash, and splat XR diagnosis. The result is a playable mesh/procedural visual baseline with real Quest splats gated as `blocked_xr_stereo_composite` in normal playtest mode.

@@ -20,6 +20,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v0.6b renderer gate: `aras-p/UnityGaussianSplatting` renders synthetic 5k/50k/100k samples in the Unity editor using D3D12, and the Android APK builds with the package present; Quest runtime splat rendering is not yet proven
 - v0.6c Quest splat runtime gate: the same real renderer loads synthetic 5k/50k/100k samples on one Quest 3 with Vulkan/Adreno 740 evidence and stereo ADB screenshots for 50k/100k; mesh/terrain fallback remains default, and real airport-capture viability is not proven
 - v0.7 playable scenery path: an opt-in, project-owned procedural scenic splat patch adds airfield/foothills background modes (`scenic_splat_low`, `scenic_splat_medium`, optional `scenic_splat_high`) while mesh/terrain fallback remains the default playable airport
+- v0.8 visual recovery path: `playable_demo` / `playable_visual_baseline` uses self-generated C172-style cockpit/exterior and airport geometry, hides cluttered training gates in playtest mode, and gates the real Gaussian renderer on Quest XR because headset captures showed a one-eye/headset-locked stereo composite failure
 
 ## Build
 
@@ -45,6 +46,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install_quest.ps1
 If ADB does not show a Quest device, connect Quest 3 by USB-C, enable Developer Mode, approve USB debugging in the headset, and rerun the install script.
 
 On Quest, a VR launch may be intercepted until the headset is worn and Touch controllers are awake or the in-headset launch prompt is accepted.
+
+Recommended short visual demo:
+
+```powershell
+.\scripts\launch_quest_playtest.ps1 -Mode playable_demo -CaptureLogcat -DurationSeconds 85
+```
+
+`scenic_splat_medium` is gated to the mesh/procedural baseline in normal Quest playtest mode until the real Gaussian renderer is proven stereo/world-locked. Use `-SplatDiagnostic` only for bounded renderer debugging.
 
 ## Evidence
 
@@ -80,6 +89,7 @@ Repo evidence notes:
 - `docs/evidence/GAUSSIAN_SPLAT_REAL_RENDERER_SPIKE_2026-06-12.md`
 - `docs/evidence/GAUSSIAN_SPLAT_QUEST_RUNTIME_SPIKE_2026-06-12.md`
 - `docs/evidence/PLAYABLE_SCENIC_SPLAT_DEMO_WITNESS_2026-06-13.md`
+- `docs/evidence/QUEST_VISUAL_RECOVERY_PLAYTEST_2026-07-03.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 
@@ -130,6 +140,14 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\playable_splat_20260613_
 ```
 
 The v0.7 scenic patch is procedural/project-owned and opt-in. It is not a real-world airport capture and does not replace the mesh airport.
+
+The v0.8 visual recovery artifacts are under:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\visual_recovery_20260703_030335
+```
+
+The v0.8 result is a safer playable visual baseline with real splats classified as `blocked_xr_stereo_composite` in normal Quest playtest mode.
 
 Run the deterministic simulator suite without the headset:
 

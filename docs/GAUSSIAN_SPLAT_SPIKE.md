@@ -256,6 +256,26 @@ Reason:
 
 Important caveat: this is synthetic-only runtime evidence. It does not prove full-airport capture viability, production photorealistic scenery, long-session thermal behavior, or a real asset pipeline.
 
+## v0.8 Quest Visual Recovery Splat Gate
+
+On 2026-07-03, real Quest headset captures showed the `scenic_splat_medium` renderer behaving as a one-eye/headset-locked composite rather than world-locked scenery. The renderer object was world-rooted and runtime evidence said the asset/setup loaded, so the failure is classified as an XR stereo/composite rendering-path blocker rather than a placement-only issue.
+
+Evidence:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\visual_recovery_20260703_030335
+```
+
+Normal Quest playtest mode now gates the real Gaussian renderer and falls back to the mesh/procedural visual baseline with the warning:
+
+```text
+Real Gaussian splat renderer disabled: XR stereo/world-lock check failed
+```
+
+Classification: `blocked_xr_stereo_composite` for default Quest playtest splats.
+
+Developer diagnostic override remains available through `qfl_splat_diagnostic=true` / `-SplatDiagnostic`, but it should not be used for the default playable demo until new headset captures prove stereo/world-locked splats.
+
 ## Next Splat Milestone
 
 The next splat chunk should remain scoped to playable-demo scenery, not flight-model/training work:

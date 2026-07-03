@@ -193,6 +193,10 @@ namespace QuestFlightLab.Tests.EditMode
             Assert.That(status.activeMode, Is.EqualTo(SceneryMode.MeshFallback.ToString()));
             Assert.That(status.fallbackUsed, Is.False);
             Assert.That(GameObject.Find(MeshSceneryProvider.AirportRootName), Is.Not.Null);
+            GameObject airport = GameObject.Find(MeshSceneryProvider.AirportRootName);
+            Assert.That(airport.transform.Find("VisualBaselineRoot"), Is.Not.Null);
+            Assert.That(airport.transform.Find("VisualBaselineRoot/BaselineHangar_0_Body"), Is.Not.Null);
+            Assert.That(airport.transform.Find("VisualBaselineRoot/RunwayLightNorth_12"), Is.Not.Null);
 
             Object.DestroyImmediate(go);
             if (existingAirport == null)
@@ -227,6 +231,20 @@ namespace QuestFlightLab.Tests.EditMode
         }
 
         [Test]
+        public void SplatSceneryProviderGatesUnsafeQuestXrRendererByDefault()
+        {
+            Assert.That(
+                SplatSceneryProvider.ShouldDisableRealRendererForQuestXr(true, "Oculus Quest 3", false),
+                Is.True);
+            Assert.That(
+                SplatSceneryProvider.ShouldDisableRealRendererForQuestXr(true, "Oculus Quest 3", true),
+                Is.False);
+            Assert.That(
+                SplatSceneryProvider.ShouldDisableRealRendererForQuestXr(false, "Oculus Quest 3", false),
+                Is.False);
+        }
+
+        [Test]
         public void QuestSplatRuntimeConfigSelectsScenicProfiles()
         {
             QuestSplatRuntimeConfig config = ScriptableObject.CreateInstance<QuestSplatRuntimeConfig>();
@@ -247,6 +265,9 @@ namespace QuestFlightLab.Tests.EditMode
                 Assert.That(config.AssetForProfile("scenic", 50000), Is.SameAs(scenicMedium));
                 Assert.That(config.AssetForProfile("scenic", 100000), Is.SameAs(scenicHigh));
                 Assert.That(QuestSplatRuntimeConfig.NormalizeProfile("scenic"), Is.EqualTo(QuestSplatRuntimeConfig.ScenicProfile));
+                Assert.That(config.WorldPositionForProfile("scenic"), Is.EqualTo(Vector3.zero));
+                Assert.That(config.EulerAnglesForProfile("scenic"), Is.EqualTo(new Vector3(0f, 90f, 0f)));
+                Assert.That(config.OpacityScaleForProfile("scenic"), Is.EqualTo(0.58f).Within(0.001f));
             }
             finally
             {

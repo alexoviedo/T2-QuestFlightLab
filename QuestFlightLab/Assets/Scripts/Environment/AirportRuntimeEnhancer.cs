@@ -1,4 +1,5 @@
 using UnityEngine;
+using QuestFlightLab.Runtime;
 
 namespace QuestFlightLab.Environment
 {
@@ -15,6 +16,17 @@ namespace QuestFlightLab.Environment
             Material blue = KbduApproxAirport.Material("Pattern Blue Runtime", new Color(0.1f, 0.35f, 0.8f));
             Material green = KbduApproxAirport.Material("Pattern Gate Green Runtime", new Color(0.1f, 0.75f, 0.35f));
             Material amber = KbduApproxAirport.Material("Pattern Reference Amber Runtime", new Color(1f, 0.62f, 0.08f));
+            Material asphalt = VisualMaterial("Runway Asphalt Baseline", new Color(0.045f, 0.048f, 0.052f), 0f, 0.18f);
+            Material concrete = VisualMaterial("Apron Concrete Baseline", new Color(0.42f, 0.41f, 0.38f), 0f, 0.22f);
+            Material grass = VisualMaterial("High Plains Grass Baseline", new Color(0.27f, 0.38f, 0.18f), 0f, 0.12f);
+            Material hangar = VisualMaterial("Hangar Painted Metal Baseline", new Color(0.68f, 0.7f, 0.68f), 0.05f, 0.28f);
+            Material roof = VisualMaterial("Hangar Roof Baseline", new Color(0.18f, 0.2f, 0.22f), 0.08f, 0.34f);
+            Material treeTrunk = VisualMaterial("Tree Trunk Baseline", new Color(0.27f, 0.18f, 0.1f), 0f, 0.16f);
+            Material treeCanopy = VisualMaterial("Tree Canopy Baseline", new Color(0.12f, 0.3f, 0.12f), 0f, 0.18f);
+            Material hill = VisualMaterial("Foothill Baseline", new Color(0.28f, 0.32f, 0.25f), 0f, 0.2f);
+            Material lightWarm = VisualMaterial("Warm Runway Light Baseline", new Color(1f, 0.82f, 0.46f), 0f, 0.1f, new Color(1f, 0.65f, 0.24f));
+            Material red = VisualMaterial("Red Light Baseline", new Color(0.8f, 0.05f, 0.04f), 0f, 0.12f, new Color(0.9f, 0.02f, 0.01f));
+
             if (root.transform.Find("RunwayEdgeLineLeft") == null)
             {
                 AddRunwayMarkingEnhancements(root.transform, white, yellow);
@@ -35,6 +47,14 @@ namespace QuestFlightLab.Environment
             {
                 root.AddComponent<AirportDebugLabelToggle>();
             }
+            if (root.transform.Find("VisualBaselineRoot") == null)
+            {
+                AddVisualBaseline(root.transform, asphalt, concrete, grass, white, yellow, hangar, roof, treeTrunk, treeCanopy, hill, lightWarm, green, red);
+            }
+            if (QuestLaunchOptions.PlaytestHudEnabled())
+            {
+                ApplyPlayableVisualPresentation(root.transform);
+            }
         }
 
         public static void AddRunwayMarkingEnhancements(Transform root, Material white, Material yellow)
@@ -51,6 +71,166 @@ namespace QuestFlightLab.Environment
 
             KbduApproxAirport.Cube(root, "HoldShortBars08", new Vector3(-320f, 0.082f, -28f), new Vector3(24f, 0.01f, 1.2f), yellow);
             KbduApproxAirport.Cube(root, "HoldShortBars26", new Vector3(320f, 0.082f, -28f), new Vector3(24f, 0.01f, 1.2f), yellow);
+        }
+
+        private static void AddVisualBaseline(
+            Transform root,
+            Material asphalt,
+            Material concrete,
+            Material grass,
+            Material white,
+            Material yellow,
+            Material hangar,
+            Material roof,
+            Material treeTrunk,
+            Material treeCanopy,
+            Material hill,
+            Material lightWarm,
+            Material green,
+            Material red)
+        {
+            GameObject baseline = new GameObject("VisualBaselineRoot");
+            baseline.transform.SetParent(root, false);
+
+            Cube(baseline.transform, "EnhancedRunwaySurface", new Vector3(0f, 0.084f, 0f), Quaternion.identity, new Vector3(1250f, 0.012f, 23.4f), asphalt);
+            Cube(baseline.transform, "EnhancedTaxiwaySurface", new Vector3(0f, 0.088f, -75f), Quaternion.identity, new Vector3(910f, 0.012f, 11.4f), concrete);
+            Cube(baseline.transform, "EnhancedApronSurface", new Vector3(-360f, 0.091f, -145f), Quaternion.identity, new Vector3(174f, 0.012f, 104f), concrete);
+            Cube(baseline.transform, "MowedRunwaySafetyArea", new Vector3(0f, 0.066f, 0f), Quaternion.identity, new Vector3(1320f, 0.012f, 74f), grass);
+
+            AddRunwayNumeralApproximation(baseline.transform, white);
+            AddRunwayLights(baseline.transform, lightWarm, green, red);
+            AddTaxiwaySigns(baseline.transform, yellow, asphalt);
+            AddHangarsAndApron(baseline.transform, hangar, roof, concrete);
+            AddVegetationAndFoothills(baseline.transform, treeTrunk, treeCanopy, hill);
+        }
+
+        private static void ApplyPlayableVisualPresentation(Transform root)
+        {
+            string[] hiddenPrefixes =
+            {
+                "LeftDownwindMarker",
+                "BaseLegMarker",
+                "PatternGate",
+                "PatternAltitudeBand",
+                "PatternBoxBoundary",
+                "ApproachGate",
+                "ApproachPathPlaceholder",
+                "GoAroundClimboutGate",
+                "ExtendedCenterline",
+                "PapiVasiPlaceholder"
+            };
+
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+            {
+                foreach (string prefix in hiddenPrefixes)
+                {
+                    if (child.name.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        child.gameObject.SetActive(false);
+                        break;
+                    }
+                }
+            }
+
+            AirportDebugLabelToggle labelToggle = root.GetComponent<AirportDebugLabelToggle>();
+            if (labelToggle != null)
+            {
+                labelToggle.debugLabelsVisible = false;
+            }
+
+            foreach (TextMesh label in root.GetComponentsInChildren<TextMesh>(true))
+            {
+                if (label.name.Contains("Label"))
+                {
+                    label.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        private static void AddRunwayNumeralApproximation(Transform parent, Material white)
+        {
+            Cube(parent, "Runway08NumeralStem0", new Vector3(-575f, 0.105f, 4.7f), Quaternion.identity, new Vector3(2.4f, 0.012f, 8f), white);
+            Cube(parent, "Runway08NumeralStem8A", new Vector3(-555f, 0.105f, 4.7f), Quaternion.identity, new Vector3(2.4f, 0.012f, 8f), white);
+            Cube(parent, "Runway08NumeralStem8B", new Vector3(-544f, 0.105f, 4.7f), Quaternion.identity, new Vector3(2.4f, 0.012f, 8f), white);
+            Cube(parent, "Runway08NumeralBar8Top", new Vector3(-549.5f, 0.106f, 8.2f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.6f), white);
+            Cube(parent, "Runway08NumeralBar8Mid", new Vector3(-549.5f, 0.106f, 4.7f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.4f), white);
+            Cube(parent, "Runway08NumeralBar8Bottom", new Vector3(-549.5f, 0.106f, 1.2f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.6f), white);
+
+            Cube(parent, "Runway26NumeralStem2", new Vector3(544f, 0.105f, -4.7f), Quaternion.identity, new Vector3(2.4f, 0.012f, 8f), white);
+            Cube(parent, "Runway26NumeralBar2Top", new Vector3(549.5f, 0.106f, -1.2f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.6f), white);
+            Cube(parent, "Runway26NumeralBar2Mid", new Vector3(549.5f, 0.106f, -4.7f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.4f), white);
+            Cube(parent, "Runway26NumeralBar2Bottom", new Vector3(549.5f, 0.106f, -8.2f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.6f), white);
+            Cube(parent, "Runway26NumeralStem6A", new Vector3(565f, 0.105f, -4.7f), Quaternion.identity, new Vector3(2.4f, 0.012f, 8f), white);
+            Cube(parent, "Runway26NumeralBar6Top", new Vector3(570.5f, 0.106f, -1.2f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.6f), white);
+            Cube(parent, "Runway26NumeralBar6Mid", new Vector3(570.5f, 0.106f, -4.7f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.4f), white);
+            Cube(parent, "Runway26NumeralBar6Bottom", new Vector3(570.5f, 0.106f, -8.2f), Quaternion.identity, new Vector3(10.5f, 0.012f, 1.6f), white);
+        }
+
+        private static void AddRunwayLights(Transform parent, Material lightWarm, Material green, Material red)
+        {
+            for (int i = -12; i <= 12; i++)
+            {
+                float x = i * 48f;
+                Sphere(parent, $"RunwayLightNorth_{i + 12}", new Vector3(x, 0.22f, 14.7f), new Vector3(1.1f, 0.45f, 1.1f), lightWarm);
+                Sphere(parent, $"RunwayLightSouth_{i + 12}", new Vector3(x, 0.22f, -14.7f), new Vector3(1.1f, 0.45f, 1.1f), lightWarm);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                float z = -8f + i * 4f;
+                Sphere(parent, $"Runway08ThresholdGreen_{i}", new Vector3(-618f, 0.26f, z), new Vector3(1.35f, 0.55f, 1.35f), green);
+                Sphere(parent, $"Runway26EndRed_{i}", new Vector3(-634f, 0.24f, z), new Vector3(1.1f, 0.45f, 1.1f), red);
+                Sphere(parent, $"Runway26ThresholdGreen_{i}", new Vector3(618f, 0.26f, z), new Vector3(1.35f, 0.55f, 1.35f), green);
+                Sphere(parent, $"Runway08EndRed_{i}", new Vector3(634f, 0.24f, z), new Vector3(1.1f, 0.45f, 1.1f), red);
+            }
+        }
+
+        private static void AddTaxiwaySigns(Transform parent, Material yellow, Material dark)
+        {
+            Cube(parent, "TaxiSignRunwayHold08", new Vector3(-330f, 1.6f, -24f), Quaternion.Euler(0f, 90f, 0f), new Vector3(6f, 2f, 0.25f), yellow);
+            Cube(parent, "TaxiSignRunwayHold08Back", new Vector3(-330f, 1.58f, -24.18f), Quaternion.Euler(0f, 90f, 0f), new Vector3(6.5f, 2.3f, 0.18f), dark);
+            Cube(parent, "TaxiSignApronA", new Vector3(-260f, 1.35f, -83f), Quaternion.identity, new Vector3(7f, 1.8f, 0.25f), yellow);
+            Cube(parent, "TaxiSignApronABack", new Vector3(-260f, 1.33f, -83.18f), Quaternion.identity, new Vector3(7.5f, 2.1f, 0.18f), dark);
+        }
+
+        private static void AddHangarsAndApron(Transform parent, Material hangar, Material roof, Material concrete)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                float x = -430f + i * 58f;
+                Cube(parent, $"BaselineHangar_{i}_Body", new Vector3(x, 7.5f, -214f), Quaternion.identity, new Vector3(44f, 15f, 34f), hangar);
+                Cube(parent, $"BaselineHangar_{i}_RoofLeft", new Vector3(x - 9f, 17f, -214f), Quaternion.Euler(0f, 0f, -22f), new Vector3(27f, 2.2f, 38f), roof);
+                Cube(parent, $"BaselineHangar_{i}_RoofRight", new Vector3(x + 9f, 17f, -214f), Quaternion.Euler(0f, 0f, 22f), new Vector3(27f, 2.2f, 38f), roof);
+                Cube(parent, $"BaselineHangar_{i}_Door", new Vector3(x, 5f, -196.7f), Quaternion.identity, new Vector3(28f, 9f, 0.5f), concrete);
+            }
+
+            Cube(parent, "BaselineFuelIsland", new Vector3(-286f, 1.4f, -134f), Quaternion.identity, new Vector3(14f, 2.8f, 9f), roof);
+            Cylinder(parent, "BaselineFuelPump", new Vector3(-286f, 2.8f, -128f), Quaternion.identity, new Vector3(1.3f, 2.8f, 1.3f), hangar);
+        }
+
+        private static void AddVegetationAndFoothills(Transform parent, Material treeTrunk, Material treeCanopy, Material hill)
+        {
+            for (int i = 0; i < 20; i++)
+            {
+                float x = -720f + i * 76f;
+                AddTree(parent, $"NorthTree_{i}", new Vector3(x, 0f, 310f + Mathf.Sin(i * 0.7f) * 26f), treeTrunk, treeCanopy);
+                AddTree(parent, $"SouthTree_{i}", new Vector3(x + 24f, 0f, -390f + Mathf.Cos(i * 0.5f) * 22f), treeTrunk, treeCanopy);
+            }
+
+            for (int i = 0; i < 8; i++)
+            {
+                float x = -780f + i * 220f;
+                Sphere(parent, $"BaselineFoothill_{i}", new Vector3(x, 48f + i * 3f, 610f + Mathf.Sin(i) * 34f), new Vector3(220f, 68f + i * 9f, 120f), hill);
+            }
+        }
+
+        private static void AddTree(Transform parent, string name, Vector3 basePosition, Material trunk, Material canopy)
+        {
+            GameObject tree = new GameObject(name);
+            tree.transform.SetParent(parent, false);
+            Cylinder(tree.transform, "Trunk", basePosition + new Vector3(0f, 2.3f, 0f), Quaternion.identity, new Vector3(0.9f, 2.3f, 0.9f), trunk);
+            Sphere(tree.transform, "CanopyLower", basePosition + new Vector3(0f, 5.3f, 0f), new Vector3(5.2f, 3.0f, 5.2f), canopy);
+            Sphere(tree.transform, "CanopyUpper", basePosition + new Vector3(0f, 7.2f, 0f), new Vector3(3.8f, 2.5f, 3.8f), canopy);
         }
 
         private static void AddAirportLabels(Transform root, Material material)
@@ -74,6 +254,62 @@ namespace QuestFlightLab.Environment
             mesh.characterSize = characterSize;
             mesh.fontSize = 32;
             mesh.color = material.color;
+        }
+
+        private static GameObject Cube(Transform parent, string name, Vector3 position, Quaternion rotation, Vector3 scale, Material material)
+        {
+            return Primitive(PrimitiveType.Cube, parent, name, position, rotation, scale, material);
+        }
+
+        private static GameObject Sphere(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
+        {
+            return Primitive(PrimitiveType.Sphere, parent, name, position, Quaternion.identity, scale, material);
+        }
+
+        private static GameObject Cylinder(Transform parent, string name, Vector3 position, Quaternion rotation, Vector3 scale, Material material)
+        {
+            return Primitive(PrimitiveType.Cylinder, parent, name, position, rotation, scale, material);
+        }
+
+        private static GameObject Primitive(PrimitiveType primitiveType, Transform parent, string name, Vector3 position, Quaternion rotation, Vector3 scale, Material material)
+        {
+            GameObject go = GameObject.CreatePrimitive(primitiveType);
+            go.name = name;
+            go.transform.SetParent(parent, false);
+            go.transform.position = position;
+            go.transform.rotation = rotation;
+            go.transform.localScale = scale;
+            Renderer renderer = go.GetComponent<Renderer>();
+            if (renderer != null) renderer.sharedMaterial = material;
+            Collider collider = go.GetComponent<Collider>();
+            if (collider != null)
+            {
+                if (Application.isPlaying) Object.Destroy(collider);
+                else Object.DestroyImmediate(collider);
+            }
+
+            return go;
+        }
+
+        private static Material VisualMaterial(string name, Color color, float metallic, float smoothness)
+        {
+            return VisualMaterial(name, color, metallic, smoothness, Color.black);
+        }
+
+        private static Material VisualMaterial(string name, Color color, float metallic, float smoothness, Color emission)
+        {
+            Material material = new Material(Shader.Find("Standard"));
+            material.name = name;
+            material.color = color;
+            material.SetFloat("_Metallic", metallic);
+            material.SetFloat("_Glossiness", smoothness);
+            if (emission.maxColorComponent > 0f)
+            {
+                material.EnableKeyword("_EMISSION");
+                material.SetColor("_EmissionColor", emission);
+            }
+
+            return material;
         }
     }
 

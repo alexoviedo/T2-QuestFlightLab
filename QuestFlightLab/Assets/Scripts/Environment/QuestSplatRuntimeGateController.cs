@@ -30,6 +30,14 @@ namespace QuestFlightLab.Environment
         public bool hasValidAsset;
         public bool hasValidRenderSetup;
         public string sampleName;
+        public Vector3 rendererWorldPosition;
+        public Vector3 rendererEulerAngles;
+        public Vector3 rendererLocalBoundsMin;
+        public Vector3 rendererLocalBoundsMax;
+        public Vector3 rendererWorldBoundsMin;
+        public Vector3 rendererWorldBoundsMax;
+        public float rendererSplatScale;
+        public string placementNotes;
         public int splatCount;
         public long assetBytes;
         public long estimatedGpuBytes;
@@ -99,6 +107,12 @@ namespace QuestFlightLab.Environment
             else
             {
                 status = controller.ApplyMode(SceneryMode.MeshFallback);
+                status.sampleKey = "mesh";
+                status.budgetProfile = launchProfile.budgetProfile;
+                if (launchProfile.budgetProfile != "mesh")
+                {
+                    status.warnings.Add("Playable visual baseline mesh/procedural scenery is active.");
+                }
             }
 
             evidence = CreateEvidence(launchMode, status);
@@ -153,6 +167,14 @@ namespace QuestFlightLab.Environment
                 hasValidAsset = providerStatus.hasValidAsset,
                 hasValidRenderSetup = providerStatus.hasValidRenderSetup,
                 sampleName = providerStatus.sampleName,
+                rendererWorldPosition = providerStatus.rendererWorldPosition,
+                rendererEulerAngles = providerStatus.rendererEulerAngles,
+                rendererLocalBoundsMin = providerStatus.rendererLocalBoundsMin,
+                rendererLocalBoundsMax = providerStatus.rendererLocalBoundsMax,
+                rendererWorldBoundsMin = providerStatus.rendererWorldBoundsMin,
+                rendererWorldBoundsMax = providerStatus.rendererWorldBoundsMax,
+                rendererSplatScale = providerStatus.rendererSplatScale,
+                placementNotes = providerStatus.placementNotes,
                 splatCount = providerStatus.splatCount,
                 assetBytes = providerStatus.assetBytes,
                 estimatedGpuBytes = providerStatus.estimatedGpuBytes,
@@ -309,6 +331,11 @@ namespace QuestFlightLab.Environment
                 if (normalized == "scenic_splat_high")
                 {
                     return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.ScenicProfile, budgetProfile = "scenic_splat_high", splatCount = 100000 };
+                }
+
+                if (normalized == "playable_demo" || normalized == "playable_visual_baseline" || normalized == "scenic_mesh_enhanced")
+                {
+                    return new RuntimeSplatLaunchProfile { sampleKey = "mesh", budgetProfile = "playable_visual_baseline", splatCount = 0 };
                 }
 
                 return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.SyntheticProfile, budgetProfile = "mesh", splatCount = 0 };
