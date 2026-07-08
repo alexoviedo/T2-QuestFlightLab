@@ -19,6 +19,9 @@ namespace QuestFlightLab.Runtime
         public float lodBias;
         public float shadowDistance;
         public float eyeTextureResolutionScale;
+        public int globalTextureMipmapLimit;
+        public int targetFrameRate;
+        public float cameraFarClipMeters;
         public bool fogEnabled;
         public Color fogColor;
         public float fogDensity;
@@ -48,26 +51,28 @@ namespace QuestFlightLab.Runtime
 
             QualitySettings.antiAliasing = msaa;
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
-            QualitySettings.lodBias = android ? 1.2f : 1.55f;
+            QualitySettings.globalTextureMipmapLimit = 0;
+            QualitySettings.lodBias = android ? 1.28f : 1.65f;
             QualitySettings.maximumLODLevel = 0;
-            QualitySettings.shadowDistance = android ? 55f : 95f;
+            QualitySettings.shadowDistance = android ? 58f : 105f;
             QualitySettings.shadowResolution = android ? ShadowResolution.Low : ShadowResolution.Medium;
             QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = android ? 72 : -1;
             GL.sRGBWrite = false;
 
-            XRSettings.eyeTextureResolutionScale = android ? 1.05f : 1.0f;
+            XRSettings.eyeTextureResolutionScale = android ? 1.08f : 1.0f;
 
-            RenderSettings.ambientLight = new Color(0.52f, 0.55f, 0.58f);
+            RenderSettings.ambientLight = new Color(0.50f, 0.54f, 0.58f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.62f, 0.72f, 0.84f);
-            RenderSettings.fogDensity = 0.00022f;
+            RenderSettings.fogColor = new Color(0.60f, 0.70f, 0.82f);
+            RenderSettings.fogDensity = 0.00016f;
 
             foreach (Camera camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
             {
                 camera.allowMSAA = true;
                 camera.allowHDR = false;
-                camera.farClipPlane = Mathf.Max(camera.farClipPlane, 6500f);
+                camera.farClipPlane = Mathf.Max(camera.farClipPlane, 9000f);
                 camera.nearClipPlane = Mathf.Min(camera.nearClipPlane, 0.03f);
             }
 
@@ -101,10 +106,24 @@ namespace QuestFlightLab.Runtime
                 lodBias = QualitySettings.lodBias,
                 shadowDistance = QualitySettings.shadowDistance,
                 eyeTextureResolutionScale = XRSettings.eyeTextureResolutionScale,
+                globalTextureMipmapLimit = QualitySettings.globalTextureMipmapLimit,
+                targetFrameRate = Application.targetFrameRate,
+                cameraFarClipMeters = MaxCameraFarClip(),
                 fogEnabled = RenderSettings.fog,
                 fogColor = RenderSettings.fogColor,
                 fogDensity = RenderSettings.fogDensity
             };
+        }
+
+        private static float MaxCameraFarClip()
+        {
+            float farClip = 0f;
+            foreach (Camera camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
+            {
+                farClip = Mathf.Max(farClip, camera.farClipPlane);
+            }
+
+            return farClip;
         }
 
         private static void WriteEvidence(RenderQualityEvidence evidence)

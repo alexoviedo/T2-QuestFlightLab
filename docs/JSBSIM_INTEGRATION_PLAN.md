@@ -61,6 +61,29 @@ The current open-loop JSBSim reference and Unity scenario suite are not matched-
 
 The Unity config was tuned only modestly in v1 to move toward a heavier, more damped C172-style trainer. This is not a JSBSim-backed runtime and not a final fidelity claim.
 
+## v2 Calibration Pass
+
+The v2 KBDU environment/physics pass keeps JSBSim as an offline reference oracle and tunes the Unity prototype more conservatively against the same open-loop comparison.
+
+Latest v2 artifacts:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\kbd_environment_physics_20260707_225453\baseline_jsbsim_comparison
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\kbd_environment_physics_20260707_225453\after_jsbsim_comparison
+```
+
+Current before/after deltas:
+
+| Phase | Baseline Delta | v2 Delta | Direction |
+| --- | ---: | ---: | --- |
+| Takeoff roll speed | +23.4 kt | +22.2 kt | slightly closer |
+| Rotation/climb altitude | +91.6 ft | +77.2 ft | closer |
+| Shallow turn bank | -48.2 deg | -45.2 deg | slightly closer |
+| Approach speed | +8.7 kt | +7.6 kt | closer |
+| Go-around speed | +36.4 kt | +35.1 kt | slightly closer |
+
+This is useful trend evidence, not a fidelity pass/fail. The next serious physics chunk should create matched-control JSBSim scenarios for the same Unity scenario definitions before making larger aerodynamic changes.
+
 ## Integration Path
 
 ### Short Term: Offline Reference Oracle

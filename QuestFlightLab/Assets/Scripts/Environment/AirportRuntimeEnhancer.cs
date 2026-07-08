@@ -113,6 +113,7 @@ namespace QuestFlightLab.Environment
             AddRunwayLights(baseline.transform, lightWarm, green, red);
             AddTaxiwaySigns(baseline.transform, yellow, asphalt);
             AddHangarsAndApron(baseline.transform, hangar, roof, concrete);
+            AddKBDUInspiredTaxiLaneNetwork(baseline.transform, asphalt, concrete, yellow, white);
             AddVisualFidelitySurfaceDetails(baseline.transform, rubber, asphaltPatch, concreteJoint, grassLight, grassDark, coneOrange, white, yellow);
             AddVegetationAndFoothills(baseline.transform, treeTrunk, treeCanopy, hill);
         }
@@ -211,7 +212,7 @@ namespace QuestFlightLab.Environment
 
         private static void AddHangarsAndApron(Transform parent, Material hangar, Material roof, Material concrete)
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 5; i++)
             {
                 float x = -430f + i * 58f;
                 Cube(parent, $"BaselineHangar_{i}_Body", new Vector3(x, 7.5f, -214f), Quaternion.identity, new Vector3(44f, 15f, 34f), hangar);
@@ -222,6 +223,36 @@ namespace QuestFlightLab.Environment
 
             Cube(parent, "BaselineFuelIsland", new Vector3(-286f, 1.4f, -134f), Quaternion.identity, new Vector3(14f, 2.8f, 9f), roof);
             Cylinder(parent, "BaselineFuelPump", new Vector3(-286f, 2.8f, -128f), Quaternion.identity, new Vector3(1.3f, 2.8f, 1.3f), hangar);
+        }
+
+        private static void AddKBDUInspiredTaxiLaneNetwork(Transform parent, Material asphalt, Material concrete, Material yellow, Material white)
+        {
+            Cube(parent, "SouthParallelTaxiwayWest", new Vector3(-355f, 0.096f, -52f), Quaternion.identity, new Vector3(520f, 0.012f, 9.5f), concrete);
+            Cube(parent, "SouthParallelTaxiwayEast", new Vector3(255f, 0.096f, -52f), Quaternion.identity, new Vector3(440f, 0.012f, 9.5f), concrete);
+            Cube(parent, "RunwayConnectorA", new Vector3(-480f, 0.099f, -29f), Quaternion.Euler(0f, 28f, 0f), new Vector3(78f, 0.012f, 8.5f), concrete);
+            Cube(parent, "RunwayConnectorB", new Vector3(-255f, 0.099f, -45f), Quaternion.Euler(0f, -20f, 0f), new Vector3(92f, 0.012f, 8.5f), concrete);
+            Cube(parent, "RunwayConnectorC", new Vector3(82f, 0.099f, -45f), Quaternion.Euler(0f, 18f, 0f), new Vector3(112f, 0.012f, 8.5f), concrete);
+            Cube(parent, "RunwayConnectorD", new Vector3(410f, 0.099f, -42f), Quaternion.Euler(0f, -24f, 0f), new Vector3(88f, 0.012f, 8.5f), concrete);
+
+            for (int i = 0; i < 14; i++)
+            {
+                float x = -610f + i * 90f;
+                Cube(parent, $"TaxiwayCenterline_{i}", new Vector3(x, 0.121f, -52f), Quaternion.identity, new Vector3(26f, 0.01f, 0.42f), yellow);
+            }
+
+            for (int i = 0; i < 9; i++)
+            {
+                float x = -470f + i * 45f;
+                Cube(parent, $"ApronTieDownLeadIn_{i}", new Vector3(x, 0.126f, -132f), Quaternion.Euler(0f, 90f, 0f), new Vector3(22f, 0.01f, 0.42f), yellow);
+                Cube(parent, $"ApronParkingT_{i}", new Vector3(x, 0.127f, -155f), Quaternion.identity, new Vector3(16f, 0.01f, 0.34f), white);
+            }
+
+            for (int i = 0; i < 7; i++)
+            {
+                float x = -535f + i * 170f;
+                Cube(parent, $"RunwayShoulderWearLeft_{i}", new Vector3(x, 0.118f, 13f), Quaternion.Euler(0f, i % 2 == 0 ? 3f : -4f, 0f), new Vector3(72f, 0.01f, 1.4f), asphalt);
+                Cube(parent, $"RunwayShoulderWearRight_{i}", new Vector3(x + 46f, 0.118f, -13f), Quaternion.Euler(0f, i % 2 == 0 ? -2f : 5f, 0f), new Vector3(66f, 0.01f, 1.3f), asphalt);
+            }
         }
 
         private static void AddVisualFidelitySurfaceDetails(
@@ -251,10 +282,17 @@ namespace QuestFlightLab.Environment
                 Cube(parent, $"RunwayPatch_{i}", new Vector3(x, 0.111f, z), Quaternion.Euler(0f, (i % 3 - 1) * 4f, 0f), new Vector3(34f, 0.01f, 3.8f), asphaltPatch);
             }
 
-            for (int i = 0; i < 14; i++)
+            for (int i = 0; i < 18; i++)
             {
-                float x = -585f + i * 90f;
+                float x = -620f + i * 74f;
                 Cube(parent, $"RunwayExpansionJoint_{i}", new Vector3(x, 0.116f, 0f), Quaternion.identity, new Vector3(0.45f, 0.01f, 22.2f), concreteJoint);
+            }
+
+            for (int i = 0; i < 22; i++)
+            {
+                float x = -590f + i * 55f;
+                float z = Mathf.Sin(i * 0.91f) * 8.2f;
+                Cube(parent, $"RunwayHairlineCrack_{i}", new Vector3(x, 0.121f, z), Quaternion.Euler(0f, -7f + (i % 5) * 3.5f, 0f), new Vector3(34f + i % 4 * 11f, 0.008f, 0.16f), concreteJoint);
             }
 
             for (int i = 0; i < 10; i++)
@@ -387,6 +425,13 @@ namespace QuestFlightLab.Environment
             material.color = color;
             material.SetFloat("_Metallic", metallic);
             material.SetFloat("_Glossiness", smoothness);
+            if (color.a >= 0.999f)
+            {
+                Texture2D noise = CreateNoiseTexture(name, color);
+                material.mainTexture = noise;
+                material.mainTextureScale = new Vector2(10f, 10f);
+            }
+
             if (emission.maxColorComponent > 0f)
             {
                 material.EnableKeyword("_EMISSION");
@@ -394,6 +439,47 @@ namespace QuestFlightLab.Environment
             }
 
             return material;
+        }
+
+        private static Texture2D CreateNoiseTexture(string name, Color baseColor)
+        {
+            const int size = 48;
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, true)
+            {
+                name = name + "_Noise",
+                filterMode = FilterMode.Trilinear,
+                wrapMode = TextureWrapMode.Repeat,
+                anisoLevel = 4
+            };
+
+            int seed = name.GetHashCode();
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float n = Noise01(seed, x + y * size);
+                    float streak = Mathf.Sin((x + seed % 11) * 0.35f + y * 0.07f) * 0.035f;
+                    float scale = 0.86f + n * 0.24f + streak;
+                    texture.SetPixel(x, y, new Color(
+                        Mathf.Clamp01(baseColor.r * scale),
+                        Mathf.Clamp01(baseColor.g * scale),
+                        Mathf.Clamp01(baseColor.b * scale),
+                        baseColor.a));
+                }
+            }
+
+            texture.Apply(true, true);
+            return texture;
+        }
+
+        private static float Noise01(int seed, int index)
+        {
+            unchecked
+            {
+                uint n = (uint)(seed * 1103515245 + index * 12345);
+                n = (n ^ (n >> 13)) * 1274126177u;
+                return ((n ^ (n >> 16)) & 0x00FFFFFF) / 16777215f;
+            }
         }
     }
 

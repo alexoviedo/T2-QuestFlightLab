@@ -26,8 +26,8 @@ MonoBehaviour:
   neverExceedSpeedKts: 163
   maxEnginePowerHp: 180
   propEfficiency: 0.74
-  staticThrustNewtons: 3700
-  maxThrustNewtons: 4300
+  staticThrustNewtons: 3600
+  maxThrustNewtons: 4100
   idleRpm: 700
   maxRpm: 2700
   carbHeatPowerLoss: 0.08
@@ -35,28 +35,28 @@ MonoBehaviour:
   airDensityKgM3: 1
   zeroLiftAoADeg: -2
   criticalAoADeg: 15
-  liftCoefficientBase: 0.45
-  liftCurveSlopePerRad: 5.1
+  liftCoefficientBase: 0.44
+  liftCurveSlopePerRad: 5.14
   maximumLiftCoefficient: 1.55
   postStallLiftMultiplier: 0.55
   elevatorAoAAuthorityDeg: 7.5
   trimAoAAuthorityDeg: 4.5
-  flapLiftBonus: 0.55
-  dragCoefficientBase: 0.036
-  inducedDragFactor: 0.055
+  flapLiftBonus: 0.54
+  dragCoefficientBase: 0.038
+  inducedDragFactor: 0.058
   flapDragBonus: 0.18
-  sideSlipDragFactor: 0.045
+  sideSlipDragFactor: 0.048
   pitchRateMaxDegPerSec: 36
-  rollRateMaxDegPerSec: 52
-  yawRateMaxDegPerSec: 25
-  pitchDamping: 2.6
-  rollDamping: 3
-  yawDamping: 2.2
+  rollRateMaxDegPerSec: 62
+  yawRateMaxDegPerSec: 27
+  pitchDamping: 2.65
+  rollDamping: 2.75
+  yawDamping: 2.3
   pitchAttitudeStability: 1
-  rollAttitudeStability: 0.55
+  rollAttitudeStability: 0.5
   maxPrototypePitchDeg: 24
-  maxPrototypeBankDeg: 55
-  coordinatedTurnCoupling: 0.78
+  maxPrototypeBankDeg: 58
+  coordinatedTurnCoupling: 0.84
   flapPitchMomentDegPerSec: -7
   flapSettingsDeg:
   - 0

@@ -25,19 +25,19 @@ namespace QuestFlightLab.Flight
     {
         public float airDensityKgM3 = 1.0f;
         public float zeroLiftAoADeg = -2f;
-        public float liftCoefficientBase = 0.42f;
-        public float liftCurveSlopePerRad = 5.2f;
-        public float maximumLiftCoefficientClean = 1.5f;
-        public float maximumLiftCoefficientLanding = 1.9f;
+        public float liftCoefficientBase = 0.44f;
+        public float liftCurveSlopePerRad = 5.14f;
+        public float maximumLiftCoefficientClean = 1.55f;
+        public float maximumLiftCoefficientLanding = 1.92f;
         public float stallWarningAoADeg = 12f;
         public float stallBreakAoADeg = 15.5f;
         public float stallWarningSpeedMarginKts = 5f;
         public float postStallLiftMultiplier = 0.52f;
-        public float dragCoefficientBase = 0.036f;
-        public float inducedDragFactor = 0.055f;
-        public float flapLiftBonus = 0.52f;
+        public float dragCoefficientBase = 0.038f;
+        public float inducedDragFactor = 0.058f;
+        public float flapLiftBonus = 0.54f;
         public float flapDragBonus = 0.18f;
-        public float sideSlipDragFactor = 0.045f;
+        public float sideSlipDragFactor = 0.048f;
     }
 
     [System.Serializable]
@@ -45,13 +45,13 @@ namespace QuestFlightLab.Flight
     {
         public float maxEnginePowerHp = 180f;
         public float propEfficiency = 0.74f;
-        public float staticThrustNewtons = 3700f;
-        public float maxThrustNewtons = 4300f;
+        public float staticThrustNewtons = 3600f;
+        public float maxThrustNewtons = 4100f;
         public float idleRpm = 700f;
         public float maxRpm = 2700f;
         public float carbHeatPowerLoss = 0.08f;
         public float minimumMixturePower = 0.35f;
-        public float climbPowerScalar = 0.92f;
+        public float climbPowerScalar = 0.91f;
     }
 
     [System.Serializable]
@@ -60,16 +60,16 @@ namespace QuestFlightLab.Flight
         public float elevatorAoAAuthorityDeg = 7.0f;
         public float trimAoAAuthorityDeg = 5.0f;
         public float pitchRateMaxDegPerSec = 36f;
-        public float rollRateMaxDegPerSec = 52f;
-        public float yawRateMaxDegPerSec = 25f;
-        public float pitchDamping = 2.6f;
-        public float rollDamping = 3.0f;
-        public float yawDamping = 2.2f;
+        public float rollRateMaxDegPerSec = 62f;
+        public float yawRateMaxDegPerSec = 27f;
+        public float pitchDamping = 2.65f;
+        public float rollDamping = 2.75f;
+        public float yawDamping = 2.3f;
         public float pitchAttitudeStability = 1.0f;
-        public float rollAttitudeStability = 0.55f;
+        public float rollAttitudeStability = 0.5f;
         public float maxPrototypePitchDeg = 24f;
-        public float maxPrototypeBankDeg = 55f;
-        public float coordinatedTurnCoupling = 0.78f;
+        public float maxPrototypeBankDeg = 58f;
+        public float coordinatedTurnCoupling = 0.84f;
         public float flapPitchMomentDegPerSec = -7f;
         public float maxTrim = 1f;
     }
@@ -139,7 +139,7 @@ namespace QuestFlightLab.Flight
         public float maxEnginePowerHp = 180f;
         public float propEfficiency = 0.74f;
         public float staticThrustNewtons = 3600f;
-        public float maxThrustNewtons = 4200f;
+        public float maxThrustNewtons = 4100f;
         public float idleRpm = 700f;
         public float maxRpm = 2700f;
         public float carbHeatPowerLoss = 0.08f;
@@ -149,31 +149,31 @@ namespace QuestFlightLab.Flight
         public float airDensityKgM3 = 1.0f;
         public float zeroLiftAoADeg = -2f;
         public float criticalAoADeg = 15f;
-        public float liftCoefficientBase = 0.45f;
-        public float liftCurveSlopePerRad = 5.1f;
+        public float liftCoefficientBase = 0.44f;
+        public float liftCurveSlopePerRad = 5.14f;
         public float maximumLiftCoefficient = 1.55f;
         public float postStallLiftMultiplier = 0.55f;
         public float elevatorAoAAuthorityDeg = 7.5f;
         public float trimAoAAuthorityDeg = 4.5f;
-        public float flapLiftBonus = 0.55f;
-        public float dragCoefficientBase = 0.035f;
-        public float inducedDragFactor = 0.054f;
-        public float flapDragBonus = 0.16f;
-        public float sideSlipDragFactor = 0.04f;
+        public float flapLiftBonus = 0.54f;
+        public float dragCoefficientBase = 0.038f;
+        public float inducedDragFactor = 0.058f;
+        public float flapDragBonus = 0.18f;
+        public float sideSlipDragFactor = 0.048f;
 
         [Header("Prototype controls and stability")]
-        public float pitchRateMaxDegPerSec = 42f;
-        public float rollRateMaxDegPerSec = 64f;
-        public float yawRateMaxDegPerSec = 28f;
-        public float pitchDamping = 2.4f;
-        public float rollDamping = 2.8f;
-        public float yawDamping = 2.1f;
-        public float pitchAttitudeStability = 0.85f;
-        public float rollAttitudeStability = 0.45f;
-        public float maxPrototypePitchDeg = 28f;
-        public float maxPrototypeBankDeg = 65f;
-        public float coordinatedTurnCoupling = 0.7f;
-        public float flapPitchMomentDegPerSec = -8f;
+        public float pitchRateMaxDegPerSec = 36f;
+        public float rollRateMaxDegPerSec = 62f;
+        public float yawRateMaxDegPerSec = 27f;
+        public float pitchDamping = 2.65f;
+        public float rollDamping = 2.75f;
+        public float yawDamping = 2.3f;
+        public float pitchAttitudeStability = 1.0f;
+        public float rollAttitudeStability = 0.5f;
+        public float maxPrototypePitchDeg = 24f;
+        public float maxPrototypeBankDeg = 58f;
+        public float coordinatedTurnCoupling = 0.84f;
+        public float flapPitchMomentDegPerSec = -7f;
 
         [Header("Prototype flaps and trim")]
         public float[] flapSettingsDeg = { 0f, 10f, 20f, 30f };

@@ -10,6 +10,8 @@ v0.5 adds targeted support for approach/go-around training evidence: approach co
 
 v1 adds a JSBSim/Unity offline comparator and a conservative config retune. JSBSim is now used as a reference oracle for trend gaps, not as the Unity runtime physics backend. The current comparison shows Unity still accelerates/climbs faster than the open-loop JSBSim `c172x` probe and turns less aggressively in the shallow-turn scenario, so the next physics chunk should build matched-control JSBSim profiles before heavier tuning.
 
+v2 makes another conservative JSBSim-informed tune while preserving the current runtime model architecture. Static/max thrust, clean lift/drag, induced drag, pitch damping/stability, and prototype pitch limits were adjusted to reduce the strongest over-climb/over-acceleration trend without breaking the existing 33-scenario suite. The open-loop comparison improved modestly, but Unity still accelerates/climbs faster than the JSBSim reference and turns less aggressively, so JSBSim remains an offline oracle rather than a runtime backend.
+
 See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 
 ## Approximate Seed Constants
@@ -46,6 +48,7 @@ See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 - Vy climb, stall recovery, pattern heading-change, instrument, and checklist verification are now explicit scenario evidence.
 - v0.5 adds approach reference-speed telemetry, final-approach scoring fields, go-around decision markers, and timeline/debrief exports.
 - v1 modestly increases damping/stability and reduces prototype pitch/bank/rate caps to keep the trainer from feeling too light while JSBSim comparison work matures.
+- v2 reduces thrust/pitch response further, increases induced drag slightly, and raises roll authority/bank limits enough to move shallow-turn response closer to the JSBSim trend while keeping editor scenarios green.
 
 ## Acceptance Metrics
 
@@ -84,3 +87,4 @@ The v0.5 suite adds stable final approach, high/low/fast/sink unstable approache
 - Better ground contact model with landing gear geometry, tire friction, braking, and crosswind effects.
 - Validated stall, spin, slip/skid, flap, trim, and control-authority behavior.
 - Matched-control JSBSim profiles for the same Unity editor scenarios before more aggressive runtime tuning.
+- A clear decision on whether JSBSim should drive editor-only reference testing, a desktop bridge, or a native Android runtime backend.

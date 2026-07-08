@@ -61,6 +61,30 @@ The v1 production visual/physics upgrade does not add new paid or downloaded vis
 
 OpenVSP remains the preferred future path for owned high-wing trainer exterior geometry, but no OpenVSP output is committed in v1.
 
+## v2 KBDU Environment + Physics Sources
+
+The v2 pass adds no paid or unclear-license assets and does not commit Google-derived assets.
+
+- OpenStreetMap reference extract:
+  - source: https://overpass-api.de/api/interpreter
+  - license/attribution: https://www.openstreetmap.org/copyright
+  - use: non-committed reference for KBDU airport/road/building/water density and layout cues
+  - artifact path: `C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\kbd_environment_physics_20260707_225453\osm_reference`
+  - committed: no raw OSM data committed
+- expanded KBDU-inspired procedural world:
+  - source: project-owned Unity mesh/material generation in `KbduInspiredWorldBuilder`
+  - use: terrain chunks, fields, roads, buildings, water/drainage hints, perimeter cues, far ridges
+  - committed: source code only
+- airport surface/detail pass:
+  - source: project-owned Unity primitive/material generation in `AirportRuntimeEnhancer`
+  - use: taxi-lane network, apron markings, runway cracks/wear, hangar/ramp density, procedural noisy materials
+  - committed: source code only
+- render-quality profile:
+  - source: project-owned runtime settings/evidence code in `QuestRenderQualityConfigurator`
+  - committed: source code only
+
+The imported C172 placeholder remains unchanged in v2.
+
 ## Existing Gaussian Splat Renderer Package
 
 The Gaussian renderer package remains:

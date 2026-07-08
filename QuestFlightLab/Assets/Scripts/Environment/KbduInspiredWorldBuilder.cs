@@ -21,43 +21,43 @@ namespace QuestFlightLab.Environment
             Transform existing = airportRoot.Find(RootName);
             if (existing != null) return existing.gameObject;
 
-            Material prairie = Material("Dry Prairie Chunk", new Color(0.32f, 0.40f, 0.22f), 0f, 0.5f);
-            Material darkerGrass = Material("Mowed Field Chunk", new Color(0.19f, 0.32f, 0.16f), 0f, 0.48f);
-            Material dirt = Material("Dry Dirt Gravel", new Color(0.38f, 0.31f, 0.22f), 0f, 0.68f);
+            Material prairie = Material("Dry Prairie Chunk", new Color(0.33f, 0.39f, 0.21f), 0f, 0.48f, 16f);
+            Material darkerGrass = Material("Mowed Field Chunk", new Color(0.18f, 0.31f, 0.15f), 0f, 0.46f, 18f);
+            Material dirt = Material("Dry Dirt Gravel", new Color(0.38f, 0.31f, 0.22f), 0f, 0.68f, 10f);
             Material road = Material("Local Road Asphalt", new Color(0.055f, 0.058f, 0.06f), 0f, 0.42f);
-            Material concrete = Material("Light Industrial Concrete", new Color(0.42f, 0.41f, 0.37f), 0f, 0.36f);
-            Material roof = Material("Industrial Roof Varied", new Color(0.18f, 0.2f, 0.22f), 0.05f, 0.48f);
+            Material concrete = Material("Light Industrial Concrete", new Color(0.42f, 0.41f, 0.37f), 0f, 0.36f, 12f);
+            Material roof = Material("Industrial Roof Varied", new Color(0.18f, 0.2f, 0.22f), 0.05f, 0.48f, 6f);
             Material water = Material("Reservoir Water Muted", new Color(0.12f, 0.26f, 0.34f, 0.78f), 0f, 0.15f);
-            Material foothill = Material("Front Range Foothill Far", new Color(0.27f, 0.31f, 0.25f), 0f, 0.72f);
-            Material mountain = Material("Front Range Mountain Far", new Color(0.34f, 0.37f, 0.37f), 0f, 0.84f);
+            Material foothill = Material("Front Range Foothill Far", new Color(0.27f, 0.31f, 0.25f), 0f, 0.72f, 9f);
+            Material mountain = Material("Front Range Mountain Far", new Color(0.34f, 0.37f, 0.37f), 0f, 0.84f, 8f);
             Material snow = Material("High Ridge Snow Hint", new Color(0.76f, 0.78f, 0.75f), 0f, 0.7f);
             Material fence = Material("Airport Perimeter Fence", new Color(0.34f, 0.35f, 0.32f), 0.15f, 0.28f);
+            Material fieldGold = Material("Harvest Field Gold", new Color(0.47f, 0.43f, 0.20f), 0f, 0.58f, 14f);
+            Material fieldGreen = Material("Irrigated Field Green", new Color(0.20f, 0.36f, 0.16f), 0f, 0.5f, 14f);
+            Material treeLine = Material("Cottonwood Tree Line", new Color(0.09f, 0.22f, 0.10f), 0f, 0.42f, 5f);
 
             GameObject root = new GameObject(RootName);
             root.transform.SetParent(airportRoot, false);
 
             int terrainChunkCount = AddTerrainChunks(root.transform, prairie, darkerGrass, dirt);
+            AddFieldParcels(root.transform, fieldGold, fieldGreen, dirt);
             AddRoadNetwork(root.transform, road, concrete);
             AddAirportNeighborhood(root.transform, concrete, roof, dirt);
             AddReservoirAndDrainage(root.transform, water, dirt);
-            AddPerimeterAndFieldCues(root.transform, fence, dirt, concrete);
+            AddPerimeterAndFieldCues(root.transform, fence, dirt, concrete, treeLine);
             AddFarFoothills(root.transform, foothill, mountain, snow);
             AddObjectLodGroups(root.transform);
 
             WorldPerformanceBudget budget = root.AddComponent<WorldPerformanceBudget>();
-            budget.profileName = "visual_fidelity_demo_medium";
-            budget.worldSizeMeters = new Vector2(8800f, 7800f);
-            budget.terrainChunkCount = terrainChunkCount;
-            budget.lodGroupCount = root.GetComponentsInChildren<LODGroup>(true).Length;
-            budget.notes = "Procedural KBDU-inspired world with mesh terrain chunks and ridge impostors; not navigation-accurate.";
+            PopulateBudget(root, budget, terrainChunkCount);
             return root;
         }
 
         private static int AddTerrainChunks(Transform parent, Material prairie, Material darkerGrass, Material dirt)
         {
-            const int radiusX = 4;
-            const int radiusZ = 4;
-            const float chunk = 980f;
+            const int radiusX = 5;
+            const int radiusZ = 5;
+            const float chunk = 1080f;
             int count = 0;
             for (int ix = -radiusX; ix <= radiusX; ix++)
             {
@@ -66,7 +66,9 @@ namespace QuestFlightLab.Environment
                     float x = ix * chunk;
                     float z = iz * chunk;
                     Material material = ((ix + iz) & 1) == 0 ? prairie : darkerGrass;
-                    GameObject tile = TerrainChunk(parent, $"TerrainChunk_{ix}_{iz}", new Vector3(x, 0f, z), chunk + 8f, material);
+                    int ring = Mathf.Max(Mathf.Abs(ix), Mathf.Abs(iz));
+                    int resolution = ring <= 1 ? 12 : ring <= 3 ? 8 : 4;
+                    GameObject tile = TerrainChunk(parent, $"TerrainChunk_{ix}_{iz}", new Vector3(x, 0f, z), chunk + 8f, resolution, material);
                     tile.isStatic = true;
                     count++;
                 }
@@ -83,47 +85,70 @@ namespace QuestFlightLab.Environment
             return count;
         }
 
+        private static void AddFieldParcels(Transform parent, Material fieldGold, Material fieldGreen, Material dirt)
+        {
+            for (int row = 0; row < 5; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    float x = -4300f + col * 980f + Mathf.Sin((row + 1) * (col + 3)) * 65f;
+                    float z = 1120f + row * 760f + Mathf.Cos((row + 2) * (col + 1)) * 82f;
+                    Material mat = (row + col) % 3 == 0 ? fieldGreen : fieldGold;
+                    Cube(parent, $"BoulderValleyFieldParcel_{row}_{col}", new Vector3(x, TerrainHeight(x, z) + 0.045f, z), Quaternion.Euler(0f, -6f + row * 3f, 0f), new Vector3(640f, 0.014f, 260f), mat);
+                    if ((row + col) % 2 == 0)
+                    {
+                        Cube(parent, $"BoulderValleyFieldFurrow_{row}_{col}", new Vector3(x, TerrainHeight(x, z) + 0.058f, z), Quaternion.Euler(0f, -6f + row * 3f, 0f), new Vector3(610f, 0.012f, 4.2f), dirt);
+                    }
+                }
+            }
+        }
+
         private static void AddRoadNetwork(Transform parent, Material road, Material concrete)
         {
-            Cube(parent, "DiagonalAirportAccessRoad", new Vector3(-330f, 0.015f, -520f), Quaternion.Euler(0f, -14f, 0f), new Vector3(1220f, 0.018f, 8f), road);
-            Cube(parent, "NorthernArterialRoad", new Vector3(140f, 0.012f, 505f), Quaternion.Euler(0f, 6f, 0f), new Vector3(2460f, 0.018f, 10f), road);
-            Cube(parent, "EasternServiceRoad", new Vector3(785f, 0.013f, -290f), Quaternion.Euler(0f, 87f, 0f), new Vector3(1320f, 0.018f, 7f), road);
-            Cube(parent, "WestRampAccessRoad", new Vector3(-705f, 0.014f, -190f), Quaternion.Euler(0f, 84f, 0f), new Vector3(760f, 0.018f, 6f), road);
+            Road(parent, "DiagonalAirportAccessRoad", -330f, -520f, -14f, 1600f, 8f, road);
+            Road(parent, "NorthernArterialRoad", 140f, 505f, 6f, 3200f, 10f, road);
+            Road(parent, "EasternServiceRoad", 785f, -290f, 87f, 1500f, 7f, road);
+            Road(parent, "WestRampAccessRoad", -705f, -190f, 84f, 860f, 6f, road);
+            Road(parent, "BoulderValleyNorthSouthRoad", -2200f, 850f, 88f, 3600f, 8f, road);
+            Road(parent, "BoulderReservoirAccessRoad", -1420f, 1350f, -31f, 1760f, 6.5f, road);
+            Road(parent, "AirportIndustrialLoopRoad", -520f, -710f, 4f, 820f, 7f, road);
+            Road(parent, "EastCountyRoad", 2550f, 1380f, 91f, 3600f, 8f, road);
 
-            for (int i = 0; i < 9; i++)
+            for (int i = 0; i < 15; i++)
             {
-                Cube(parent, $"RoadCenterDash_{i}", new Vector3(-860f + i * 185f, 0.032f, -387f + i * 9f), Quaternion.Euler(0f, -14f, 0f), new Vector3(26f, 0.01f, 0.55f), concrete);
+                Cube(parent, $"RoadCenterDash_{i}", new Vector3(-1120f + i * 170f, 0.032f, -387f + i * 9f), Quaternion.Euler(0f, -14f, 0f), new Vector3(26f, 0.01f, 0.55f), concrete);
             }
         }
 
         private static void AddAirportNeighborhood(Transform parent, Material concrete, Material roof, Material dirt)
         {
-            for (int i = 0; i < 11; i++)
+            for (int i = 0; i < 18; i++)
             {
-                float x = -760f + (i % 6) * 85f;
-                float z = -640f - (i / 6) * 96f;
-                GameObject building = Cube(parent, $"AirportIndustrial_{i}_Body", new Vector3(x, 5.8f, z), Quaternion.identity, new Vector3(52f + (i % 3) * 12f, 11.5f, 35f + (i % 2) * 14f), concrete);
+                float x = -820f + (i % 6) * 86f;
+                float z = -620f - (i / 6) * 82f;
+                GameObject building = Cube(parent, $"AirportIndustrial_{i}_Body", new Vector3(x, 5.3f, z), Quaternion.Euler(0f, (i % 3 - 1) * 3f, 0f), new Vector3(52f + (i % 3) * 12f, 10.5f, 35f + (i % 2) * 14f), concrete);
                 building.isStatic = true;
-                Cube(parent, $"AirportIndustrial_{i}_Roof", new Vector3(x, 12f, z), Quaternion.identity, new Vector3(56f + (i % 3) * 12f, 1.5f, 39f + (i % 2) * 14f), roof);
+                Cube(parent, $"AirportIndustrial_{i}_Roof", new Vector3(x, 11.2f, z), Quaternion.Euler(0f, (i % 3 - 1) * 3f, 0f), new Vector3(56f + (i % 3) * 12f, 1.5f, 39f + (i % 2) * 14f), roof);
                 Cube(parent, $"AirportIndustrial_{i}_Yard", new Vector3(x, 0.005f, z + 38f), Quaternion.identity, new Vector3(68f, 0.012f, 34f), dirt);
             }
 
-            for (int i = 0; i < 18; i++)
+            for (int i = 0; i < 34; i++)
             {
-                float x = 940f + (i % 6) * 68f;
-                float z = -710f + (i / 6) * 72f;
-                Cube(parent, $"LowBuildingFar_{i}", new Vector3(x, 3.2f, z), Quaternion.identity, new Vector3(38f, 6.4f, 28f), i % 2 == 0 ? concrete : roof);
+                float x = 920f + (i % 9) * 74f;
+                float z = -820f + (i / 9) * 86f;
+                Cube(parent, $"LowBuildingFar_{i}", new Vector3(x, 3.0f, z), Quaternion.Euler(0f, (i % 4) * 2f, 0f), new Vector3(38f + (i % 3) * 8f, 6f, 28f + (i % 2) * 10f), i % 2 == 0 ? concrete : roof);
             }
         }
 
         private static void AddReservoirAndDrainage(Transform parent, Material water, Material dirt)
         {
-            Cube(parent, "SmallReservoirWest", new Vector3(-1280f, TerrainHeight(-1280f, 740f) + 0.018f, 740f), Quaternion.Euler(0f, -8f, 0f), new Vector3(360f, 0.018f, 160f), water);
-            Cube(parent, "ReservoirShoreWest", new Vector3(-1280f, TerrainHeight(-1280f, 740f) + 0.012f, 740f), Quaternion.Euler(0f, -8f, 0f), new Vector3(394f, 0.014f, 188f), dirt);
+            Cube(parent, "SmallReservoirWest", new Vector3(-1280f, TerrainHeight(-1280f, 740f) + 0.018f, 740f), Quaternion.Euler(0f, -8f, 0f), new Vector3(620f, 0.018f, 260f), water);
+            Cube(parent, "ReservoirShoreWest", new Vector3(-1280f, TerrainHeight(-1280f, 740f) + 0.012f, 740f), Quaternion.Euler(0f, -8f, 0f), new Vector3(680f, 0.014f, 306f), dirt);
             Cube(parent, "DrainageSwaleNorth", new Vector3(-120f, TerrainHeight(-120f, 850f) + 0.018f, 850f), Quaternion.Euler(0f, 5f, 0f), new Vector3(1350f, 0.012f, 34f), dirt);
+            Cube(parent, "IrrigationDitchNorthwest", new Vector3(-2200f, TerrainHeight(-2200f, 1520f) + 0.016f, 1520f), Quaternion.Euler(0f, 18f, 0f), new Vector3(1900f, 0.012f, 18f), dirt);
         }
 
-        private static void AddPerimeterAndFieldCues(Transform parent, Material fence, Material dirt, Material concrete)
+        private static void AddPerimeterAndFieldCues(Transform parent, Material fence, Material dirt, Material concrete, Material treeLine)
         {
             Cube(parent, "AirportPerimeterFenceNorth", new Vector3(20f, 1.15f, 356f), Quaternion.identity, new Vector3(1480f, 1.3f, 0.18f), fence);
             Cube(parent, "AirportPerimeterFenceSouth", new Vector3(20f, 1.15f, -426f), Quaternion.identity, new Vector3(1480f, 1.3f, 0.18f), fence);
@@ -142,19 +167,26 @@ namespace QuestFlightLab.Environment
                 float z = 1180f + (i / 8) * 430f;
                 Cube(parent, $"DistantFarmTrack_{i}", new Vector3(x, TerrainHeight(x, z) + 0.032f, z), Quaternion.Euler(0f, (i % 4) * 7f, 0f), new Vector3(360f, 0.012f, 5.5f), dirt);
             }
+
+            for (int i = 0; i < 18; i++)
+            {
+                float x = -3800f + i * 440f;
+                float z = 1870f + Mathf.Sin(i * 0.77f) * 180f;
+                Cube(parent, $"CottonwoodTreeLineNorth_{i}", new Vector3(x, TerrainHeight(x, z) + 4.5f, z), Quaternion.Euler(0f, i * 4f, 0f), new Vector3(145f, 9f + i % 4 * 1.5f, 12f), treeLine);
+            }
         }
 
         private static void AddFarFoothills(Transform parent, Material foothill, Material mountain, Material snow)
         {
-            Ridge(parent, "FrontRangeFoothillLowRidge", -4200f, 8300f, 2750f, 620f, 12f, 92f, 18, 11, foothill);
-            Ridge(parent, "FrontRangeFoothillBackRidge", -4550f, 9000f, 3350f, 720f, 36f, 155f, 20, 29, foothill);
-            Ridge(parent, "FrontRangeMountainBackRidge", -4700f, 9400f, 4300f, 940f, 82f, 330f, 22, 47, mountain);
+            Ridge(parent, "FrontRangeFoothillLowRidge", -5600f, 11200f, 3400f, 820f, 12f, 105f, 24, 11, foothill);
+            Ridge(parent, "FrontRangeFoothillBackRidge", -6200f, 12400f, 4400f, 960f, 38f, 188f, 28, 29, foothill);
+            Ridge(parent, "FrontRangeMountainBackRidge", -6800f, 13600f, 6100f, 1220f, 92f, 430f, 30, 47, mountain);
 
             for (int i = 0; i < 9; i++)
             {
-                float x = -3600f + i * 820f;
-                float y = 285f + Mathf.Sin(i * 0.8f) * 34f;
-                Cube(parent, $"FrontRangeSnowCap_{i}", new Vector3(x, y, 4300f + Mathf.Cos(i * 0.51f) * 70f), Quaternion.Euler(0f, i * 6f, -7f + i % 3 * 5f), new Vector3(260f, 11f, 42f), snow);
+                float x = -4700f + i * 1160f;
+                float y = 365f + Mathf.Sin(i * 0.8f) * 38f;
+                Cube(parent, $"FrontRangeSnowCap_{i}", new Vector3(x, y, 6100f + Mathf.Cos(i * 0.51f) * 90f), Quaternion.Euler(0f, i * 6f, -7f + i % 3 * 5f), new Vector3(360f, 11f, 48f), snow);
             }
         }
 
@@ -164,7 +196,10 @@ namespace QuestFlightLab.Environment
             {
                 if (!child.name.StartsWith("AirportIndustrial_", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("FrontRange", StringComparison.OrdinalIgnoreCase) &&
-                    !child.name.StartsWith("LowBuildingFar_", StringComparison.OrdinalIgnoreCase))
+                    !child.name.StartsWith("LowBuildingFar_", StringComparison.OrdinalIgnoreCase) &&
+                    !child.name.StartsWith("BoulderValleyFieldParcel_", StringComparison.OrdinalIgnoreCase) &&
+                    !child.name.StartsWith("CottonwoodTreeLine", StringComparison.OrdinalIgnoreCase) &&
+                    !child.name.StartsWith("DistantFarmTrack_", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -192,9 +227,8 @@ namespace QuestFlightLab.Environment
             return Primitive(PrimitiveType.Sphere, parent, name, position, rotation, scale, material);
         }
 
-        private static GameObject TerrainChunk(Transform parent, string name, Vector3 center, float size, Material material)
+        private static GameObject TerrainChunk(Transform parent, string name, Vector3 center, float size, int resolution, Material material)
         {
-            const int resolution = 8;
             Vector3[] vertices = new Vector3[(resolution + 1) * (resolution + 1)];
             Vector2[] uvs = new Vector2[vertices.Length];
             int[] triangles = new int[resolution * resolution * 6];
@@ -245,6 +279,11 @@ namespace QuestFlightLab.Environment
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = true;
             return go;
+        }
+
+        private static GameObject Road(Transform parent, string name, float x, float z, float yaw, float length, float width, Material material)
+        {
+            return Cube(parent, name, new Vector3(x, TerrainHeight(x, z) + 0.035f, z), Quaternion.Euler(0f, yaw, 0f), new Vector3(length, 0.018f, width), material);
         }
 
         private static GameObject Ridge(
@@ -345,7 +384,7 @@ namespace QuestFlightLab.Environment
             return go;
         }
 
-        private static Material Material(string name, Color color, float metallic, float smoothness)
+        private static Material Material(string name, Color color, float metallic, float smoothness, float textureScale = 8f)
         {
             Material material = new Material(Shader.Find("Standard"));
             material.name = name;
@@ -356,7 +395,7 @@ namespace QuestFlightLab.Environment
             {
                 Texture2D noise = NoiseTexture(name, color);
                 material.mainTexture = noise;
-                material.mainTextureScale = new Vector2(8f, 8f);
+                material.mainTextureScale = new Vector2(textureScale, textureScale);
             }
 
             if (color.a < 1f)
@@ -370,6 +409,59 @@ namespace QuestFlightLab.Environment
             }
 
             return material;
+        }
+
+        private static void PopulateBudget(GameObject root, WorldPerformanceBudget budget, int terrainChunkCount)
+        {
+            MeshFilter[] meshes = root.GetComponentsInChildren<MeshFilter>(true);
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            int triangles = 0;
+            foreach (MeshFilter filter in meshes)
+            {
+                if (filter.sharedMesh != null) triangles += filter.sharedMesh.triangles.Length / 3;
+            }
+
+            budget.profileName = "visual_fidelity_demo_medium";
+            budget.worldSizeMeters = new Vector2(11800f, 11800f);
+            budget.terrainChunkCount = terrainChunkCount;
+            budget.lodGroupCount = root.GetComponentsInChildren<LODGroup>(true).Length;
+            budget.rendererCount = renderers.Length;
+            budget.meshCount = meshes.Length;
+            budget.approxTriangleCount = triangles;
+            budget.materialCount = CountUniqueMaterials(renderers);
+            budget.textureCount = CountUniqueTextures(renderers);
+            budget.nearDetailRadiusMeters = 1800f;
+            budget.midDetailRadiusMeters = 4200f;
+            budget.farDrawRadiusMeters = 7200f;
+            budget.notes = "Procedural KBDU-inspired world with mesh terrain detail rings, OSM-referenced road/airport cues, field parcels, and ridge impostors; not navigation-accurate.";
+        }
+
+        private static int CountUniqueMaterials(Renderer[] renderers)
+        {
+            var materials = new System.Collections.Generic.HashSet<Material>();
+            foreach (Renderer renderer in renderers)
+            {
+                foreach (Material material in renderer.sharedMaterials)
+                {
+                    if (material != null) materials.Add(material);
+                }
+            }
+
+            return materials.Count;
+        }
+
+        private static int CountUniqueTextures(Renderer[] renderers)
+        {
+            var textures = new System.Collections.Generic.HashSet<Texture>();
+            foreach (Renderer renderer in renderers)
+            {
+                foreach (Material material in renderer.sharedMaterials)
+                {
+                    if (material != null && material.mainTexture != null) textures.Add(material.mainTexture);
+                }
+            }
+
+            return textures.Count;
         }
 
         private static float TerrainHeight(float x, float z)
@@ -432,6 +524,14 @@ namespace QuestFlightLab.Environment
         public Vector2 worldSizeMeters;
         public int terrainChunkCount;
         public int lodGroupCount;
+        public int rendererCount;
+        public int meshCount;
+        public int approxTriangleCount;
+        public int materialCount;
+        public int textureCount;
+        public float nearDetailRadiusMeters;
+        public float midDetailRadiusMeters;
+        public float farDrawRadiusMeters;
         public string notes;
     }
 }

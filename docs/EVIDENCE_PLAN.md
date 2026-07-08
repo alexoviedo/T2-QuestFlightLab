@@ -137,6 +137,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_quest.ps1
 
 This captures the expanded environment visual QA/contact sheet, world-builder budget, render-quality profile, editor scenario evidence, JSBSim/Unity comparison report, PlayMode XML, Android build logs, and APK hash. Treat the environment as KBDU-inspired only and the JSBSim comparison as reference-oracle evidence only.
 
+For v2 KBDU environment/rendering/physics work, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_visual_qa.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\run_editor_scenario_tests.ps1
+python .\tools\jsbsim_probe\run_c172_probe.py --output-dir <artifact-root>\jsbsim_reference
+python .\tools\jsbsim_probe\compare_jsbsim_unity.py --jsbsim-json <artifact-root>\jsbsim_reference\jsbsim_c172_probe.json --jsbsim-csv <artifact-root>\jsbsim_reference\jsbsim_c172_probe.csv --unity-scenario-csv <artifact-root>\after_editor_scenarios\scenario_results.csv --output-dir <artifact-root>\after_jsbsim_comparison
+powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlatform PlayMode
+powershell -ExecutionPolicy Bypass -File .\scripts\build_quest.ps1
+```
+
+The v2 witness should include the OSM/Overpass reference artifact path, visual QA before/after contact sheets, world performance budget, render-quality profile, JSBSim comparison before/after table, scenario/PlayMode results, and APK hash. Treat OpenStreetMap-derived context as KBDU-inspired reference unless intentionally committed and attributed under its license obligations.
+
 The supplemental PlayMode probe is:
 
 ```powershell
@@ -232,3 +245,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\visual_recovery_20260703
 ```
 
 This folder contains the v0.8 before/after headset screenshots, logcat, head-pose diagnostics, demo-pilot evidence, splat-gate evidence, APK hash, and splat XR diagnosis. The result is a playable mesh/procedural visual baseline with real Quest splats gated as `blocked_xr_stereo_composite` in normal playtest mode.
+
+## 2026-07-07 KBDU Environment/Physics v2 Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\kbd_environment_physics_20260707_225453
+```
+
+This folder contains repo/tooling state, baseline and after visual QA, OSM reference extracts kept outside the repo, render-quality notes, editor scenario results, PlayMode XML, JSBSim comparison before/after reports, Android build logs, and APK hash evidence.

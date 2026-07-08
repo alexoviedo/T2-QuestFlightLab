@@ -42,6 +42,10 @@ QuestFlightLab uses these values as prototype targets for a C172S-style powered 
 | Final glide path | 3 degrees nominal | FAA Airplane Flying Handbook approach guidance | Scored by vertical-speed/airspeed trend, not by runway survey geometry. |
 | Final bank limit | 15 degrees or less | FAA Airplane Flying Handbook approach guidance | Used by v0.5 approach scoring. |
 
+## Current Calibration Status
+
+The v2 JSBSim comparison is still reference-oracle evidence only. Unity scenario behavior moved slightly closer to the open-loop JSBSim `c172x` probe for takeoff-roll speed, rotation/climb altitude, shallow-turn bank, approach speed, and go-around speed, but the profiles are not matched-control runs and do not prove final C172 fidelity.
+
 ## Training Behavior Targets
 
 - Before takeoff: verify controls, trim, flaps, mixture, carb heat, engine instruments, doors/windows, runway heading/departure brief placeholders.

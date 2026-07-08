@@ -90,3 +90,21 @@ Use the diagnostic override only for bounded renderer experiments. Do not use it
 - No real airport capture or surveyed scenery alignment is claimed.
 - Real Gaussian splats remain blocked in default Quest playtest mode until the XR stereo/composite path is fixed.
 - Editor visual QA does not prove Quest headset comfort, performance, or stereo rendering.
+
+## v2 KBDU Environment + Render Pass
+
+The v2 pass keeps the current imported C172 placeholder and deepens the world around it:
+
+- footprint increases to 11.8 km x 11.8 km,
+- terrain uses 121 mesh chunks with near/mid/far detail rings,
+- OSM reference data informed denser taxiway/apron/building/road/water cues, but raw OSM data is not committed,
+- ramp/hangar and final-approach visual QA shots were added,
+- runway/taxiway/apron surfaces include more joints, cracks, shoulder wear, taxi-lane centerlines, parking/T markings, and procedural noisy materials,
+- render-quality evidence now records far clip, mip limit, target FPS, and the active MSAA/aniso/LOD/shadow profile,
+- visual QA reports world-budget metrics including renderer/mesh/triangle/material/texture counts.
+
+Latest v2 visual QA artifact:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\kbd_environment_physics_20260707_225453\after_visual_qa_final
+```

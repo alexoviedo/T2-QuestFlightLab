@@ -68,3 +68,13 @@ The v1 milestone keeps the previous imported C172 placeholder aircraft/cockpit b
 - Visual QA captures additional far-scenery and ground-detail shots.
 - JSBSim comparison moves from a standalone probe to an offline Unity-scenario comparator.
 - Unity runtime physics remains approximate; no JSBSim runtime backend, final C172 fidelity, or training suitability is claimed.
+
+## v2 KBDU Environment + Physics Direction
+
+The v2 milestone keeps the current imported C172 placeholder cockpit/aircraft and focuses on the world/physics weaknesses:
+
+- `visual_fidelity_demo` now uses an 11.8 km x 11.8 km KBDU-inspired world with 121 terrain chunks and near/mid/far detail rings.
+- OpenStreetMap/Overpass data was used as a non-committed reference for airport/road/building/water density; the committed scene remains procedural and approximate.
+- Airport/runway detail includes denser taxi-lanes/connectors, ramp/hangar details, runway cracks/wear, field parcels, tree-line cues, roads, reservoir/drainage hints, and larger Front Range-style ridges.
+- Render-quality evidence now records far clip, mipmap limit, target FPS, MSAA/aniso/LOD/shadow settings, and visual QA captures ramp/hangar plus final-approach distance-cue shots.
+- Unity flight config was tuned modestly against the JSBSim comparison to reduce over-climb/over-acceleration and improve shallow-turn trend, while JSBSim remains an offline reference oracle.

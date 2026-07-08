@@ -60,6 +60,7 @@ namespace QuestFlightLab.Editor
             report.renderQuality = QuestRenderQualityConfigurator.ApplyProfile("visual_fidelity_demo_editor");
 
             VisualQaContext context = BuildVisualQaScene(width, height, report);
+            report.renderQuality = QuestRenderQualityConfigurator.CaptureEvidence("visual_fidelity_demo_editor");
             report.viewpointPersistence = VerifyViewpointPersistence(outputDir);
 
             RenderRequiredShots(context, report, outputDir, width, height);
@@ -83,8 +84,8 @@ namespace QuestFlightLab.Editor
         {
             RenderSettings.ambientLight = new Color(0.48f, 0.52f, 0.58f);
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.62f, 0.73f, 0.86f);
-            RenderSettings.fogDensity = 0.00045f;
+            RenderSettings.fogColor = new Color(0.60f, 0.70f, 0.82f);
+            RenderSettings.fogDensity = 0.00016f;
 
             GameObject sunObject = new GameObject("Visual QA Sun");
             Light sun = sunObject.AddComponent<Light>();
@@ -102,7 +103,7 @@ namespace QuestFlightLab.Editor
             cameraObject.tag = "MainCamera";
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.nearClipPlane = 0.03f;
-            camera.farClipPlane = 6500f;
+            camera.farClipPlane = 9000f;
             camera.fieldOfView = 76f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.56f, 0.72f, 0.94f);
@@ -116,7 +117,7 @@ namespace QuestFlightLab.Editor
             {
                 WorldPerformanceBudget budget = world.GetComponent<WorldPerformanceBudget>();
                 report.worldBuilderStatus = budget != null
-                    ? $"profile={budget.profileName} size={budget.worldSizeMeters.x:0}x{budget.worldSizeMeters.y:0}m chunks={budget.terrainChunkCount} lodGroups={budget.lodGroupCount}"
+                    ? $"profile={budget.profileName} size={budget.worldSizeMeters.x:0}x{budget.worldSizeMeters.y:0}m chunks={budget.terrainChunkCount} lodGroups={budget.lodGroupCount} renderers={budget.rendererCount} meshes={budget.meshCount} tris~{budget.approxTriangleCount} materials={budget.materialCount} textures={budget.textureCount} draw={budget.farDrawRadiusMeters:0}m"
                     : "expanded KBDU-inspired world built";
             }
             else
@@ -336,6 +337,32 @@ namespace QuestFlightLab.Editor
                 cameraPosition = new Vector3(-545f, 5.2f, -18f),
                 cameraRotation = LookAt(new Vector3(-545f, 5.2f, -18f), new Vector3(-455f, 0.4f, 2f)),
                 fov = 36f,
+                hideExteriorForCockpit = false,
+                showHud = false,
+                sanityTag = "runway"
+            });
+
+            RenderShot(context, report, outputDir, width, height, new ShotDefinition
+            {
+                id = "13_ramp_hangar_detail",
+                title = "Ramp, hangars, and taxi-lane detail",
+                sceneryMode = "visual_fidelity_demo",
+                cameraPosition = new Vector3(-555f, 26f, -330f),
+                cameraRotation = LookAt(new Vector3(-555f, 26f, -330f), new Vector3(-335f, 4f, -145f)),
+                fov = 42f,
+                hideExteriorForCockpit = false,
+                showHud = false,
+                sanityTag = "scenery"
+            });
+
+            RenderShot(context, report, outputDir, width, height, new ShotDefinition
+            {
+                id = "14_final_approach_distance_cues",
+                title = "Final approach and larger-world distance cues",
+                sceneryMode = "visual_fidelity_demo",
+                cameraPosition = new Vector3(-1350f, 150f, -34f),
+                cameraRotation = LookAt(new Vector3(-1350f, 150f, -34f), new Vector3(-340f, 12f, 0f)),
+                fov = 35f,
                 hideExteriorForCockpit = false,
                 showHud = false,
                 sanityTag = "runway"
@@ -761,7 +788,7 @@ namespace QuestFlightLab.Editor
             sb.AppendLine($"- Overall pass: {report.passed}");
             sb.AppendLine($"- Cockpit asset: {report.cockpitAssetStatus}");
             sb.AppendLine($"- World builder: {report.worldBuilderStatus}");
-            sb.AppendLine($"- Render quality: AA {report.renderQuality.antiAliasing}, aniso {report.renderQuality.anisotropicFiltering}, LOD bias {report.renderQuality.lodBias:0.00}, shadow distance {report.renderQuality.shadowDistance:0}m");
+            sb.AppendLine($"- Render quality: AA {report.renderQuality.antiAliasing}, aniso {report.renderQuality.anisotropicFiltering}, LOD bias {report.renderQuality.lodBias:0.00}, shadow distance {report.renderQuality.shadowDistance:0}m, far clip {report.renderQuality.cameraFarClipMeters:0}m, mip limit {report.renderQuality.globalTextureMipmapLimit}, target FPS {report.renderQuality.targetFrameRate}");
             sb.AppendLine($"- Mesh scenery: {report.meshSceneryStatus}");
             sb.AppendLine($"- Scenic/splat status: {report.scenicSceneryStatus}");
             sb.AppendLine($"- Viewpoint persistence: {(report.viewpointPersistence.passed ? "PASS" : "FAIL")} `{report.viewpointPersistence.path}`");
