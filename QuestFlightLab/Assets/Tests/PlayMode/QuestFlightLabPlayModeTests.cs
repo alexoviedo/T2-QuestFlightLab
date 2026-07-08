@@ -1,4 +1,5 @@
 #if UNITY_INCLUDE_TESTS
+using System.IO;
 using NUnit.Framework;
 using QuestFlightLab.Environment;
 using QuestFlightLab.Flight;
@@ -242,6 +243,48 @@ namespace QuestFlightLab.Tests.PlayMode
             Quaternion modelInCamera = Quaternion.Euler(QuestFirstViewRuntimeRepair.ImportedC172LocalEuler);
             Assert.That(Vector3.Dot(modelInCamera * Vector3.forward, Vector3.up), Is.GreaterThan(0.95f));
             Assert.That(Vector3.Dot(modelInCamera * Vector3.up, Vector3.back), Is.GreaterThan(0.95f));
+        }
+
+        [Test]
+        public void CockpitViewpointPersistenceSavesLoadsAndResetsCurrentCalibration()
+        {
+            string root = Path.Combine(Application.temporaryCachePath, "qfl_viewpoint_persistence_test");
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+
+            CockpitViewpointCalibrationState state = new CockpitViewpointCalibrationState
+            {
+                schemaVersion = CockpitViewpointPersistence.SchemaVersion,
+                generatedUtc = "2026-07-07T00:00:00.0000000Z",
+                sceneryMode = "visual_qa",
+                demoMode = "short_playtest",
+                importedC172CockpitModelEye = QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye,
+                importedC172PilotViewOffset = new Vector3(-0.21f, 0.17f, 0.05f),
+                importedC172CockpitYawDeg = 3.5f,
+                pilotEyeLocal = QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal + new Vector3(-0.21f, 0.17f, 0.05f),
+                importedC172LocalPosition = Vector3.zero,
+                instructions = "Test calibration."
+            };
+
+            string savedPath = CockpitViewpointPersistence.SaveCurrent(state, root);
+            Assert.That(File.Exists(savedPath), Is.True);
+
+            bool loaded = CockpitViewpointPersistence.TryLoadCurrent(
+                out CockpitViewpointCalibrationState restored,
+                out string loadedPath,
+                out string loadError,
+                root);
+            Assert.That(loaded, Is.True, loadError);
+            Assert.That(loadedPath, Is.EqualTo(savedPath));
+            Assert.That(restored.importedC172PilotViewOffset.x, Is.EqualTo(state.importedC172PilotViewOffset.x).Within(0.0001f));
+            Assert.That(restored.importedC172PilotViewOffset.y, Is.EqualTo(state.importedC172PilotViewOffset.y).Within(0.0001f));
+            Assert.That(restored.importedC172PilotViewOffset.z, Is.EqualTo(state.importedC172PilotViewOffset.z).Within(0.0001f));
+            Assert.That(restored.importedC172CockpitYawDeg, Is.EqualTo(3.5f).Within(0.0001f));
+
+            bool deleted = CockpitViewpointPersistence.DeleteCurrent(out string deletedPath, out string deleteError, root);
+            Assert.That(deleted, Is.True, deleteError);
+            Assert.That(deletedPath, Is.EqualTo(savedPath));
+            Assert.That(File.Exists(savedPath), Is.False);
+            Directory.Delete(root, true);
         }
 
         private static Bounds BoundsForTest(Renderer[] renderers)

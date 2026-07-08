@@ -21,6 +21,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v0.6c Quest splat runtime gate: the same real renderer loads synthetic 5k/50k/100k samples on one Quest 3 with Vulkan/Adreno 740 evidence and stereo ADB screenshots for 50k/100k; mesh/terrain fallback remains default, and real airport-capture viability is not proven
 - v0.7 playable scenery path: an opt-in, project-owned procedural scenic splat patch adds airfield/foothills background modes (`scenic_splat_low`, `scenic_splat_medium`, optional `scenic_splat_high`) while mesh/terrain fallback remains the default playable airport
 - v0.8 visual recovery path: `playable_demo` / `playable_visual_baseline` uses self-generated C172-style cockpit/exterior and airport geometry, hides cluttered training gates in playtest mode, and gates the real Gaussian renderer on Quest XR because headset captures showed a one-eye/headset-locked stereo composite failure
+- v0.9 autonomous visual QA path: `scripts\run_visual_qa.ps1` captures deterministic Unity Editor screenshots/contact sheets for cockpit, HUD, runway, aircraft, airport, scenic/fallback, demo-pilot, and viewpoint-calibration views without Quest, ESP32, or headset access
 
 ## Build
 
@@ -54,6 +55,16 @@ Recommended short visual demo:
 ```
 
 `scenic_splat_medium` is gated to the mesh/procedural baseline in normal Quest playtest mode until the real Gaussian renderer is proven stereo/world-locked. Use `-SplatDiagnostic` only for bounded renderer debugging.
+
+## Autonomous Visual QA
+
+For no-headset visual iteration:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_visual_qa.ps1
+```
+
+This writes screenshots, `visual_qa_contact_sheet.png`, JSON/CSV/Markdown reports, image sanity analysis, and a Unity log to a setup-artifacts folder. It is the preferred path when Codex needs to inspect the current visual state without Quest hardware.
 
 ## Evidence
 
@@ -90,6 +101,7 @@ Repo evidence notes:
 - `docs/evidence/GAUSSIAN_SPLAT_QUEST_RUNTIME_SPIKE_2026-06-12.md`
 - `docs/evidence/PLAYABLE_SCENIC_SPLAT_DEMO_WITNESS_2026-06-13.md`
 - `docs/evidence/QUEST_VISUAL_RECOVERY_PLAYTEST_2026-07-03.md`
+- `docs/evidence/AUTONOMOUS_VISUAL_QA_WITNESS_2026-07-08.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 

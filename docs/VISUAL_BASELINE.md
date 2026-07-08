@@ -14,6 +14,7 @@ Runtime systems:
   - locks the pilot view to the aircraft while preserving headset pose
   - hides solid placeholder fuselage/glass that blocked the pilot view
   - hides the original blocky aircraft visuals in playtest mode
+  - loads an imported C172 placeholder when available at `Resources/QuestFlightLab/ImportedAssets/Cessna172KogThorns/cessna172`
   - adds a self-generated C172-style high-wing exterior with wing struts, tricycle gear, prop/spinner, real transparent cabin-window openings, and animated control surfaces
   - places the pilot viewpoint in the left seat instead of on the aircraft centerline
   - adds a self-generated C172-style cockpit with transparent windshield/side windows, windshield frame, glare shield, panel, gauge/radio/switch accents, seats, yokes, rudder pedals, throttle, mixture, carb heat, trim, and flap cues
@@ -26,6 +27,8 @@ Runtime systems:
   - hides large training pattern gates/labels during playtest HUD mode so the default view is not cluttered by training scaffolding
 - `PlaytestHud`
   - shows a compact HUD and hides verbose telemetry/menu/performance panels by default
+- `VisualQaBatchRunner`
+  - captures deterministic editor screenshots/contact sheets for cockpit, HUD, runway, external aircraft, airport overview, scenic/fallback, demo flight, and viewpoint calibration without Quest hardware
 
 ## Recommended Launch
 
@@ -34,6 +37,12 @@ Runtime systems:
 ```
 
 `playable_demo` starts the short deterministic demo pilot sequence automatically. `playable_visual_baseline` and `scenic_mesh_enhanced` are mesh/procedural visual-baseline aliases.
+
+For no-headset visual inspection:
+
+```powershell
+.\scripts\run_visual_qa.ps1
+```
 
 ## Splat Gate
 
@@ -53,7 +62,8 @@ Use the diagnostic override only for bounded renderer experiments. Do not use it
 
 ## Known Limitations
 
-- Visuals are still procedural and low-detail compared with production scenery.
-- Cockpit proportions, instruments, and exterior model are C172-style placeholders, not final C172 art/fidelity.
+- Visuals are still placeholder quality compared with production scenery.
+- The imported cockpit/aircraft and procedural fallback are placeholders, not final C172 art/fidelity.
 - No real airport capture or surveyed scenery alignment is claimed.
 - Real Gaussian splats remain blocked in default Quest playtest mode until the XR stereo/composite path is fixed.
+- Editor visual QA does not prove Quest headset comfort, performance, or stereo rendering.

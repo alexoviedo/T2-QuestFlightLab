@@ -26,6 +26,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlat
 
 This verifies the deterministic input source and mapper path, traffic-pattern lesson/scoring support, approach scoring/timeline serialization, airport reference verification, and cockpit panel binding through Unity Test Runner XML evidence. The explicit editor scenario runner remains the primary simulator-core evidence because it exports richer flight telemetry.
 
+## Autonomous Visual QA
+
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_visual_qa.ps1
+```
+
+This launches Unity batchmode, executes `QuestFlightLab.Editor.VisualQaBatchRunner.RunVisualQa`, captures ten deterministic visual shots, builds `visual_qa_contact_sheet.png`, writes JSON/CSV/Markdown reports, and runs `tools\visual_qa_analyze.py` against the screenshots. It is the preferred no-headset path for catching blank views, giant HUD overlays, missing cockpit assets, missing runway geometry, and broken demo-pilot visual motion.
+
+The visual QA path complements the editor scenario and PlayMode suites. It does not prove real Quest comfort, stereo rendering, final performance, USB2BLE hardware behavior, or production visual fidelity.
+
 ## Gaussian Splat Spike Probe
 
 Run the optional scenery spike without the headset:
@@ -64,7 +76,7 @@ The D3D12 editor smoke proves renderer/package integration in the editor. Androi
 
 ## Meta XR Simulator
 
-Meta XR Simulator was not detected in the Unity editor domain during the 2026-06-12 v0.2 run. If Meta XR Simulator is added later, it should be treated as a headset-interaction approximation, not proof of Quest hardware, Bluetooth, or USB2BLE behavior.
+Meta XR Simulator was not detected in the Unity editor domain during the 2026-06-12 v0.2 run or the 2026-07 autonomous visual QA run. If Meta XR Simulator is added later, it should be treated as a headset-interaction approximation, not proof of Quest hardware, Bluetooth, or USB2BLE behavior.
 
 ## What This Proves
 
@@ -75,6 +87,7 @@ Meta XR Simulator was not detected in the Unity editor domain during the 2026-06
 - The named cockpit instrument panel objects, Basic Traffic Pattern Familiarization scaffold, Stabilized Approach + Go-Around scaffold, airport pattern/final references, debrief reports, and replay timeline path are present in the autonomous evidence path.
 - The optional v0.6 scenery provider path can fail safe to mesh fallback when no Gaussian splat renderer is installed.
 - The v0.6b real Gaussian renderer package can create/render synthetic splat assets in editor D3D12 and remain present during Android APK build validation.
+- The autonomous visual QA path can render and sanity-check cockpit/HUD/runway/aircraft/airport/demo/calibration screenshots without Quest or ESP32 hardware.
 
 ## What This Does Not Prove
 
@@ -86,3 +99,4 @@ Meta XR Simulator was not detected in the Unity editor domain during the 2026-06
 - FAA-approved training, BATD/AATD qualification, or pilot-training credit.
 - Production Gaussian splat rendering, full-airport splat viability, or Quest splat performance.
 - Quest Gaussian splat runtime viability unless a headset smoke explicitly runs and captures frame/log evidence.
+- Visual quality beyond fail-fast screenshot heuristics; human review of the contact sheet is still required.

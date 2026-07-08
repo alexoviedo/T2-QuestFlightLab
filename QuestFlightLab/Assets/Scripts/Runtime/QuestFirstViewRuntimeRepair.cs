@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
 using QuestFlightLab.Aircraft;
 using QuestFlightLab.Flight;
@@ -14,7 +13,6 @@ namespace QuestFlightLab.Runtime
     public class QuestFirstViewRuntimeRepair : MonoBehaviour
     {
         private const string LogPrefix = "[QuestFlightLab][FirstView]";
-        private const int SeatCalibrationSchemaVersion = 2;
         public const string ImportedC172ResourcePath = "QuestFlightLab/ImportedAssets/Cessna172KogThorns/cessna172";
         public static readonly Vector3 ImportedC172PilotEyeLocal = new Vector3(0f, 0.72f, 0f);
         public static readonly Vector3 ImportedC172LocalEuler = new Vector3(-90f, 0f, 0f);
@@ -268,7 +266,7 @@ namespace QuestFlightLab.Runtime
                 importedC172CockpitYawDeg = NormalizeAngle(cockpitYawDeg);
             }
 
-            if (!resetCalibration && TryLoadSavedSeatCalibration(out SeatCalibrationEvidence savedCalibration))
+            if (!resetCalibration && TryLoadSavedSeatCalibration(out CockpitViewpointCalibrationState savedCalibration))
             {
                 if (!hasExplicitCockpitEyeZ)
                 {
@@ -650,13 +648,9 @@ namespace QuestFlightLab.Runtime
         {
             try
             {
-                string dir = SeatCalibrationDirectory();
-                Directory.CreateDirectory(dir);
-                string path = Path.Combine(dir, $"seat_calibration_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json");
-                string currentPath = SeatCalibrationCurrentPath();
-                SeatCalibrationEvidence evidence = new SeatCalibrationEvidence
+                CockpitViewpointCalibrationState evidence = new CockpitViewpointCalibrationState
                 {
-                    schemaVersion = SeatCalibrationSchemaVersion,
+                    schemaVersion = CockpitViewpointPersistence.SchemaVersion,
                     generatedUtc = DateTime.UtcNow.ToString("O"),
                     sceneryMode = QuestLaunchOptions.SceneryMode(),
                     demoMode = QuestLaunchOptions.DemoMode(),
@@ -668,15 +662,13 @@ namespace QuestFlightLab.Runtime
                     instructions = "Left stick adjusts the pilot seat left/right and forward/back. Right stick up/down adjusts pilot seat height. Right stick left/right rotates cockpit yaw. A saves. B resets. Hold grip for fine adjustment."
                 };
 
-                string json = JsonUtility.ToJson(evidence, true);
-                File.WriteAllText(path, json);
-                File.WriteAllText(currentPath, json);
+                string currentPath = CockpitViewpointPersistence.SaveCurrent(evidence);
                 SeatCalibrationCapturePath = currentPath;
                 SavedSeatCalibrationPath = currentPath;
                 SavedSeatCalibrationLoaded = true;
                 SeatCalibrationStatus = "saved";
                 RecenterHeadBaselineNowOrNext("seat calibration saved");
-                Debug.Log($"{LogPrefix} Seat calibration captured path={path} current={currentPath} cockpitModelEye={importedC172CockpitModelEye} pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1}");
+                Debug.Log($"{LogPrefix} Seat calibration captured current={currentPath} cockpitModelEye={importedC172CockpitModelEye} pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1}");
             }
             catch (Exception ex)
             {
@@ -685,64 +677,38 @@ namespace QuestFlightLab.Runtime
             }
         }
 
-        private bool TryLoadSavedSeatCalibration(out SeatCalibrationEvidence evidence)
+        private bool TryLoadSavedSeatCalibration(out CockpitViewpointCalibrationState evidence)
         {
-            evidence = null;
-            string path = SeatCalibrationCurrentPath();
-            if (!File.Exists(path)) return false;
-
-            try
+            if (CockpitViewpointPersistence.TryLoadCurrent(out evidence, out string path, out string error))
             {
-                evidence = JsonUtility.FromJson<SeatCalibrationEvidence>(File.ReadAllText(path));
-                if (evidence == null) return false;
-                if (evidence.schemaVersion < SeatCalibrationSchemaVersion)
-                {
-                    Debug.LogWarning($"{LogPrefix} Ignoring old seat calibration schema {evidence.schemaVersion} at {path}; recalibration is required.");
-                    SeatCalibrationStatus = "old save ignored";
-                    return false;
-                }
-
                 SavedSeatCalibrationPath = path;
                 Debug.Log($"{LogPrefix} Loaded saved seat calibration path={path} cockpitModelEye={evidence.importedC172CockpitModelEye} pilotViewOffset={evidence.importedC172PilotViewOffset} pilotEyeLocal={evidence.pilotEyeLocal} cockpitYawDeg={evidence.importedC172CockpitYawDeg:F1}");
                 return true;
             }
-            catch (Exception ex)
+
+            if (!string.IsNullOrWhiteSpace(error))
             {
-                Debug.LogWarning($"{LogPrefix} Saved seat calibration load failed: {ex.Message}");
-                SeatCalibrationStatus = "load failed";
-                return false;
+                Debug.LogWarning($"{LogPrefix} Saved seat calibration load failed from {path}: {error}");
+                SeatCalibrationStatus = error.StartsWith("old schema", StringComparison.OrdinalIgnoreCase) ? "old save ignored" : "load failed";
             }
+
+            return false;
         }
 
         private void DeleteSavedSeatCalibration()
         {
-            string currentPath = SeatCalibrationCurrentPath();
-            try
+            if (CockpitViewpointPersistence.DeleteCurrent(out string currentPath, out string error))
             {
-                if (File.Exists(currentPath))
-                {
-                    File.Delete(currentPath);
-                    Debug.Log($"{LogPrefix} Deleted saved seat calibration {currentPath}");
-                }
+                Debug.Log($"{LogPrefix} Deleted saved seat calibration {currentPath}");
             }
-            catch (Exception ex)
+            else if (!string.IsNullOrWhiteSpace(error))
             {
-                Debug.LogWarning($"{LogPrefix} Saved seat calibration delete failed: {ex.Message}");
+                Debug.LogWarning($"{LogPrefix} Saved seat calibration delete failed: {error}");
             }
 
             SavedSeatCalibrationLoaded = false;
             SavedSeatCalibrationPath = string.Empty;
             SeatCalibrationCapturePath = string.Empty;
-        }
-
-        private static string SeatCalibrationDirectory()
-        {
-            return Path.Combine(Application.persistentDataPath, "QuestFlightLab", "seat_calibration");
-        }
-
-        private static string SeatCalibrationCurrentPath()
-        {
-            return Path.Combine(SeatCalibrationDirectory(), "seat_calibration_current.json");
         }
 
         private static Vector3 ClampPilotViewOffset(Vector3 offset)
@@ -820,21 +786,6 @@ namespace QuestFlightLab.Runtime
             }
 
             return false;
-        }
-
-        [Serializable]
-        private class SeatCalibrationEvidence
-        {
-            public int schemaVersion;
-            public string generatedUtc;
-            public string sceneryMode;
-            public string demoMode;
-            public Vector3 importedC172CockpitModelEye;
-            public Vector3 importedC172PilotViewOffset;
-            public float importedC172CockpitYawDeg;
-            public Vector3 pilotEyeLocal;
-            public Vector3 importedC172LocalPosition;
-            public string instructions;
         }
 
         private static int HideImportedExteriorForCockpit(GameObject root)

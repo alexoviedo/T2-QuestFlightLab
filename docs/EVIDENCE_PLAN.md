@@ -104,6 +104,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_quest.ps1
 
 This captures the recommended mesh/procedural visual baseline, demo-pilot motion evidence, head-pose diagnostics, and the Quest XR splat safety gate. Treat `scenic_splat_medium` as `blocked_xr_stereo_composite` unless `-SplatDiagnostic` is used and new headset captures prove stereo/world-locked output.
 
+For autonomous visual QA without Quest/ESP32/headset access, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_visual_qa.ps1
+```
+
+This executes `QuestFlightLab.Editor.VisualQaBatchRunner.RunVisualQa`, captures deterministic editor screenshots, creates `visual_qa_contact_sheet.png`, writes `visual_qa_report.json`, `visual_qa_report.csv`, `visual_qa_summary.md`, and runs `tools\visual_qa_analyze.py` to produce `visual_qa_analysis.json` and `visual_qa_analysis.md`. Treat this as fail-fast visual evidence only; it does not prove Quest comfort, Quest stereo rendering, USB2BLE hardware input, production visual quality, or Quest Gaussian splat viability.
+
 The supplemental PlayMode probe is:
 
 ```powershell

@@ -4,7 +4,13 @@ This project keeps committed visual assets traceable. Do not commit paid assets,
 
 ## v0.8 Visual Baseline
 
-The v0.8 playable visual baseline uses self-generated Unity procedural geometry and materials:
+The v0.8 playable visual baseline uses self-generated Unity procedural geometry/materials plus a committed imported C172 placeholder:
+
+- imported C172 placeholder:
+  - path: `QuestFlightLab/Assets/Resources/QuestFlightLab/ImportedAssets/Cessna172KogThorns/cessna172.glb`
+  - source note: `QuestFlightLab/Assets/Resources/QuestFlightLab/ImportedAssets/Cessna172KogThorns/SOURCE.txt`
+  - use: personal prototype placeholder cockpit/exterior visual baseline; intended to be replaced by project-owned assets later
+  - limitation: do not present as production-ready, redistributable, final C172 fidelity, or project-owned art
 
 - C172-style cockpit/exterior baseline: Unity primitive/mesh geometry generated at runtime by `QuestFirstViewRuntimeRepair`
   - left-seat pilot eye point
@@ -13,7 +19,7 @@ The v0.8 playable visual baseline uses self-generated Unity procedural geometry 
 - airport baseline: Unity primitive cubes, spheres, and cylinders generated at runtime by `AirportRuntimeEnhancer`
 - runway/apron/grass/hangar/tree/light materials: self-generated Unity `Standard` materials with project-owned color/smoothness/emission settings
 
-No downloaded cockpit, aircraft, airport, terrain, HDRI, Google Maps/Earth-derived image, paid asset, PLY, or SPZ asset is committed for the v0.8 visual baseline.
+No downloaded airport, terrain, HDRI, Google Maps/Earth-derived image, paid asset, PLY, or SPZ asset is committed for the v0.8 visual baseline.
 
 ## Existing Gaussian Splat Renderer Package
 
