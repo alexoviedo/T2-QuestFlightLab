@@ -30,6 +30,28 @@ Runtime systems:
 - `VisualQaBatchRunner`
   - captures deterministic editor screenshots/contact sheets for cockpit, HUD, runway, external aircraft, airport overview, scenic/fallback, demo flight, and viewpoint calibration without Quest hardware
 
+## v1 Environment-Focused Upgrade
+
+Alex confirmed the previous imported C172 placeholder cockpit/aircraft was good enough for now, so the v1 production visual pass intentionally keeps that aircraft path:
+
+```text
+Resources/QuestFlightLab/ImportedAssets/Cessna172KogThorns/cessna172
+```
+
+The current focus is the airport/world around it:
+
+- `KbduInspiredWorldBuilder`
+  - adds an 8.8 km x 7.8 km KBDU-inspired visual footprint around the existing runway scene
+  - uses 81 low-cost terrain mesh chunks instead of a tiny flat ground plane
+  - adds roads, field strips, airport perimeter fence cues, ramp parking stripes, drainage/reservoir cues, local industrial buildings, and far Front Range-inspired ridge impostors
+  - hides older blocky placeholder foothills in playtest/HUD mode so the far-ridge system carries the skyline
+- `QuestRenderQualityConfigurator`
+  - applies the visual-demo render profile in runtime/visual QA
+  - enables MSAA, anisotropic filtering, longer camera clip range, fog/ambient/sun tuning, and conservative shadow settings
+- `VisualQaBatchRunner`
+  - now captures terrain/far-scenery and ground-detail shots in addition to cockpit/runway/aircraft/HUD shots
+  - records world-builder and render-quality status in JSON/Markdown reports
+
 ## Recommended Launch
 
 ```powershell
@@ -63,7 +85,8 @@ Use the diagnostic override only for bounded renderer experiments. Do not use it
 ## Known Limitations
 
 - Visuals are still placeholder quality compared with production scenery.
-- The imported cockpit/aircraft and procedural fallback are placeholders, not final C172 art/fidelity.
+- The imported cockpit/aircraft remains a placeholder, not final C172 art/fidelity.
+- The expanded environment is KBDU-inspired and not navigation-accurate.
 - No real airport capture or surveyed scenery alignment is claimed.
 - Real Gaussian splats remain blocked in default Quest playtest mode until the XR stereo/composite path is fixed.
 - Editor visual QA does not prove Quest headset comfort, performance, or stereo rendering.

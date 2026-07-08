@@ -38,6 +38,29 @@ The profile covers:
 - approach preview,
 - go-around placeholder.
 
+## v1 Unity Comparator
+
+The v1 production visual/physics upgrade adds an offline comparator:
+
+```powershell
+python .\tools\jsbsim_probe\compare_jsbsim_unity.py `
+  --jsbsim-json <artifact-root>\jsbsim_probe\v1_reference\jsbsim_c172_probe.json `
+  --jsbsim-csv <artifact-root>\jsbsim_probe\v1_reference\jsbsim_c172_probe.csv `
+  --unity-scenario-csv <artifact-root>\after_editor_scenarios\scenario_results.csv `
+  --output-dir <artifact-root>\jsbsim_unity_comparison_after
+```
+
+Latest classification: `reference_oracle_only`.
+
+The current open-loop JSBSim reference and Unity scenario suite are not matched-control profiles yet, but they expose useful trend gaps:
+
+- Unity takeoff-roll and go-around speeds are materially higher than the current JSBSim open-loop reference.
+- Unity rotation/climb altitude gain is materially higher than the current JSBSim open-loop reference.
+- Unity shallow-turn bank response is much milder than the current JSBSim open-loop reference.
+- Approach speed is the closest current trend match.
+
+The Unity config was tuned only modestly in v1 to move toward a heavier, more damped C172-style trainer. This is not a JSBSim-backed runtime and not a final fidelity claim.
+
 ## Integration Path
 
 ### Short Term: Offline Reference Oracle

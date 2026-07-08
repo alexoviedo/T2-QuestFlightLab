@@ -125,6 +125,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_quest.ps1
 
 This captures visual QA/contact sheets, Unity simulator regressions, PlayMode tests, a dry-run/generated aircraft asset manifest, JSBSim C172-like reference telemetry, build logs, and APK hash evidence. Treat JSBSim as an offline reference oracle until Android/Quest native integration is proven. Treat Blender/OpenVSP/Cesium outputs as research or import candidates until visual QA and Android build evidence pass.
 
+For v1 production visual/physics upgrade work, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_visual_qa.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\run_editor_scenario_tests.ps1
+python .\tools\jsbsim_probe\compare_jsbsim_unity.py --jsbsim-json <artifact-root>\jsbsim_probe\v1_reference\jsbsim_c172_probe.json --jsbsim-csv <artifact-root>\jsbsim_probe\v1_reference\jsbsim_c172_probe.csv --unity-scenario-csv <artifact-root>\after_editor_scenarios\scenario_results.csv --output-dir <artifact-root>\jsbsim_unity_comparison_after
+powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlatform PlayMode
+powershell -ExecutionPolicy Bypass -File .\scripts\build_quest.ps1
+```
+
+This captures the expanded environment visual QA/contact sheet, world-builder budget, render-quality profile, editor scenario evidence, JSBSim/Unity comparison report, PlayMode XML, Android build logs, and APK hash. Treat the environment as KBDU-inspired only and the JSBSim comparison as reference-oracle evidence only.
+
 The supplemental PlayMode probe is:
 
 ```powershell

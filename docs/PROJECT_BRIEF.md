@@ -58,3 +58,13 @@ The next direction is an evidence-gated fidelity pipeline, not more blind placeh
 - Poly Haven or similarly clear CC0 sources are preferred for PBR materials/HDRIs.
 - Cesium/3D Tiles/geospatial work remains a research gate until Quest runtime, licensing, and offline/cache constraints are understood.
 - Gaussian splats remain diagnostic or small-background candidates until Quest XR stereo/world-lock evidence improves.
+
+## v1 Production Visual + Physics Direction
+
+The v1 milestone keeps the previous imported C172 placeholder aircraft/cockpit because it was good enough for current iteration, then moves effort to the world and physics evidence:
+
+- `visual_fidelity_demo` now builds a larger KBDU-inspired environment around the airport with terrain chunks, local roads/fields, perimeter cues, industrial buildings, reservoir/drainage hints, and far ridge scenery.
+- A render-quality configurator applies MSAA/aniso/fog/lighting/camera defaults and records evidence for visual QA.
+- Visual QA captures additional far-scenery and ground-detail shots.
+- JSBSim comparison moves from a standalone probe to an offline Unity-scenario comparator.
+- Unity runtime physics remains approximate; no JSBSim runtime backend, final C172 fidelity, or training suitability is claimed.

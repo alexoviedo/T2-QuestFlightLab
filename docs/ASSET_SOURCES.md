@@ -42,6 +42,25 @@ Preferred future sources/tools:
   - intended use: small optimized CC0 PBR materials/HDRIs for cockpit, runway, apron, grass, dirt, hangars, and sky
   - status: approved source class; no new Poly Haven textures committed in this slice
 
+## v1 Environment-Focused Sources
+
+The v1 production visual/physics upgrade does not add new paid or downloaded visual assets.
+
+- expanded KBDU-inspired world:
+  - path: `QuestFlightLab/Assets/Scripts/Environment/KbduInspiredWorldBuilder.cs`
+  - source/license: project-owned procedural Unity mesh/material generation
+  - use: enlarged training environment, terrain chunks, roads, fields, airport perimeter cues, reservoir/drainage hints, local buildings, and Front Range-inspired ridge impostors
+  - committed assets: source code only; no raw terrain captures, satellite imagery, paid models, or texture downloads
+- render profile:
+  - path: `QuestFlightLab/Assets/Scripts/Runtime/QuestRenderQualityConfigurator.cs`
+  - source/license: project-owned runtime settings/evidence code
+  - use: MSAA/aniso/fog/lighting/camera/shadow defaults for the visual demo path
+- aircraft/cockpit:
+  - retained previous imported C172 placeholder after Alex confirmed it was good enough for this chunk
+  - no new aircraft model is committed in v1
+
+OpenVSP remains the preferred future path for owned high-wing trainer exterior geometry, but no OpenVSP output is committed in v1.
+
 ## Existing Gaussian Splat Renderer Package
 
 The Gaussian renderer package remains:

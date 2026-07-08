@@ -19,7 +19,7 @@ Improve scenery credibility without turning the Quest runtime into an unbounded 
 ## Immediate Quest-Safe Path
 
 - Keep the enhanced mesh/procedural airport as default.
-- Add runway wear, apron seams, hangars, fuel/clutter, runway lights, grass variation, foothills, and sky/lighting improvements.
+- Use the v1 KBDU-inspired expanded world as the immediate local baseline: 8.8 km x 7.8 km visual footprint, terrain chunks, far ridge impostors, local roads/fields/perimeter cues, runway wear, apron seams, hangars, fuel/clutter, runway lights, grass variation, and sky/lighting improvements.
 - Add small CC0 material textures only after optimization and source documentation.
 - Use visual QA for screenshot comparison before and after each scenery pass.
 

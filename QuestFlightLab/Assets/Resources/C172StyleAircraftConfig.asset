@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94e06aef029fa324fa7b095eea470c77, type: 3}
   m_Name: C172StyleAircraftConfig
   m_EditorClassIdentifier: Assembly-CSharp::QuestFlightLab.Flight.C172StyleAircraftConfig
-  massKg: 1111
+  massKg: 1157
   wingAreaM2: 16.2
   wingSpanM: 11
   aspectRatio: 7.45
@@ -26,8 +26,8 @@ MonoBehaviour:
   neverExceedSpeedKts: 163
   maxEnginePowerHp: 180
   propEfficiency: 0.74
-  staticThrustNewtons: 3600
-  maxThrustNewtons: 4200
+  staticThrustNewtons: 3700
+  maxThrustNewtons: 4300
   idleRpm: 700
   maxRpm: 2700
   carbHeatPowerLoss: 0.08
@@ -42,30 +42,30 @@ MonoBehaviour:
   elevatorAoAAuthorityDeg: 7.5
   trimAoAAuthorityDeg: 4.5
   flapLiftBonus: 0.55
-  dragCoefficientBase: 0.035
-  inducedDragFactor: 0.054
-  flapDragBonus: 0.16
-  sideSlipDragFactor: 0.04
-  pitchRateMaxDegPerSec: 42
-  rollRateMaxDegPerSec: 64
-  yawRateMaxDegPerSec: 28
-  pitchDamping: 2.4
-  rollDamping: 2.8
-  yawDamping: 2.1
-  pitchAttitudeStability: 0.85
-  rollAttitudeStability: 0.45
-  maxPrototypePitchDeg: 28
-  maxPrototypeBankDeg: 65
-  coordinatedTurnCoupling: 0.7
-  flapPitchMomentDegPerSec: -8
+  dragCoefficientBase: 0.036
+  inducedDragFactor: 0.055
+  flapDragBonus: 0.18
+  sideSlipDragFactor: 0.045
+  pitchRateMaxDegPerSec: 36
+  rollRateMaxDegPerSec: 52
+  yawRateMaxDegPerSec: 25
+  pitchDamping: 2.6
+  rollDamping: 3
+  yawDamping: 2.2
+  pitchAttitudeStability: 1
+  rollAttitudeStability: 0.55
+  maxPrototypePitchDeg: 24
+  maxPrototypeBankDeg: 55
+  coordinatedTurnCoupling: 0.78
+  flapPitchMomentDegPerSec: -7
   flapSettingsDeg:
   - 0
   - 10
   - 20
   - 30
   maxTrim: 1
-  runwayFrictionCoefficient: 0.035
-  lateralGroundFriction: 2.7
-  brakeStrengthNewtons: 6500
-  nosewheelSteerDegPerSec: 22
+  runwayFrictionCoefficient: 0.036
+  lateralGroundFriction: 3
+  brakeStrengthNewtons: 7000
+  nosewheelSteerDegPerSec: 24
   groundEffectHeightM: 4

@@ -23,6 +23,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v0.8 visual recovery path: `playable_demo` / `playable_visual_baseline` uses self-generated C172-style cockpit/exterior and airport geometry, hides cluttered training gates in playtest mode, and gates the real Gaussian renderer on Quest XR because headset captures showed a one-eye/headset-locked stereo composite failure
 - v0.9 autonomous visual QA path: `scripts\run_visual_qa.ps1` captures deterministic Unity Editor screenshots/contact sheets for cockpit, HUD, runway, aircraft, airport, scenic/fallback, demo-pilot, and viewpoint-calibration views without Quest, ESP32, or headset access
 - v0.9 production-direction path: `visual_fidelity_demo` keeps the safe visual baseline playable while JSBSim, Blender/OpenVSP, Poly Haven-class materials, and geospatial/Cesium research are evaluated behind evidence gates
+- v1 production visual/physics upgrade path: the recommended demo keeps the previous imported C172 placeholder cockpit/aircraft, expands the KBDU-inspired mesh/procedural environment to an 8.8 km x 7.8 km playable visual footprint with 81 terrain chunks, far ridge impostors, roads/field/perimeter cues, a Quest-friendly render-quality profile, and JSBSim-vs-Unity comparator evidence
 
 ## Build
 
@@ -104,6 +105,7 @@ Repo evidence notes:
 - `docs/evidence/QUEST_VISUAL_RECOVERY_PLAYTEST_2026-07-03.md`
 - `docs/evidence/AUTONOMOUS_VISUAL_QA_WITNESS_2026-07-08.md`
 - `docs/evidence/PRODUCTION_FIDELITY_DIRECTION_WITNESS_2026-07-08.md`
+- `docs/evidence/PRODUCTION_VISUAL_PHYSICS_UPGRADE_2026-07-08.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 

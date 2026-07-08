@@ -130,7 +130,10 @@ namespace QuestFlightLab.Environment
                 "ApproachPathPlaceholder",
                 "GoAroundClimboutGate",
                 "ExtendedCenterline",
-                "PapiVasiPlaceholder"
+                "PapiVasiPlaceholder",
+                "Foothill_",
+                "BaselineFoothill",
+                "LowFoothillShelf"
             };
 
             foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
@@ -301,7 +304,7 @@ namespace QuestFlightLab.Environment
             for (int i = 0; i < 8; i++)
             {
                 float x = -780f + i * 220f;
-                Sphere(parent, $"BaselineFoothill_{i}", new Vector3(x, 48f + i * 3f, 610f + Mathf.Sin(i) * 34f), new Vector3(220f, 68f + i * 9f, 120f), hill);
+                Cube(parent, $"LowFoothillShelf_{i}", new Vector3(x, 12f + i * 1.6f, 820f + Mathf.Sin(i) * 38f), Quaternion.Euler(0f, i * 3f, -3f + i % 3 * 3f), new Vector3(250f, 18f + i * 1.8f, 74f), hill);
             }
         }
 

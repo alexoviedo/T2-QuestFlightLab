@@ -8,11 +8,13 @@ v0.4 keeps the physics changes targeted: the deterministic pattern profile now s
 
 v0.5 adds targeted support for approach/go-around training evidence: approach configuration now references the configured approach speed, go-around power with flaps gets a mild deterministic climb/pitch bias, and `TrainingReferenceTargets` includes stable-approach gate, final-approach speed, descent-rate, bank, glide-path, and go-around climb targets. This is still not a landing-gear, tire, flare, or aircraft-specific POH model.
 
+v1 adds a JSBSim/Unity offline comparator and a conservative config retune. JSBSim is now used as a reference oracle for trend gaps, not as the Unity runtime physics backend. The current comparison shows Unity still accelerates/climbs faster than the open-loop JSBSim `c172x` probe and turns less aggressively in the shallow-turn scenario, so the next physics chunk should build matched-control JSBSim profiles before heavier tuning.
+
 See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 
 ## Approximate Seed Constants
 
-- Mass: 1111 kg
+- Mass: 1157 kg
 - Wing area: 16.2 m2
 - Wing span: 11.0 m
 - Aspect ratio: 7.45
@@ -43,6 +45,7 @@ See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 - Stall warning is suppressed during ordinary ground roll and records warning count/onset in autonomous evidence.
 - Vy climb, stall recovery, pattern heading-change, instrument, and checklist verification are now explicit scenario evidence.
 - v0.5 adds approach reference-speed telemetry, final-approach scoring fields, go-around decision markers, and timeline/debrief exports.
+- v1 modestly increases damping/stability and reduces prototype pitch/bank/rate caps to keep the trainer from feeling too light while JSBSim comparison work matures.
 
 ## Acceptance Metrics
 
@@ -80,3 +83,4 @@ The v0.5 suite adds stable final approach, high/low/fast/sink unstable approache
 - Validated engine/propeller model, mixture/carb heat behavior, and RPM/manifold-power relationships.
 - Better ground contact model with landing gear geometry, tire friction, braking, and crosswind effects.
 - Validated stall, spin, slip/skid, flap, trim, and control-authority behavior.
+- Matched-control JSBSim profiles for the same Unity editor scenarios before more aggressive runtime tuning.

@@ -57,6 +57,7 @@ namespace QuestFlightLab.Editor
             System.Environment.SetEnvironmentVariable(QuestLaunchOptions.DemoModeKey, "short_playtest");
             System.Environment.SetEnvironmentVariable(QuestLaunchOptions.PlaytestHudKey, "true");
             System.Environment.SetEnvironmentVariable(QuestLaunchOptions.SeatCalibrationKey, "true");
+            report.renderQuality = QuestRenderQualityConfigurator.ApplyProfile("visual_fidelity_demo_editor");
 
             VisualQaContext context = BuildVisualQaScene(width, height, report);
             report.viewpointPersistence = VerifyViewpointPersistence(outputDir);
@@ -101,15 +102,27 @@ namespace QuestFlightLab.Editor
             cameraObject.tag = "MainCamera";
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.nearClipPlane = 0.03f;
-            camera.farClipPlane = 5000f;
+            camera.farClipPlane = 6500f;
             camera.fieldOfView = 76f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.56f, 0.72f, 0.94f);
             camera.aspect = width / (float)height;
             cameraObject.AddComponent<AudioListener>();
 
-            KbduApproxAirport.Build(null);
+            GameObject airport = KbduApproxAirport.Build(null);
             AirportRuntimeEnhancer.EnhanceExistingScene();
+            GameObject world = KbduInspiredWorldBuilder.AddWorld(airport != null ? airport.transform : null);
+            if (world != null)
+            {
+                WorldPerformanceBudget budget = world.GetComponent<WorldPerformanceBudget>();
+                report.worldBuilderStatus = budget != null
+                    ? $"profile={budget.profileName} size={budget.worldSizeMeters.x:0}x{budget.worldSizeMeters.y:0}m chunks={budget.terrainChunkCount} lodGroups={budget.lodGroupCount}"
+                    : "expanded KBDU-inspired world built";
+            }
+            else
+            {
+                report.worldBuilderStatus = "expanded KBDU-inspired world missing";
+            }
 
             GameObject sceneryObject = new GameObject("Visual QA Scenery Mode Controller");
             SceneryModeController scenery = sceneryObject.AddComponent<SceneryModeController>();
@@ -135,7 +148,7 @@ namespace QuestFlightLab.Editor
 
             GameObject importedModel = AddImportedC172(aircraft.transform, report);
             report.cockpitAssetStatus = importedModel != null
-                ? "Imported C172 placeholder loaded from Resources/QuestFlightLab/ImportedAssets/Cessna172KogThorns/cessna172.glb."
+                ? "C172-style cockpit/exterior asset loaded from Resources/" + report.importedC172ResourcePath + "."
                 : "Imported C172 placeholder missing; visual QA used no imported cockpit asset.";
 
             GameObject hudObject = new GameObject("Visual QA Playtest HUD");
@@ -158,8 +171,10 @@ namespace QuestFlightLab.Editor
 
         private static GameObject AddImportedC172(Transform aircraft, VisualQaReport report)
         {
-            GameObject prefab = Resources.Load<GameObject>(QuestFirstViewRuntimeRepair.ImportedC172ResourcePath);
+            string resourcePath = QuestFirstViewRuntimeRepair.ImportedC172ResourcePath;
+            GameObject prefab = Resources.Load<GameObject>(resourcePath);
             if (prefab == null) return null;
+            report.importedC172ResourcePath = resourcePath;
 
             GameObject instance = Object.Instantiate(prefab, aircraft);
             instance.name = "Visual QA Imported C172";
@@ -298,6 +313,32 @@ namespace QuestFlightLab.Editor
                 showHud = true,
                 showCalibrationPanel = true,
                 sanityTag = "hud"
+            });
+
+            RenderShot(context, report, outputDir, width, height, new ShotDefinition
+            {
+                id = "11_large_terrain_far_scenery",
+                title = "Large terrain and Front Range-inspired far scenery",
+                sceneryMode = "visual_fidelity_demo",
+                cameraPosition = new Vector3(-1650f, 520f, -1180f),
+                cameraRotation = LookAt(new Vector3(-1650f, 520f, -1180f), new Vector3(-150f, 35f, 1100f)),
+                fov = 48f,
+                hideExteriorForCockpit = false,
+                showHud = false,
+                sanityTag = "scenery"
+            });
+
+            RenderShot(context, report, outputDir, width, height, new ShotDefinition
+            {
+                id = "12_render_quality_ground_detail",
+                title = "Runway surface, markings, and anti-aliasing detail check",
+                sceneryMode = "visual_fidelity_demo",
+                cameraPosition = new Vector3(-545f, 5.2f, -18f),
+                cameraRotation = LookAt(new Vector3(-545f, 5.2f, -18f), new Vector3(-455f, 0.4f, 2f)),
+                fov = 36f,
+                hideExteriorForCockpit = false,
+                showHud = false,
+                sanityTag = "runway"
             });
         }
 
@@ -719,6 +760,8 @@ namespace QuestFlightLab.Editor
             sb.AppendLine($"- Contact sheet: `{report.contactSheetPath}`");
             sb.AppendLine($"- Overall pass: {report.passed}");
             sb.AppendLine($"- Cockpit asset: {report.cockpitAssetStatus}");
+            sb.AppendLine($"- World builder: {report.worldBuilderStatus}");
+            sb.AppendLine($"- Render quality: AA {report.renderQuality.antiAliasing}, aniso {report.renderQuality.anisotropicFiltering}, LOD bias {report.renderQuality.lodBias:0.00}, shadow distance {report.renderQuality.shadowDistance:0}m");
             sb.AppendLine($"- Mesh scenery: {report.meshSceneryStatus}");
             sb.AppendLine($"- Scenic/splat status: {report.scenicSceneryStatus}");
             sb.AppendLine($"- Viewpoint persistence: {(report.viewpointPersistence.passed ? "PASS" : "FAIL")} `{report.viewpointPersistence.path}`");
@@ -913,9 +956,12 @@ namespace QuestFlightLab.Editor
             public int renderWidth;
             public int renderHeight;
             public string cockpitAssetStatus;
+            public string importedC172ResourcePath;
             public int importedC172RendererCount;
             public Vector3 importedC172BoundsCenter;
             public Vector3 importedC172BoundsSize;
+            public string worldBuilderStatus;
+            public RenderQualityEvidence renderQuality;
             public string meshSceneryStatus;
             public string scenicSceneryStatus;
             public string contactSheetPath;
