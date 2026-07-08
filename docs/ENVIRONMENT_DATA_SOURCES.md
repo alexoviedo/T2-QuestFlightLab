@@ -39,3 +39,15 @@ No Google Maps/Earth/Street View imagery, paid assets, or unclear-license assets
 ## Limits
 
 The current environment is KBDU-inspired, not surveyed, not navigation-accurate, and not a production airport database.
+
+## v2.1 Data Use
+
+The v2.1 production visual/physics pass did not commit new external raw data. It continued to use the prior non-committed OSM/Overpass reference as context and implemented the larger environment through project-owned procedural generation.
+
+Artifact root for the v2.1 witness:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_visual_physics_v2_20260707_233843
+```
+
+The next data step should be a bounded USGS 3DEP/The National Map elevation import proof that keeps raw downloads in artifacts and commits only small processed data if it materially improves the Quest demo.

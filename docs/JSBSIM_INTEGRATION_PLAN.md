@@ -84,6 +84,36 @@ Current before/after deltas:
 
 This is useful trend evidence, not a fidelity pass/fail. The next serious physics chunk should create matched-control JSBSim scenarios for the same Unity scenario definitions before making larger aerodynamic changes.
 
+## v2.1 Matched-Control Comparator
+
+The v2.1 pass adds a matched-control comparator:
+
+```powershell
+python .\tools\jsbsim_probe\run_matched_jsbsim_comparison.py `
+  --unity-scenario-json <artifact-root>\after_editor_scenarios_final2\scenario_results.json `
+  --output-dir <artifact-root>\after_matched_jsbsim_comparison
+```
+
+This runner defines paired schedules for takeoff roll, rotation/climb, Vy climb, shallow turns, stabilized approach, and go-around, then compares JSBSim `c172x` output against Unity scenario telemetry.
+
+Latest v2.1 artifacts:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_visual_physics_v2_20260707_233843\baseline_matched_jsbsim_comparison
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_visual_physics_v2_20260707_233843\after_matched_jsbsim_comparison
+```
+
+Aggregate before/after:
+
+| Metric | Baseline | v2.1 | Direction |
+| --- | ---: | ---: | --- |
+| Mean weighted error score | 142.14 | 141.99 | slightly closer |
+| Mean airspeed RMSE | 26.9 kt | 26.7 kt | slightly closer |
+| Mean altitude-delta RMSE | 184.0 ft | 183.7 ft | slightly closer |
+| Mean bank RMSE | 57.0 deg | 57.0 deg | unchanged |
+
+The modest improvement came from a small thrust reduction that preserves all existing Unity scenario gates. More aggressive config-only tuning broke the traffic-pattern/stabilized-approach scenarios, so deeper realism should move toward a JSBSim runtime/bridge feasibility path instead of overfitting this prototype Unity model.
+
 ## Integration Path
 
 ### Short Term: Offline Reference Oracle
@@ -122,6 +152,7 @@ Only consider JSBSim as the actual flight-dynamics backend after:
 ## Current Limitations
 
 - Open-loop probe is not a stable autopilot.
+- Matched-control profiles still diverge strongly in airborne cases because initialization, aircraft definitions, and control mappings are not equivalent yet.
 - Current Unity physics remains a prototype approximation.
 - The probe is not calibrated to current Unity aircraft mass/aero/engine values.
 - No Android/Quest JSBSim runtime work was attempted in this chunk.

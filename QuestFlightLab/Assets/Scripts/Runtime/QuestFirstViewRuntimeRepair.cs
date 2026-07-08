@@ -14,7 +14,9 @@ namespace QuestFlightLab.Runtime
     {
         private const string LogPrefix = "[QuestFlightLab][FirstView]";
         public const string ImportedC172ResourcePath = "QuestFlightLab/ImportedAssets/Cessna172KogThorns/cessna172";
-        public static readonly Vector3 ImportedC172PilotEyeLocal = new Vector3(0f, 0.72f, 0f);
+        public static readonly Vector3 ImportedC172SeatReferenceLocal = PilotViewpointConfig.ImportedC172SeatReferenceLocal;
+        public static readonly Vector3 ImportedC172DefaultPilotViewOffset = PilotViewpointConfig.ImportedC172DefaultPilotViewOffset;
+        public static readonly Vector3 ImportedC172PilotEyeLocal = PilotViewpointConfig.ImportedC172DefaultPilotEyeLocal;
         public static readonly Vector3 ImportedC172LocalEuler = new Vector3(-90f, 0f, 0f);
         public static readonly Vector3 ImportedC172CockpitModelEye = new Vector3(-0.28f, -0.45f, 1.69f);
         public static readonly Vector3 ImportedC172CockpitModelEyeEuler = Vector3.zero;
@@ -294,7 +296,7 @@ namespace QuestFlightLab.Runtime
                 SeatCalibrationStatus = "reset clean";
             }
 
-            Debug.Log($"{LogPrefix} Imported C172 cockpit eye calibration={importedC172CockpitModelEye} pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1} seatCalibration={SeatCalibrationEnabled} headPoseMode={HeadPoseMode}");
+            Debug.Log($"{LogPrefix} Imported C172 cockpit eye calibration={importedC172CockpitModelEye} seatReference={ImportedC172SeatReferenceLocal} defaultPilotOffset={ImportedC172DefaultPilotViewOffset} pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1} seatCalibration={SeatCalibrationEnabled} headPoseMode={HeadPoseMode}");
         }
 
         private void ApplyManualHeadPoseFromDevice()
@@ -522,7 +524,7 @@ namespace QuestFlightLab.Runtime
 
             Quaternion cockpitYaw = Quaternion.Euler(0f, importedC172CockpitYawDeg, 0f);
             cockpit.localRotation = cockpitYaw * modelInCameraRotation;
-            Vector3 baseSeatTarget = ImportedC172PilotEyeLocal + importedC172LocalPosition;
+            Vector3 baseSeatTarget = ImportedC172SeatReferenceLocal + importedC172LocalPosition;
             cockpit.localPosition = baseSeatTarget - cockpit.localRotation * importedC172CockpitModelEye;
         }
 
@@ -654,6 +656,8 @@ namespace QuestFlightLab.Runtime
                     generatedUtc = DateTime.UtcNow.ToString("O"),
                     sceneryMode = QuestLaunchOptions.SceneryMode(),
                     demoMode = QuestLaunchOptions.DemoMode(),
+                    importedC172SeatReferenceLocal = ImportedC172SeatReferenceLocal,
+                    importedC172DefaultPilotViewOffset = ImportedC172DefaultPilotViewOffset,
                     importedC172CockpitModelEye = importedC172CockpitModelEye,
                     importedC172PilotViewOffset = importedC172PilotViewOffset,
                     importedC172CockpitYawDeg = importedC172CockpitYawDeg,

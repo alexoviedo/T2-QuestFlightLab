@@ -95,6 +95,25 @@ The Gaussian renderer package remains:
 
 The package license covers the renderer code/package. It does not grant rights to arbitrary captured airport splat assets. Captured splat/source-data licensing must be tracked separately before any real-world asset is committed.
 
+## v2.1 Pilot Eye + KBDU Environment Sources
+
+The v2.1 pass does not add paid, downloaded, or questionable-license visual assets. It preserves the current imported C172 placeholder and expands project-owned procedural environment generation:
+
+- pilot-eye/default seat reference:
+  - path: `QuestFlightLab/Assets/Scripts/Runtime/PilotViewpointConfig.cs`
+  - source: project-authored configuration for the existing imported C172 placeholder
+  - use: default pilot eye point and visual QA acceptance gate
+- expanded KBDU-inspired procedural world:
+  - path: `QuestFlightLab/Assets/Scripts/Environment/KbduInspiredWorldBuilder.cs`
+  - source: project-owned procedural Unity geometry/material generation
+  - use: 14.56 km x 14.56 km bounded airport/terrain environment, terrain chunks, roads, fields, reservoir/drainage hints, buildings, and far ridge impostors
+- matched-control JSBSim comparator:
+  - path: `tools/jsbsim_probe/run_matched_jsbsim_comparison.py`
+  - source: project-authored tool using the Python `jsbsim` package and bundled `c172x`
+  - use: offline physics reference oracle only
+
+No raw OSM/USGS/Google data, no APKs, no screenshots, and no large downloaded archives are committed for v2.1.
+
 ## Rules For Future Visual Assets
 
 - Prefer self-generated procedural Unity/Blender assets for quick iteration.

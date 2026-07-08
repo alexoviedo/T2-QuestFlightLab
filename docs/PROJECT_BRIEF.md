@@ -78,3 +78,12 @@ The v2 milestone keeps the current imported C172 placeholder cockpit/aircraft an
 - Airport/runway detail includes denser taxi-lanes/connectors, ramp/hangar details, runway cracks/wear, field parcels, tree-line cues, roads, reservoir/drainage hints, and larger Front Range-style ridges.
 - Render-quality evidence now records far clip, mipmap limit, target FPS, MSAA/aniso/LOD/shadow settings, and visual QA captures ramp/hangar plus final-approach distance-cue shots.
 - Unity flight config was tuned modestly against the JSBSim comparison to reduce over-climb/over-acceleration and improve shallow-turn trend, while JSBSim remains an offline reference oracle.
+
+## v2.1 Pilot Eye + Matched-Control Direction
+
+The v2.1 milestone preserves the imported C172 placeholder and tightens the first-view and evidence loops:
+
+- Default pilot eye for the imported C172 placeholder is now a project-owned reference config: seat local `(0.00, 0.72, 0.00)` m, default offset `(0.00, 0.22, 0.00)` m, resolved eye `(0.00, 0.94, 0.00)` m.
+- `visual_fidelity_demo` expands the KBDU-inspired procedural world to 14.56 km x 14.56 km with 169 chunks, denser field/road/reservoir/ridge cues, and refreshed LOD/render-quality evidence.
+- Matched-control JSBSim/Unity scenarios now compare takeoff, climb, turns, approach, and go-around profiles.
+- The accepted runtime tune is intentionally small because more aggressive config-only tuning broke existing traffic-pattern and approach gates.

@@ -44,7 +44,9 @@ QuestFlightLab uses these values as prototype targets for a C172S-style powered 
 
 ## Current Calibration Status
 
-The v2 JSBSim comparison is still reference-oracle evidence only. Unity scenario behavior moved slightly closer to the open-loop JSBSim `c172x` probe for takeoff-roll speed, rotation/climb altitude, shallow-turn bank, approach speed, and go-around speed, but the profiles are not matched-control runs and do not prove final C172 fidelity.
+The v2 JSBSim comparison is still reference-oracle evidence only. Unity scenario behavior moved slightly closer to the open-loop JSBSim `c172x` probe for takeoff-roll speed, rotation/climb altitude, shallow-turn bank, approach speed, and go-around speed.
+
+The v2.1 pass adds matched-control JSBSim/Unity scenario twins for takeoff, climb, turns, approach, and go-around. The aggregate comparison improved slightly, but airborne profiles still diverge strongly because the initialization, aircraft definitions, and control mappings are not equivalent. This does not prove final C172 fidelity.
 
 ## Training Behavior Targets
 

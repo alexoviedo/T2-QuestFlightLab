@@ -108,3 +108,27 @@ Latest v2 visual QA artifact:
 ```text
 C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\kbd_environment_physics_20260707_225453\after_visual_qa_final
 ```
+
+## v2.1 Pilot Eye + KBDU Environment Pass
+
+The v2.1 pass fixes the default cockpit view before player calibration:
+
+- default imported C172 seat reference: `(0.00, 0.72, 0.00)` local meters,
+- default pilot-eye offset: `(0.00, 0.22, 0.00)` local meters,
+- resolved default pilot eye: `(0.00, 0.94, 0.00)` local meters,
+- visual QA requires the default eye reference to pass and checks that the cockpit pilot shot keeps enough outside runway/horizon view visible.
+
+The environment budget also increases again while preserving the imported aircraft/cockpit:
+
+- footprint: 14.56 km x 14.56 km,
+- terrain chunks: 169,
+- LOD groups: 387,
+- approximate world triangles in deterministic visual QA: 20,148,
+- draw distance: 9.2 km,
+- final visual QA: 14/14 shots passed.
+
+Latest v2.1 visual QA artifact:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_visual_physics_v2_20260707_233843\after_visual_qa_final
+```

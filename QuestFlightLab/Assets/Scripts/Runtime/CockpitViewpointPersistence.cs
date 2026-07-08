@@ -11,6 +11,8 @@ namespace QuestFlightLab.Runtime
         public string generatedUtc;
         public string sceneryMode;
         public string demoMode;
+        public Vector3 importedC172SeatReferenceLocal;
+        public Vector3 importedC172DefaultPilotViewOffset;
         public Vector3 importedC172CockpitModelEye;
         public Vector3 importedC172PilotViewOffset;
         public float importedC172CockpitYawDeg;
@@ -21,7 +23,7 @@ namespace QuestFlightLab.Runtime
 
     public static class CockpitViewpointPersistence
     {
-        public const int SchemaVersion = 2;
+        public const int SchemaVersion = 3;
         public const string DirectoryName = "seat_calibration";
         public const string CurrentFileName = "seat_calibration_current.json";
 

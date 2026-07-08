@@ -61,12 +61,14 @@ namespace QuestFlightLab.Editor
 
             VisualQaContext context = BuildVisualQaScene(width, height, report);
             report.renderQuality = QuestRenderQualityConfigurator.CaptureEvidence("visual_fidelity_demo_editor");
+            report.pilotEyeReference = VerifyPilotEyeReference();
             report.viewpointPersistence = VerifyViewpointPersistence(outputDir);
 
             RenderRequiredShots(context, report, outputDir, width, height);
             report.demoPilot = VerifyDemoPilotMotion();
             report.contactSheetPath = BuildContactSheet(report, outputDir);
             report.passed = report.shots.All(s => s.passed) &&
+                            report.pilotEyeReference.passed &&
                             report.viewpointPersistence.passed &&
                             report.demoPilot.passed;
 
@@ -85,7 +87,7 @@ namespace QuestFlightLab.Editor
             RenderSettings.ambientLight = new Color(0.48f, 0.52f, 0.58f);
             RenderSettings.fog = true;
             RenderSettings.fogColor = new Color(0.60f, 0.70f, 0.82f);
-            RenderSettings.fogDensity = 0.00016f;
+            RenderSettings.fogDensity = 0.00013f;
 
             GameObject sunObject = new GameObject("Visual QA Sun");
             Light sun = sunObject.AddComponent<Light>();
@@ -103,7 +105,7 @@ namespace QuestFlightLab.Editor
             cameraObject.tag = "MainCamera";
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.nearClipPlane = 0.03f;
-            camera.farClipPlane = 9000f;
+            camera.farClipPlane = 11000f;
             camera.fieldOfView = 76f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.56f, 0.72f, 0.94f);
@@ -238,7 +240,7 @@ namespace QuestFlightLab.Editor
                 id = "03_instrument_hud_readability",
                 title = "Instrument and HUD readability close view",
                 sceneryMode = "mesh",
-                cameraPosition = context.aircraftRoot.transform.TransformPoint(pilotEye + new Vector3(0.02f, -0.08f, 0.05f)),
+                cameraPosition = context.aircraftRoot.transform.TransformPoint(pilotEye + new Vector3(0.02f, -0.04f, 0.05f)),
                 cameraRotation = startRotation * Quaternion.Euler(8f, 0f, 0f),
                 fov = 58f,
                 hideExteriorForCockpit = true,
@@ -463,6 +465,7 @@ namespace QuestFlightLab.Editor
                 colorVariance = stats.colorVariance,
                 nonBackgroundRatio = stats.nonBackgroundRatio,
                 greenTextRatio = stats.greenTextRatio,
+                outsideViewRatio = stats.outsideViewRatio,
                 dimensionsValid = stats.width > 0 && stats.height > 0,
                 imageNotBlank = stats.colorVariance > 18f && stats.nonBackgroundRatio > 0.035f,
                 giantUiOverlayDetected = shot.showHud && stats.greenTextRatio > 0.16f,
@@ -487,6 +490,11 @@ namespace QuestFlightLab.Editor
                 result.warnings.Add("Cockpit shot has too little non-background detail.");
             }
 
+            if (shot.sanityTag == "cockpit" && result.outsideViewRatio < PilotViewpointConfig.MinimumCockpitOutsideViewRatio)
+            {
+                result.warnings.Add($"Cockpit shot outside-view ratio {result.outsideViewRatio:0.000} is below pilot-eye target {PilotViewpointConfig.MinimumCockpitOutsideViewRatio:0.000}.");
+            }
+
             if (shot.sanityTag == "runway" && !result.runwayGeometryPresent)
             {
                 result.warnings.Add("Runway geometry object is missing.");
@@ -501,7 +509,7 @@ namespace QuestFlightLab.Editor
                             result.imageNotBlank &&
                             !result.giantUiOverlayDetected &&
                             result.activeCameraNotAtOrigin &&
-                            (shot.sanityTag != "cockpit" || (result.cockpitAssetPresent && result.nonBackgroundRatio >= 0.12f)) &&
+                            (shot.sanityTag != "cockpit" || (result.cockpitAssetPresent && result.nonBackgroundRatio >= 0.12f && result.outsideViewRatio >= PilotViewpointConfig.MinimumCockpitOutsideViewRatio)) &&
                             (shot.sanityTag != "aircraft" || result.cockpitAssetPresent) &&
                             (shot.sanityTag != "runway" || result.runwayGeometryPresent) &&
                             (shot.sanityTag != "hud" || result.hudVisible);
@@ -514,7 +522,7 @@ namespace QuestFlightLab.Editor
             RenderTexture previousActive = RenderTexture.active;
             RenderTexture renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
             {
-                antiAliasing = 2
+                antiAliasing = 4
             };
             Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
 
@@ -546,6 +554,7 @@ namespace QuestFlightLab.Editor
             double meanB = 0;
             int nonBackground = 0;
             int greenText = 0;
+            int outsideView = 0;
 
             foreach (Color32 pixel in pixels)
             {
@@ -554,7 +563,10 @@ namespace QuestFlightLab.Editor
                 meanB += pixel.b;
                 int bgDiff = Math.Abs(pixel.r - background.r) + Math.Abs(pixel.g - background.g) + Math.Abs(pixel.b - background.b);
                 if (bgDiff > 36) nonBackground++;
-                if (pixel.g > 130 && pixel.r < 150 && pixel.b > 80) greenText++;
+                if (pixel.g > 130 && pixel.g > pixel.r + 35 && pixel.g > pixel.b + 15) greenText++;
+                bool skyLike = pixel.b > 125 && pixel.g > 110 && pixel.r < 190 && pixel.b > pixel.r + 20;
+                bool terrainLike = pixel.g > 75 && pixel.g > pixel.r * 0.92f && pixel.b < 175 && pixel.r < 170;
+                if (skyLike || terrainLike) outsideView++;
             }
 
             meanR /= Math.Max(1, count);
@@ -575,7 +587,27 @@ namespace QuestFlightLab.Editor
                 height = texture.height,
                 colorVariance = (float)variance,
                 nonBackgroundRatio = nonBackground / (float)Math.Max(1, count),
-                greenTextRatio = greenText / (float)Math.Max(1, count)
+                greenTextRatio = greenText / (float)Math.Max(1, count),
+                outsideViewRatio = outsideView / (float)Math.Max(1, count)
+            };
+        }
+
+        private static PilotEyeViewResult VerifyPilotEyeReference()
+        {
+            Vector3 seatReference = QuestFirstViewRuntimeRepair.ImportedC172SeatReferenceLocal;
+            Vector3 defaultOffset = QuestFirstViewRuntimeRepair.ImportedC172DefaultPilotViewOffset;
+            Vector3 pilotEye = QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal;
+            bool eyeTallEnough = pilotEye.y >= PilotViewpointConfig.MinimumDefaultEyeHeightMeters;
+            bool offsetTallEnough = defaultOffset.y >= 0.20f;
+            return new PilotEyeViewResult
+            {
+                importedC172SeatReferenceLocal = seatReference,
+                importedC172DefaultPilotViewOffset = defaultOffset,
+                importedC172PilotEyeLocal = pilotEye,
+                importedC172CockpitModelEye = QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye,
+                minimumEyeHeightMeters = PilotViewpointConfig.MinimumDefaultEyeHeightMeters,
+                minimumOutsideViewRatio = PilotViewpointConfig.MinimumCockpitOutsideViewRatio,
+                passed = eyeTallEnough && offsetTallEnough
             };
         }
 
@@ -589,6 +621,8 @@ namespace QuestFlightLab.Editor
                 generatedUtc = DateTime.UtcNow.ToString("O"),
                 sceneryMode = "visual_qa",
                 demoMode = "short_playtest",
+                importedC172SeatReferenceLocal = QuestFirstViewRuntimeRepair.ImportedC172SeatReferenceLocal,
+                importedC172DefaultPilotViewOffset = QuestFirstViewRuntimeRepair.ImportedC172DefaultPilotViewOffset,
                 importedC172CockpitModelEye = QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye,
                 importedC172PilotViewOffset = new Vector3(-0.21f, 0.17f, 0.05f),
                 importedC172CockpitYawDeg = 3.5f,
@@ -757,7 +791,7 @@ namespace QuestFlightLab.Editor
         private static string BuildCsv(VisualQaReport report)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("id,title,passed,scenery_mode,path,variance,non_background_ratio,green_text_ratio,warnings");
+            sb.AppendLine("id,title,passed,scenery_mode,path,variance,non_background_ratio,green_text_ratio,outside_view_ratio,warnings");
             foreach (VisualQaShotResult shot in report.shots)
             {
                 sb.Append(Escape(shot.id)).Append(',')
@@ -768,6 +802,7 @@ namespace QuestFlightLab.Editor
                     .Append(shot.colorVariance.ToString("0.###", CultureInfo.InvariantCulture)).Append(',')
                     .Append(shot.nonBackgroundRatio.ToString("0.####", CultureInfo.InvariantCulture)).Append(',')
                     .Append(shot.greenTextRatio.ToString("0.####", CultureInfo.InvariantCulture)).Append(',')
+                    .Append(shot.outsideViewRatio.ToString("0.####", CultureInfo.InvariantCulture)).Append(',')
                     .Append(Escape(string.Join("; ", shot.warnings))).AppendLine();
             }
 
@@ -787,6 +822,7 @@ namespace QuestFlightLab.Editor
             sb.AppendLine($"- Contact sheet: `{report.contactSheetPath}`");
             sb.AppendLine($"- Overall pass: {report.passed}");
             sb.AppendLine($"- Cockpit asset: {report.cockpitAssetStatus}");
+            sb.AppendLine($"- Pilot eye reference: {(report.pilotEyeReference.passed ? "PASS" : "FAIL")} seat={report.pilotEyeReference.importedC172SeatReferenceLocal} defaultOffset={report.pilotEyeReference.importedC172DefaultPilotViewOffset} eye={report.pilotEyeReference.importedC172PilotEyeLocal}");
             sb.AppendLine($"- World builder: {report.worldBuilderStatus}");
             sb.AppendLine($"- Render quality: AA {report.renderQuality.antiAliasing}, aniso {report.renderQuality.anisotropicFiltering}, LOD bias {report.renderQuality.lodBias:0.00}, shadow distance {report.renderQuality.shadowDistance:0}m, far clip {report.renderQuality.cameraFarClipMeters:0}m, mip limit {report.renderQuality.globalTextureMipmapLimit}, target FPS {report.renderQuality.targetFrameRate}");
             sb.AppendLine($"- Mesh scenery: {report.meshSceneryStatus}");
@@ -798,7 +834,9 @@ namespace QuestFlightLab.Editor
             sb.AppendLine("| --- | --- | --- |");
             foreach (VisualQaShotResult shot in report.shots)
             {
-                string notes = shot.warnings.Count == 0 ? "ok" : string.Join("; ", shot.warnings);
+                string notes = shot.warnings.Count == 0
+                    ? $"ok; outside={shot.outsideViewRatio:0.000}"
+                    : $"{string.Join("; ", shot.warnings)}; outside={shot.outsideViewRatio:0.000}";
                 sb.AppendLine($"| `{shot.id}` | {shot.passed} | {notes} |");
             }
 
@@ -841,7 +879,7 @@ namespace QuestFlightLab.Editor
             Quaternion cameraInModelRotation = Quaternion.Euler(QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEyeEuler);
             Quaternion modelInCameraRotation = Quaternion.Inverse(cameraInModelRotation) * modelRotation;
             cockpit.localRotation = Quaternion.Euler(0f, yawDegrees, 0f) * modelInCameraRotation;
-            Vector3 baseSeatTarget = QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal + offset;
+            Vector3 baseSeatTarget = QuestFirstViewRuntimeRepair.ImportedC172SeatReferenceLocal + offset;
             cockpit.localPosition = baseSeatTarget - cockpit.localRotation * QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye;
         }
 
@@ -989,6 +1027,7 @@ namespace QuestFlightLab.Editor
             public Vector3 importedC172BoundsSize;
             public string worldBuilderStatus;
             public RenderQualityEvidence renderQuality;
+            public PilotEyeViewResult pilotEyeReference;
             public string meshSceneryStatus;
             public string scenicSceneryStatus;
             public string contactSheetPath;
@@ -1014,6 +1053,7 @@ namespace QuestFlightLab.Editor
             public float colorVariance;
             public float nonBackgroundRatio;
             public float greenTextRatio;
+            public float outsideViewRatio;
             public bool dimensionsValid;
             public bool imageNotBlank;
             public bool giantUiOverlayDetected;
@@ -1037,6 +1077,18 @@ namespace QuestFlightLab.Editor
             public bool valuesMatched;
             public bool resetDeletedCurrent;
             public string error;
+            public bool passed;
+        }
+
+        [Serializable]
+        public class PilotEyeViewResult
+        {
+            public Vector3 importedC172SeatReferenceLocal;
+            public Vector3 importedC172DefaultPilotViewOffset;
+            public Vector3 importedC172PilotEyeLocal;
+            public Vector3 importedC172CockpitModelEye;
+            public float minimumEyeHeightMeters;
+            public float minimumOutsideViewRatio;
             public bool passed;
         }
 
@@ -1087,6 +1139,7 @@ namespace QuestFlightLab.Editor
             public float colorVariance;
             public float nonBackgroundRatio;
             public float greenTextRatio;
+            public float outsideViewRatio;
         }
     }
 }

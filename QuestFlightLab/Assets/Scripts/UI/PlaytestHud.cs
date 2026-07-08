@@ -130,23 +130,23 @@ namespace QuestFlightLab.UI
 
             Root = new GameObject(HudName);
             Root.transform.SetParent(_camera.transform, false);
-            Root.transform.localPosition = new Vector3(-0.82f, 0.16f, 1.62f);
-            Root.transform.localRotation = Quaternion.Euler(-4f, 16f, 0f);
+            Root.transform.localPosition = new Vector3(-1.12f, 0.36f, 2.35f);
+            Root.transform.localRotation = Quaternion.Euler(-2f, 20f, 0f);
 
             Material panelMat = Material("Playtest HUD Panel", new Color(0.018f, 0.02f, 0.024f));
             Material textMat = Material("Playtest HUD Text", new Color(0.78f, 0.96f, 0.88f));
 
-            Cube(Root.transform, "PlaytestHudBackground", new Vector3(0f, 0f, 0.04f), new Vector3(0.98f, 0.42f, 0.025f), panelMat);
+            Cube(Root.transform, "PlaytestHudBackground", new Vector3(0f, 0f, 0.04f), new Vector3(0.72f, 0.30f, 0.025f), panelMat);
 
             GameObject textObject = new GameObject("PlaytestHudText");
             textObject.transform.SetParent(Root.transform, false);
-            textObject.transform.localPosition = new Vector3(-0.46f, 0.18f, -0.02f);
+            textObject.transform.localPosition = new Vector3(-0.34f, 0.13f, -0.02f);
             _text = textObject.AddComponent<TextMesh>();
             _text.anchor = TextAnchor.UpperLeft;
             _text.alignment = TextAlignment.Left;
-            _text.fontSize = 22;
-            _text.characterSize = 0.0105f;
-            _text.lineSpacing = 0.84f;
+            _text.fontSize = 20;
+            _text.characterSize = 0.0074f;
+            _text.lineSpacing = 0.80f;
             _text.color = textMat.color;
         }
 

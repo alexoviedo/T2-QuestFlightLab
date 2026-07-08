@@ -117,7 +117,7 @@ def analyze_png(path: pathlib.Path) -> dict:
         mean[2] += b
         if abs(r - bg[0]) + abs(g - bg[1]) + abs(b - bg[2]) > 36:
             non_bg += 1
-        if g > 130 and r < 150 and b > 80:
+        if g > 130 and g > r + 35 and g > b + 15:
             green_text += 1
 
     mean = [v / pixel_count for v in mean]

@@ -19,8 +19,9 @@ Improve scenery credibility without turning the Quest runtime into an unbounded 
 ## Immediate Quest-Safe Path
 
 - Keep the enhanced mesh/procedural airport as default.
-- Use the v2 KBDU-inspired expanded world as the immediate local baseline: 11.8 km x 11.8 km visual footprint, 121 terrain chunks, far ridge impostors, local roads/fields/perimeter cues, runway wear, apron/taxiway details, hangars, fuel/clutter, runway lights, grass variation, and sky/lighting improvements.
+- Use the v2.1 KBDU-inspired expanded world as the immediate local baseline: 14.56 km x 14.56 km visual footprint, 169 terrain chunks, far ridge impostors, local roads/fields/perimeter cues, runway wear, apron/taxiway details, hangars, fuel/clutter, runway lights, grass variation, and sky/lighting improvements.
 - Use OpenStreetMap extracts as non-committed reference or as intentionally attributed ODbL-derived data only when the share-alike implications are acceptable.
+- Add a bounded USGS 3DEP/The National Map height-data proof before trying heavier streaming terrain.
 - Add small CC0 material textures only after optimization and source documentation.
 - Use visual QA for screenshot comparison before and after each scenery pass.
 

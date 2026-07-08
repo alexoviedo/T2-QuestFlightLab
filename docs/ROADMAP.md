@@ -10,9 +10,9 @@
 
 ## Next Milestones
 
-1. Iterate the v2 KBDU-inspired environment with optimized CC0 PBR materials/HDRI, better vegetation/field/road variation, and a Quest runtime frame-time smoke.
-2. Build matched-control JSBSim profiles for the same Unity editor scenarios, then tune Unity flight behavior against reference envelopes.
-3. Add a real terrain/elevation source gate, likely USGS 3DEP-derived offline height data, while keeping the Quest runtime local and bounded.
+1. Run a Quest runtime visual-fidelity smoke for the v2.1 environment to capture headset shimmer, frame timing, and pilot-eye comfort evidence.
+2. Add a real terrain/elevation source gate, likely USGS 3DEP-derived offline height data, while keeping the Quest runtime local and bounded.
+3. Turn the matched-control JSBSim comparator into a runtime/bridge feasibility decision, because config-only tuning is now hitting the prototype Unity model's limits.
 4. Establish an owned/OpenVSP/Blender aircraft asset path when the environment baseline is convincing enough to revisit cockpit/exterior art.
 5. Expand cockpit/instrument layout from placeholders toward inspectable analog/G1000-style training views.
 6. Tighten stabilized approach, landing flare, and go-around behavior with aircraft-specific data and better instructor/debrief review.

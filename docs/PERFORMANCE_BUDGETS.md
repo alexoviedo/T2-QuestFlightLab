@@ -8,12 +8,12 @@ Current `visual_fidelity_demo` budget:
 
 | Area | Current Budget |
 | --- | --- |
-| Environment footprint | 11.8 km x 11.8 km KBDU-inspired visual area |
-| Terrain chunks | 121 mesh chunks with near/mid/far detail rings |
+| Environment footprint | 14.56 km x 14.56 km KBDU-inspired visual area |
+| Terrain chunks | 169 mesh chunks with near/mid/far detail rings |
 | Far scenery | Low-cost ridge impostor meshes |
 | Airport clutter | Procedural hangars, lights, cones, taxi-lanes, field/road/perimeter cues |
-| Visual QA LOD groups | 174 in the v2 2026-07-08 run |
-| Approx world triangles | 13,704 in v2 visual QA budget evidence |
+| Visual QA LOD groups | 387 in the v2.1 2026-07-08 run |
+| Approx world triangles | 20,148 in v2.1 visual QA budget evidence |
 | Render quality | 4x MSAA in visual QA/runtime visual profile; Android project default Medium uses MSAA |
 | Texture source | Runtime procedural material/noise textures; no large downloaded textures committed |
 | Gaussian splats | Diagnostic/fallback only until Quest XR stereo/world-lock issue is fixed |
@@ -21,6 +21,12 @@ Current `visual_fidelity_demo` budget:
 ## Instrumentation
 
 `WorldPerformanceBudget` records the world profile, footprint, terrain chunk count, LOD group count, renderer count, mesh count, approximate triangle count, material count, texture count, near/mid/far radii, and notes. `VisualQaBatchRunner` includes this status and the active render-quality profile in its Markdown/JSON output.
+
+Latest deterministic visual QA budget evidence:
+
+```text
+profile=visual_fidelity_demo_medium size=14560x14560m chunks=169 lodGroups=387 renderers=611 meshes=611 tris~20148 materials=15 textures=14 draw=9200m
+```
 
 ## Guardrails
 

@@ -26,8 +26,8 @@ MonoBehaviour:
   neverExceedSpeedKts: 163
   maxEnginePowerHp: 180
   propEfficiency: 0.74
-  staticThrustNewtons: 3600
-  maxThrustNewtons: 4100
+  staticThrustNewtons: 3550
+  maxThrustNewtons: 4050
   idleRpm: 700
   maxRpm: 2700
   carbHeatPowerLoss: 0.08
@@ -37,7 +37,7 @@ MonoBehaviour:
   criticalAoADeg: 15
   liftCoefficientBase: 0.44
   liftCurveSlopePerRad: 5.14
-  maximumLiftCoefficient: 1.55
+  maximumLiftCoefficient: 1.5
   postStallLiftMultiplier: 0.55
   elevatorAoAAuthorityDeg: 7.5
   trimAoAAuthorityDeg: 4.5

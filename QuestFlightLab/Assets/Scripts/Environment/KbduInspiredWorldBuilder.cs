@@ -35,6 +35,7 @@ namespace QuestFlightLab.Environment
             Material fieldGold = Material("Harvest Field Gold", new Color(0.47f, 0.43f, 0.20f), 0f, 0.58f, 14f);
             Material fieldGreen = Material("Irrigated Field Green", new Color(0.20f, 0.36f, 0.16f), 0f, 0.5f, 14f);
             Material treeLine = Material("Cottonwood Tree Line", new Color(0.09f, 0.22f, 0.10f), 0f, 0.42f, 5f);
+            Material scrub = Material("Foothill Scrub Brush", new Color(0.22f, 0.28f, 0.16f), 0f, 0.56f, 7f);
 
             GameObject root = new GameObject(RootName);
             root.transform.SetParent(airportRoot, false);
@@ -44,7 +45,7 @@ namespace QuestFlightLab.Environment
             AddRoadNetwork(root.transform, road, concrete);
             AddAirportNeighborhood(root.transform, concrete, roof, dirt);
             AddReservoirAndDrainage(root.transform, water, dirt);
-            AddPerimeterAndFieldCues(root.transform, fence, dirt, concrete, treeLine);
+            AddPerimeterAndFieldCues(root.transform, fence, dirt, concrete, treeLine, scrub);
             AddFarFoothills(root.transform, foothill, mountain, snow);
             AddObjectLodGroups(root.transform);
 
@@ -55,9 +56,9 @@ namespace QuestFlightLab.Environment
 
         private static int AddTerrainChunks(Transform parent, Material prairie, Material darkerGrass, Material dirt)
         {
-            const int radiusX = 5;
-            const int radiusZ = 5;
-            const float chunk = 1080f;
+            const int radiusX = 6;
+            const int radiusZ = 6;
+            const float chunk = 1120f;
             int count = 0;
             for (int ix = -radiusX; ix <= radiusX; ix++)
             {
@@ -67,17 +68,17 @@ namespace QuestFlightLab.Environment
                     float z = iz * chunk;
                     Material material = ((ix + iz) & 1) == 0 ? prairie : darkerGrass;
                     int ring = Mathf.Max(Mathf.Abs(ix), Mathf.Abs(iz));
-                    int resolution = ring <= 1 ? 12 : ring <= 3 ? 8 : 4;
+                    int resolution = ring <= 1 ? 14 : ring <= 3 ? 9 : ring <= 5 ? 5 : 3;
                     GameObject tile = TerrainChunk(parent, $"TerrainChunk_{ix}_{iz}", new Vector3(x, 0f, z), chunk + 8f, resolution, material);
                     tile.isStatic = true;
                     count++;
                 }
             }
 
-            for (int i = 0; i < 46; i++)
+            for (int i = 0; i < 70; i++)
             {
-                float x = -3700f + (i % 23) * 330f;
-                float z = -2300f + (i / 23) * 620f + Mathf.Sin(i * 1.7f) * 90f;
+                float x = -5200f + (i % 35) * 305f;
+                float z = -3150f + (i / 35) * 760f + Mathf.Sin(i * 1.7f) * 120f;
                 float y = TerrainHeight(x, z) + 0.035f;
                 Cube(parent, $"DryFieldPatch_{i}", new Vector3(x, y, z), Quaternion.Euler(0f, i * 11f, 0f), new Vector3(210f + (i % 4) * 32f, 0.014f, 38f + (i % 3) * 12f), dirt);
             }
@@ -87,17 +88,17 @@ namespace QuestFlightLab.Environment
 
         private static void AddFieldParcels(Transform parent, Material fieldGold, Material fieldGreen, Material dirt)
         {
-            for (int row = 0; row < 5; row++)
+            for (int row = 0; row < 7; row++)
             {
-                for (int col = 0; col < 8; col++)
+                for (int col = 0; col < 10; col++)
                 {
-                    float x = -4300f + col * 980f + Mathf.Sin((row + 1) * (col + 3)) * 65f;
-                    float z = 1120f + row * 760f + Mathf.Cos((row + 2) * (col + 1)) * 82f;
+                    float x = -5700f + col * 1050f + Mathf.Sin((row + 1) * (col + 3)) * 80f;
+                    float z = 1180f + row * 790f + Mathf.Cos((row + 2) * (col + 1)) * 96f;
                     Material mat = (row + col) % 3 == 0 ? fieldGreen : fieldGold;
-                    Cube(parent, $"BoulderValleyFieldParcel_{row}_{col}", new Vector3(x, TerrainHeight(x, z) + 0.045f, z), Quaternion.Euler(0f, -6f + row * 3f, 0f), new Vector3(640f, 0.014f, 260f), mat);
+                    Cube(parent, $"BoulderValleyFieldParcel_{row}_{col}", new Vector3(x, TerrainHeight(x, z) + 0.045f, z), Quaternion.Euler(0f, -8f + row * 3f, 0f), new Vector3(720f, 0.014f, 290f), mat);
                     if ((row + col) % 2 == 0)
                     {
-                        Cube(parent, $"BoulderValleyFieldFurrow_{row}_{col}", new Vector3(x, TerrainHeight(x, z) + 0.058f, z), Quaternion.Euler(0f, -6f + row * 3f, 0f), new Vector3(610f, 0.012f, 4.2f), dirt);
+                        Cube(parent, $"BoulderValleyFieldFurrow_{row}_{col}", new Vector3(x, TerrainHeight(x, z) + 0.058f, z), Quaternion.Euler(0f, -8f + row * 3f, 0f), new Vector3(690f, 0.012f, 4.2f), dirt);
                     }
                 }
             }
@@ -113,8 +114,11 @@ namespace QuestFlightLab.Environment
             Road(parent, "BoulderReservoirAccessRoad", -1420f, 1350f, -31f, 1760f, 6.5f, road);
             Road(parent, "AirportIndustrialLoopRoad", -520f, -710f, 4f, 820f, 7f, road);
             Road(parent, "EastCountyRoad", 2550f, 1380f, 91f, 3600f, 8f, road);
+            Road(parent, "NorthReservoirRoad", -2450f, 2850f, -7f, 3300f, 7f, road);
+            Road(parent, "EastFarmGridRoad", 3540f, 2480f, 2f, 3000f, 6.5f, road);
+            Road(parent, "SouthAirportServiceRoad", 120f, -1840f, 10f, 2800f, 6f, road);
 
-            for (int i = 0; i < 15; i++)
+            for (int i = 0; i < 22; i++)
             {
                 Cube(parent, $"RoadCenterDash_{i}", new Vector3(-1120f + i * 170f, 0.032f, -387f + i * 9f), Quaternion.Euler(0f, -14f, 0f), new Vector3(26f, 0.01f, 0.55f), concrete);
             }
@@ -132,10 +136,10 @@ namespace QuestFlightLab.Environment
                 Cube(parent, $"AirportIndustrial_{i}_Yard", new Vector3(x, 0.005f, z + 38f), Quaternion.identity, new Vector3(68f, 0.012f, 34f), dirt);
             }
 
-            for (int i = 0; i < 34; i++)
+            for (int i = 0; i < 54; i++)
             {
-                float x = 920f + (i % 9) * 74f;
-                float z = -820f + (i / 9) * 86f;
+                float x = 920f + (i % 11) * 78f;
+                float z = -860f + (i / 11) * 88f;
                 Cube(parent, $"LowBuildingFar_{i}", new Vector3(x, 3.0f, z), Quaternion.Euler(0f, (i % 4) * 2f, 0f), new Vector3(38f + (i % 3) * 8f, 6f, 28f + (i % 2) * 10f), i % 2 == 0 ? concrete : roof);
             }
         }
@@ -146,9 +150,11 @@ namespace QuestFlightLab.Environment
             Cube(parent, "ReservoirShoreWest", new Vector3(-1280f, TerrainHeight(-1280f, 740f) + 0.012f, 740f), Quaternion.Euler(0f, -8f, 0f), new Vector3(680f, 0.014f, 306f), dirt);
             Cube(parent, "DrainageSwaleNorth", new Vector3(-120f, TerrainHeight(-120f, 850f) + 0.018f, 850f), Quaternion.Euler(0f, 5f, 0f), new Vector3(1350f, 0.012f, 34f), dirt);
             Cube(parent, "IrrigationDitchNorthwest", new Vector3(-2200f, TerrainHeight(-2200f, 1520f) + 0.016f, 1520f), Quaternion.Euler(0f, 18f, 0f), new Vector3(1900f, 0.012f, 18f), dirt);
+            Cube(parent, "BoulderReservoirHintNorth", new Vector3(-3150f, TerrainHeight(-3150f, 3050f) + 0.018f, 3050f), Quaternion.Euler(0f, 5f, 0f), new Vector3(1250f, 0.016f, 420f), water);
+            Cube(parent, "BoulderReservoirHintShore", new Vector3(-3150f, TerrainHeight(-3150f, 3050f) + 0.012f, 3050f), Quaternion.Euler(0f, 5f, 0f), new Vector3(1360f, 0.012f, 484f), dirt);
         }
 
-        private static void AddPerimeterAndFieldCues(Transform parent, Material fence, Material dirt, Material concrete, Material treeLine)
+        private static void AddPerimeterAndFieldCues(Transform parent, Material fence, Material dirt, Material concrete, Material treeLine, Material scrub)
         {
             Cube(parent, "AirportPerimeterFenceNorth", new Vector3(20f, 1.15f, 356f), Quaternion.identity, new Vector3(1480f, 1.3f, 0.18f), fence);
             Cube(parent, "AirportPerimeterFenceSouth", new Vector3(20f, 1.15f, -426f), Quaternion.identity, new Vector3(1480f, 1.3f, 0.18f), fence);
@@ -161,32 +167,39 @@ namespace QuestFlightLab.Environment
                 Cube(parent, $"RampParkingStripe_{i}", new Vector3(x, 0.12f, -171f), Quaternion.Euler(0f, 18f, 0f), new Vector3(1.1f, 0.011f, 22f), concrete);
             }
 
-            for (int i = 0; i < 16; i++)
+            for (int i = 0; i < 28; i++)
             {
-                float x = -2600f + (i % 8) * 520f;
-                float z = 1180f + (i / 8) * 430f;
+                float x = -4200f + (i % 14) * 560f;
+                float z = 1180f + (i / 14) * 510f;
                 Cube(parent, $"DistantFarmTrack_{i}", new Vector3(x, TerrainHeight(x, z) + 0.032f, z), Quaternion.Euler(0f, (i % 4) * 7f, 0f), new Vector3(360f, 0.012f, 5.5f), dirt);
             }
 
-            for (int i = 0; i < 18; i++)
+            for (int i = 0; i < 28; i++)
             {
-                float x = -3800f + i * 440f;
-                float z = 1870f + Mathf.Sin(i * 0.77f) * 180f;
+                float x = -5200f + i * 420f;
+                float z = 2050f + Mathf.Sin(i * 0.77f) * 220f;
                 Cube(parent, $"CottonwoodTreeLineNorth_{i}", new Vector3(x, TerrainHeight(x, z) + 4.5f, z), Quaternion.Euler(0f, i * 4f, 0f), new Vector3(145f, 9f + i % 4 * 1.5f, 12f), treeLine);
+            }
+
+            for (int i = 0; i < 34; i++)
+            {
+                float x = -6100f + (i % 17) * 720f;
+                float z = 3720f + Mathf.Sin(i * 0.63f) * 360f;
+                Cube(parent, $"FoothillScrubPatch_{i}", new Vector3(x, TerrainHeight(x, z) + 1.2f, z), Quaternion.Euler(0f, i * 9f, 0f), new Vector3(180f + (i % 3) * 70f, 2.2f, 22f), scrub);
             }
         }
 
         private static void AddFarFoothills(Transform parent, Material foothill, Material mountain, Material snow)
         {
-            Ridge(parent, "FrontRangeFoothillLowRidge", -5600f, 11200f, 3400f, 820f, 12f, 105f, 24, 11, foothill);
-            Ridge(parent, "FrontRangeFoothillBackRidge", -6200f, 12400f, 4400f, 960f, 38f, 188f, 28, 29, foothill);
-            Ridge(parent, "FrontRangeMountainBackRidge", -6800f, 13600f, 6100f, 1220f, 92f, 430f, 30, 47, mountain);
+            Ridge(parent, "FrontRangeFoothillLowRidge", -7200f, 14400f, 4300f, 980f, 18f, 132f, 30, 11, foothill);
+            Ridge(parent, "FrontRangeFoothillBackRidge", -7800f, 15600f, 5600f, 1180f, 48f, 230f, 34, 29, foothill);
+            Ridge(parent, "FrontRangeMountainBackRidge", -8400f, 16800f, 7600f, 1480f, 120f, 560f, 38, 47, mountain);
 
-            for (int i = 0; i < 9; i++)
+            for (int i = 0; i < 11; i++)
             {
-                float x = -4700f + i * 1160f;
-                float y = 365f + Mathf.Sin(i * 0.8f) * 38f;
-                Cube(parent, $"FrontRangeSnowCap_{i}", new Vector3(x, y, 6100f + Mathf.Cos(i * 0.51f) * 90f), Quaternion.Euler(0f, i * 6f, -7f + i % 3 * 5f), new Vector3(360f, 11f, 48f), snow);
+                float x = -6300f + i * 1260f;
+                float y = 460f + Mathf.Sin(i * 0.8f) * 48f;
+                Cube(parent, $"FrontRangeSnowCap_{i}", new Vector3(x, y, 7600f + Mathf.Cos(i * 0.51f) * 115f), Quaternion.Euler(0f, i * 6f, -7f + i % 3 * 5f), new Vector3(430f, 11f, 54f), snow);
             }
         }
 
@@ -198,8 +211,11 @@ namespace QuestFlightLab.Environment
                     !child.name.StartsWith("FrontRange", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("LowBuildingFar_", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("BoulderValleyFieldParcel_", StringComparison.OrdinalIgnoreCase) &&
+                    !child.name.StartsWith("BoulderValleyFieldFurrow_", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("CottonwoodTreeLine", StringComparison.OrdinalIgnoreCase) &&
-                    !child.name.StartsWith("DistantFarmTrack_", StringComparison.OrdinalIgnoreCase))
+                    !child.name.StartsWith("FoothillScrubPatch_", StringComparison.OrdinalIgnoreCase) &&
+                    !child.name.StartsWith("DistantFarmTrack_", StringComparison.OrdinalIgnoreCase) &&
+                    !child.name.StartsWith("DryFieldPatch_", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -422,7 +438,7 @@ namespace QuestFlightLab.Environment
             }
 
             budget.profileName = "visual_fidelity_demo_medium";
-            budget.worldSizeMeters = new Vector2(11800f, 11800f);
+            budget.worldSizeMeters = new Vector2(14560f, 14560f);
             budget.terrainChunkCount = terrainChunkCount;
             budget.lodGroupCount = root.GetComponentsInChildren<LODGroup>(true).Length;
             budget.rendererCount = renderers.Length;
@@ -430,9 +446,9 @@ namespace QuestFlightLab.Environment
             budget.approxTriangleCount = triangles;
             budget.materialCount = CountUniqueMaterials(renderers);
             budget.textureCount = CountUniqueTextures(renderers);
-            budget.nearDetailRadiusMeters = 1800f;
-            budget.midDetailRadiusMeters = 4200f;
-            budget.farDrawRadiusMeters = 7200f;
+            budget.nearDetailRadiusMeters = 2200f;
+            budget.midDetailRadiusMeters = 5200f;
+            budget.farDrawRadiusMeters = 9200f;
             budget.notes = "Procedural KBDU-inspired world with mesh terrain detail rings, OSM-referenced road/airport cues, field parcels, and ridge impostors; not navigation-accurate.";
         }
 
@@ -467,11 +483,13 @@ namespace QuestFlightLab.Environment
         private static float TerrainHeight(float x, float z)
         {
             float runwayFlat = Mathf.Clamp01(1f - Mathf.Max(Mathf.Abs(x) / 1300f, Mathf.Abs(z) / 720f));
-            float northRise = Mathf.Clamp01((z - 980f) / 2700f) * 20f;
-            float westRise = Mathf.Clamp01((-x - 1450f) / 2600f) * 6f;
-            float ripple = Mathf.Sin(x * 0.0041f + z * 0.0028f) * 2.2f +
-                           Mathf.Sin(x * 0.0082f - z * 0.0019f) * 1.1f;
-            float height = -0.18f + northRise + westRise + ripple;
+            float northRise = Mathf.Clamp01((z - 980f) / 3900f) * 32f;
+            float westRise = Mathf.Clamp01((-x - 1450f) / 3600f) * 11f;
+            float foothillLift = Mathf.Clamp01((z - 3100f) / 4200f) * Mathf.Clamp01((-x + 800f) / 5200f) * 36f;
+            float ripple = Mathf.Sin(x * 0.0036f + z * 0.0024f) * 2.8f +
+                           Mathf.Sin(x * 0.0072f - z * 0.0017f) * 1.5f +
+                           Mathf.Sin((x + z) * 0.0011f) * 3.4f;
+            float height = -0.18f + northRise + westRise + foothillLift + ripple;
             return Mathf.Lerp(height, -0.18f, runwayFlat);
         }
 

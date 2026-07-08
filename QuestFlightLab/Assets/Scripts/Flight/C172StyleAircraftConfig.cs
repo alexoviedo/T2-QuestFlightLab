@@ -45,8 +45,8 @@ namespace QuestFlightLab.Flight
     {
         public float maxEnginePowerHp = 180f;
         public float propEfficiency = 0.74f;
-        public float staticThrustNewtons = 3600f;
-        public float maxThrustNewtons = 4100f;
+        public float staticThrustNewtons = 3550f;
+        public float maxThrustNewtons = 4050f;
         public float idleRpm = 700f;
         public float maxRpm = 2700f;
         public float carbHeatPowerLoss = 0.08f;
@@ -138,8 +138,8 @@ namespace QuestFlightLab.Flight
         [Header("Prototype engine and propeller")]
         public float maxEnginePowerHp = 180f;
         public float propEfficiency = 0.74f;
-        public float staticThrustNewtons = 3600f;
-        public float maxThrustNewtons = 4100f;
+        public float staticThrustNewtons = 3550f;
+        public float maxThrustNewtons = 4050f;
         public float idleRpm = 700f;
         public float maxRpm = 2700f;
         public float carbHeatPowerLoss = 0.08f;
@@ -151,7 +151,7 @@ namespace QuestFlightLab.Flight
         public float criticalAoADeg = 15f;
         public float liftCoefficientBase = 0.44f;
         public float liftCurveSlopePerRad = 5.14f;
-        public float maximumLiftCoefficient = 1.55f;
+        public float maximumLiftCoefficient = 1.50f;
         public float postStallLiftMultiplier = 0.55f;
         public float elevatorAoAAuthorityDeg = 7.5f;
         public float trimAoAAuthorityDeg = 4.5f;

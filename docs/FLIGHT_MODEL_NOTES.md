@@ -12,6 +12,8 @@ v1 adds a JSBSim/Unity offline comparator and a conservative config retune. JSBS
 
 v2 makes another conservative JSBSim-informed tune while preserving the current runtime model architecture. Static/max thrust, clean lift/drag, induced drag, pitch damping/stability, and prototype pitch limits were adjusted to reduce the strongest over-climb/over-acceleration trend without breaking the existing 33-scenario suite. The open-loop comparison improved modestly, but Unity still accelerates/climbs faster than the JSBSim reference and turns less aggressively, so JSBSim remains an offline oracle rather than a runtime backend.
 
+v2.1 adds matched-control JSBSim/Unity scenario twins for takeoff, climb, turns, approach, and go-around. The final accepted tune keeps the proven lift/drag/pitch/roll envelope and only slightly reduces static/max thrust, because more aggressive config-only tuning broke the traffic-pattern and stabilized-approach regression gates. The matched-control aggregate improved slightly from 142.14 to 141.99 weighted error, with airspeed RMSE improving from 26.9 kt to 26.7 kt. This is calibration progress, not final fidelity.
+
 See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 
 ## Approximate Seed Constants
@@ -49,6 +51,7 @@ See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 - v0.5 adds approach reference-speed telemetry, final-approach scoring fields, go-around decision markers, and timeline/debrief exports.
 - v1 modestly increases damping/stability and reduces prototype pitch/bank/rate caps to keep the trainer from feeling too light while JSBSim comparison work matures.
 - v2 reduces thrust/pitch response further, increases induced drag slightly, and raises roll authority/bank limits enough to move shallow-turn response closer to the JSBSim trend while keeping editor scenarios green.
+- v2.1 keeps the runtime model inside the green scenario envelope and reduces static/max thrust slightly from 3600/4100 N to 3550/4050 N. Attempts to increase roll/turn authority further produced traffic-pattern stall warnings and were backed out.
 
 ## Acceptance Metrics
 
@@ -86,5 +89,5 @@ The v0.5 suite adds stable final approach, high/low/fast/sink unstable approache
 - Validated engine/propeller model, mixture/carb heat behavior, and RPM/manifold-power relationships.
 - Better ground contact model with landing gear geometry, tire friction, braking, and crosswind effects.
 - Validated stall, spin, slip/skid, flap, trim, and control-authority behavior.
-- Matched-control JSBSim profiles for the same Unity editor scenarios before more aggressive runtime tuning.
+- JSBSim runtime/bridge feasibility for deeper tuning, because matched-control config-only tuning now exposes limitations in the current prototype Unity physics model.
 - A clear decision on whether JSBSim should drive editor-only reference testing, a desktop bridge, or a native Android runtime backend.

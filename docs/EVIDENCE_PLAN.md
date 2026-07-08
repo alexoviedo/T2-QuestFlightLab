@@ -253,3 +253,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\kbd_environment_physics_
 ```
 
 This folder contains repo/tooling state, baseline and after visual QA, OSM reference extracts kept outside the repo, render-quality notes, editor scenario results, PlayMode XML, JSBSim comparison before/after reports, Android build logs, and APK hash evidence.
+
+## 2026-07-08 Production Visual/Physics v2.1 Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_visual_physics_v2_20260707_233843
+```
+
+This folder contains repo/tooling state, baseline audit notes, baseline/final visual QA, corrected pilot-eye evidence, render-quality report, editor scenario results, PlayMode XML, matched-control JSBSim comparison before/after reports, copied Android build logs, APK hash evidence, and optional Quest-smoke notes. The result is editor/build evidence only; no headset runtime performance, comfort, or splat stereo proof was captured.

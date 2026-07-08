@@ -52,27 +52,27 @@ namespace QuestFlightLab.Runtime
             QualitySettings.antiAliasing = msaa;
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
             QualitySettings.globalTextureMipmapLimit = 0;
-            QualitySettings.lodBias = android ? 1.28f : 1.65f;
+            QualitySettings.lodBias = android ? 1.35f : 1.75f;
             QualitySettings.maximumLODLevel = 0;
-            QualitySettings.shadowDistance = android ? 58f : 105f;
+            QualitySettings.shadowDistance = android ? 62f : 115f;
             QualitySettings.shadowResolution = android ? ShadowResolution.Low : ShadowResolution.Medium;
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = android ? 72 : -1;
             GL.sRGBWrite = false;
 
-            XRSettings.eyeTextureResolutionScale = android ? 1.08f : 1.0f;
+            XRSettings.eyeTextureResolutionScale = android ? 1.12f : 1.0f;
 
             RenderSettings.ambientLight = new Color(0.50f, 0.54f, 0.58f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             RenderSettings.fogColor = new Color(0.60f, 0.70f, 0.82f);
-            RenderSettings.fogDensity = 0.00016f;
+            RenderSettings.fogDensity = 0.00013f;
 
             foreach (Camera camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
             {
                 camera.allowMSAA = true;
                 camera.allowHDR = false;
-                camera.farClipPlane = Mathf.Max(camera.farClipPlane, 9000f);
+                camera.farClipPlane = Mathf.Max(camera.farClipPlane, 11000f);
                 camera.nearClipPlane = Mathf.Min(camera.nearClipPlane, 0.03f);
             }
 

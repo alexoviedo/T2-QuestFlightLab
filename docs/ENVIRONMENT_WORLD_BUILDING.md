@@ -8,8 +8,8 @@ The immediate Quest demo path is a controlled KBDU-inspired world, not Cesium/Go
 
 - approximate KBDU Runway 08/26 runway/taxiway/apron geometry,
 - enhanced runway markings, lights, rubber wear, apron seams, hangars, fuel/clutter, and grass variation,
-- an expanded 11.8 km x 11.8 km procedural world around the airport,
-- 121 terrain mesh chunks with near/mid/far detail rings and subtle elevation variation,
+- an expanded 14.56 km x 14.56 km procedural world around the airport,
+- 169 terrain mesh chunks with near/mid/far detail rings and subtle elevation variation,
 - airport-adjacent roads, field parcels, field strips, perimeter fencing, ramp parking cues, industrial buildings, reservoir/drainage hints, and far Front Range-inspired ridge impostors.
 
 This is intended to look more like a believable high-plains airport training environment while staying small, local, deterministic, and build-safe for standalone Quest.
@@ -33,6 +33,16 @@ The extracted OSM tags showed substantially denser aeroway detail than the old s
 ## Asset Source
 
 The v2 environment is project-owned procedural Unity geometry/material generation, informed by non-committed OSM reference data. No paid assets, raw downloaded terrain, Google imagery, or unclear-license models are committed for this pass.
+
+## v2.1 Expansion
+
+The v2.1 pass keeps the imported aircraft/cockpit placeholder unchanged and expands the world-building emphasis:
+
+- world budget grows from 11.8 km x 11.8 km to 14.56 km x 14.56 km,
+- terrain chunks increase from 121 to 169 with more near/mid/far detail-ring coverage,
+- field parcels, dry grass patches, tree-line segments, farm tracks, roads, drainage/reservoir hints, far buildings, and Front Range ridge impostors are denser,
+- render quality profile extends far clip/draw distance so approach and external views carry more distance cues,
+- visual QA confirms 14/14 shots pass, including cockpit, runway, ramp/hangar, terrain, final approach, and render-detail views.
 
 ## Known Limits
 
