@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using UnityEngine;
 
 namespace QuestFlightLab.Runtime
@@ -10,8 +13,18 @@ namespace QuestFlightLab.Runtime
         public const string PlaytestHudKey = "qfl_playtest_hud";
         public const string VerboseHudKey = "qfl_verbose_hud";
         public const string SplatDiagnosticKey = "qfl_splat_diagnostic";
+        public const string CockpitEyeZKey = "qfl_cockpit_eye_z";
+        public const string SeatCalibrationKey = "qfl_seat_calibration";
+        public const string PilotViewOffsetXKey = "qfl_pilot_view_offset_x";
+        public const string PilotViewOffsetYKey = "qfl_pilot_view_offset_y";
+        public const string PilotViewOffsetZKey = "qfl_pilot_view_offset_z";
+        public const string CockpitYawDegKey = "qfl_cockpit_yaw_deg";
+        public const string ManualHeadPoseKey = "qfl_manual_head_pose";
+        public const string ResetSeatCalibrationKey = "qfl_reset_seat_calibration";
 
         private const string LogPrefix = "[QuestFlightLab][LaunchOptions]";
+        private static Dictionary<string, string> _fileOptions;
+        private static bool _fileOptionsLoaded;
 
         public static string SceneryMode()
         {
@@ -50,10 +63,34 @@ namespace QuestFlightLab.Runtime
             return ReadBool(SplatDiagnosticKey, false);
         }
 
+        public static bool SeatCalibrationEnabled()
+        {
+            return ReadBool(SeatCalibrationKey, Application.platform == RuntimePlatform.Android || ShortPlaytestDemoRequested());
+        }
+
+        public static bool ResetSeatCalibrationRequested()
+        {
+            return ReadBool(ResetSeatCalibrationKey, false);
+        }
+
         public static bool ReadBool(string key, bool fallback)
         {
             string value = ReadString(key, string.Empty);
             return string.IsNullOrWhiteSpace(value) ? fallback : ParseBool(value, fallback);
+        }
+
+        public static bool TryReadFloat(string key, out float value)
+        {
+            value = default;
+            string raw = ReadString(key, string.Empty);
+            if (string.IsNullOrWhiteSpace(raw)) return false;
+
+            if (float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+            {
+                return true;
+            }
+
+            return float.TryParse(raw, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
         }
 
         public static string ReadString(string key, string fallback = "")
@@ -69,6 +106,9 @@ namespace QuestFlightLab.Runtime
             value = System.Environment.GetEnvironmentVariable(key);
             if (!string.IsNullOrWhiteSpace(value)) return value.Trim();
 
+            value = ReadLaunchOptionsFile(key);
+            if (!string.IsNullOrWhiteSpace(value)) return value.Trim();
+
             foreach (string arg in System.Environment.GetCommandLineArgs())
             {
                 if (TryReadCommandLineValue(arg, key, out value))
@@ -78,6 +118,41 @@ namespace QuestFlightLab.Runtime
             }
 
             return fallback;
+        }
+
+        private static string ReadLaunchOptionsFile(string key)
+        {
+            EnsureLaunchOptionsFileLoaded();
+            if (_fileOptions == null) return string.Empty;
+            return _fileOptions.TryGetValue(key, out string value) ? value : string.Empty;
+        }
+
+        private static void EnsureLaunchOptionsFileLoaded()
+        {
+            if (_fileOptionsLoaded) return;
+            _fileOptionsLoaded = true;
+            _fileOptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                string path = Path.Combine(Application.persistentDataPath, "QuestFlightLab", "launch_options.json");
+                if (!File.Exists(path)) return;
+
+                LaunchOptionsFile file = JsonUtility.FromJson<LaunchOptionsFile>(File.ReadAllText(path));
+                if (file == null || file.options == null) return;
+
+                foreach (LaunchOptionEntry option in file.options)
+                {
+                    if (option == null || string.IsNullOrWhiteSpace(option.key)) continue;
+                    _fileOptions[option.key.Trim()] = option.value ?? string.Empty;
+                }
+
+                Debug.Log($"{LogPrefix} Loaded {_fileOptions.Count} option(s) from {path}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"{LogPrefix} Could not read launch options file: {ex.Message}");
+            }
         }
 
         private static bool TryReadCommandLineValue(string arg, string key, out string value)
@@ -153,6 +228,19 @@ namespace QuestFlightLab.Runtime
             }
 
             return fallback;
+        }
+
+        [Serializable]
+        private class LaunchOptionsFile
+        {
+            public LaunchOptionEntry[] options;
+        }
+
+        [Serializable]
+        private class LaunchOptionEntry
+        {
+            public string key;
+            public string value;
         }
     }
 }

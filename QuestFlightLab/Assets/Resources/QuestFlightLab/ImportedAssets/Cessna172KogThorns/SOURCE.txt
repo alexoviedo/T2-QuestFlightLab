@@ -1,0 +1,7 @@
+Source: DownloadFree3D Cessna 172
+Page: https://downloadfree3d.com/3d-models/aircraft/airplane/cessna-172-3/
+Downloaded: 2026-07-03
+Archive title: cessna172-made-by-kog-thorns
+Format: GLB
+Use in this repo: personal prototype placeholder visual baseline; intended to be replaced by project-owned assets later.
+Notes: User explicitly requested fastest best-looking personal placeholder path and accepted non-final licensing/provenance risk. Do not present this as production-ready, redistributable, or final project-owned art.

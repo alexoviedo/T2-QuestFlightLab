@@ -30,9 +30,28 @@ namespace QuestFlightLab.Runtime
         public bool manualHeadPoseApplied;
         public bool manualHeadDevicePoseValid;
         public bool manualHeadDeviceTracked;
+        public bool manualHeadUserPresent;
         public float manualHeadYawDeltaDeg;
         public float manualHeadPitchDeltaDeg;
         public float manualHeadPositionDeltaMeters;
+        public float manualHeadAppliedPositionDeltaMeters;
+        public int manualHeadBaselineRecaptureCount;
+        public string manualHeadBaselineStatus;
+        public string headPoseMode;
+        public bool importedC172Loaded;
+        public int importedExteriorRendererHiddenCount;
+        public Vector3 importedC172BoundsSize;
+        public Vector3 importedC172CockpitModelEye;
+        public Vector3 importedC172PilotViewOffset;
+        public float importedC172CockpitYawDeg;
+        public Vector3 pilotEyeLocal;
+        public bool seatCalibrationEnabled;
+        public bool seatCalibrationAdjustmentActive;
+        public bool seatCalibrationModeActive;
+        public string seatCalibrationCapturePath;
+        public string seatCalibrationStatus;
+        public bool savedSeatCalibrationLoaded;
+        public string savedSeatCalibrationPath;
         public bool playtestHudActive;
         public int hiddenVerbosePanelCount;
         public int hudLineCount;
@@ -191,9 +210,28 @@ namespace QuestFlightLab.Runtime
                 evidence.manualHeadPoseApplied = repair.ManualHeadPoseApplied;
                 evidence.manualHeadDevicePoseValid = repair.HeadDevicePoseValid;
                 evidence.manualHeadDeviceTracked = repair.HeadDeviceTracked;
+                evidence.manualHeadUserPresent = repair.HeadUserPresent;
                 evidence.manualHeadYawDeltaDeg = Mathf.Abs(repair.HeadYawDeltaDeg);
                 evidence.manualHeadPitchDeltaDeg = Mathf.Abs(repair.HeadPitchDeltaDeg);
                 evidence.manualHeadPositionDeltaMeters = repair.HeadPositionDeltaMeters;
+                evidence.manualHeadAppliedPositionDeltaMeters = repair.HeadAppliedPositionDeltaMeters;
+                evidence.manualHeadBaselineRecaptureCount = repair.HeadBaselineRecaptureCount;
+                evidence.manualHeadBaselineStatus = repair.HeadBaselineStatus;
+                evidence.headPoseMode = repair.HeadPoseMode;
+                evidence.importedC172Loaded = repair.ImportedC172Loaded;
+                evidence.importedExteriorRendererHiddenCount = repair.ImportedExteriorRendererHiddenCount;
+                evidence.importedC172BoundsSize = repair.ImportedC172BoundsSize;
+                evidence.importedC172CockpitModelEye = repair.ImportedC172CockpitModelEyeUsed;
+                evidence.importedC172PilotViewOffset = repair.ImportedC172PilotViewOffsetUsed;
+                evidence.importedC172CockpitYawDeg = repair.ImportedC172CockpitYawDegUsed;
+                evidence.pilotEyeLocal = repair.PilotEyeLocalUsed;
+                evidence.seatCalibrationEnabled = repair.SeatCalibrationEnabled;
+                evidence.seatCalibrationAdjustmentActive = repair.SeatCalibrationAdjustmentActive;
+                evidence.seatCalibrationModeActive = repair.SeatCalibrationModeActive;
+                evidence.seatCalibrationCapturePath = repair.SeatCalibrationCapturePath;
+                evidence.seatCalibrationStatus = repair.SeatCalibrationStatus;
+                evidence.savedSeatCalibrationLoaded = repair.SavedSeatCalibrationLoaded;
+                evidence.savedSeatCalibrationPath = repair.SavedSeatCalibrationPath;
             }
             evidence.playtestHudActive = PlaytestHud.Instance != null && PlaytestHud.Instance.Root != null;
             evidence.hiddenVerbosePanelCount = PlaytestHud.Instance != null ? PlaytestHud.Instance.HiddenVerbosePanelCount : 0;
@@ -235,6 +273,18 @@ namespace QuestFlightLab.Runtime
             yield return new WaitForSecondsRealtime(5f);
             yield return new WaitForEndOfFrame();
             CaptureFirstViewScreenshot("demo");
+            WriteEvidence();
+
+            float waitStart = Time.unscaledTime;
+            while (Time.unscaledTime - waitStart < 30f)
+            {
+                QuestFirstViewRuntimeRepair repair = QuestFirstViewRuntimeRepair.Instance;
+                if (repair != null && repair.ImportedC172Loaded) break;
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
+
+            yield return new WaitForEndOfFrame();
+            CaptureFirstViewScreenshot("imported_c172");
             WriteEvidence();
         }
 

@@ -4,8 +4,16 @@ param(
   [ValidateSet('','short_playtest')]
   [string]$DemoMode = '',
   [switch]$SplatDiagnostic,
+  [switch]$SeatCalibration,
+  [switch]$ResetSeatCalibration,
+  [switch]$ManualHeadPose,
   [switch]$CaptureLogcat,
   [int]$DurationSeconds = 30,
+  [string]$CockpitEyeZ = '',
+  [string]$PilotViewOffsetX = '',
+  [string]$PilotViewOffsetY = '',
+  [string]$PilotViewOffsetZ = '',
+  [string]$CockpitYawDeg = '',
   [string]$AdbExe = 'C:\Program Files\Meta Quest Developer Hub\resources\bin\adb.exe',
   [string]$PackageId = 'com.alexoviedo.t2.questflightlab',
   [string]$Activity = 'com.unity3d.player.UnityPlayerGameActivity',
@@ -57,6 +65,92 @@ if ($SplatDiagnostic) {
   $launchArgs += @('--es', 'qfl_splat_diagnostic', 'true')
 }
 
+if ($SeatCalibration) {
+  $launchArgs += @('--es', 'qfl_seat_calibration', 'true')
+}
+
+if ($ResetSeatCalibration) {
+  $launchArgs += @('--es', 'qfl_reset_seat_calibration', 'true')
+}
+
+if ($ManualHeadPose) {
+  $launchArgs += @('--es', 'qfl_manual_head_pose', 'true')
+}
+
+if (![string]::IsNullOrWhiteSpace($CockpitEyeZ)) {
+  $launchArgs += @('--es', 'qfl_cockpit_eye_z', $CockpitEyeZ)
+}
+
+if (![string]::IsNullOrWhiteSpace($PilotViewOffsetX)) {
+  $launchArgs += @('--es', 'qfl_pilot_view_offset_x', $PilotViewOffsetX)
+}
+
+if (![string]::IsNullOrWhiteSpace($PilotViewOffsetY)) {
+  $launchArgs += @('--es', 'qfl_pilot_view_offset_y', $PilotViewOffsetY)
+}
+
+if (![string]::IsNullOrWhiteSpace($PilotViewOffsetZ)) {
+  $launchArgs += @('--es', 'qfl_pilot_view_offset_z', $PilotViewOffsetZ)
+}
+
+if (![string]::IsNullOrWhiteSpace($CockpitYawDeg)) {
+  $launchArgs += @('--es', 'qfl_cockpit_yaw_deg', $CockpitYawDeg)
+}
+
+$optionEntries = @(
+  @{ key = 'qfl_scenery_mode'; value = $Mode },
+  @{ key = 'qfl_playtest_hud'; value = 'true' }
+)
+
+if (![string]::IsNullOrWhiteSpace($DemoMode)) {
+  $optionEntries += @{ key = 'qfl_demo_mode'; value = $DemoMode }
+}
+
+if ($SplatDiagnostic) {
+  $optionEntries += @{ key = 'qfl_splat_diagnostic'; value = 'true' }
+}
+
+if ($SeatCalibration) {
+  $optionEntries += @{ key = 'qfl_seat_calibration'; value = 'true' }
+}
+
+if ($ResetSeatCalibration) {
+  $optionEntries += @{ key = 'qfl_reset_seat_calibration'; value = 'true' }
+}
+
+if ($ManualHeadPose) {
+  $optionEntries += @{ key = 'qfl_manual_head_pose'; value = 'true' }
+}
+
+if (![string]::IsNullOrWhiteSpace($CockpitEyeZ)) {
+  $optionEntries += @{ key = 'qfl_cockpit_eye_z'; value = $CockpitEyeZ }
+}
+
+if (![string]::IsNullOrWhiteSpace($PilotViewOffsetX)) {
+  $optionEntries += @{ key = 'qfl_pilot_view_offset_x'; value = $PilotViewOffsetX }
+}
+
+if (![string]::IsNullOrWhiteSpace($PilotViewOffsetY)) {
+  $optionEntries += @{ key = 'qfl_pilot_view_offset_y'; value = $PilotViewOffsetY }
+}
+
+if (![string]::IsNullOrWhiteSpace($PilotViewOffsetZ)) {
+  $optionEntries += @{ key = 'qfl_pilot_view_offset_z'; value = $PilotViewOffsetZ }
+}
+
+if (![string]::IsNullOrWhiteSpace($CockpitYawDeg)) {
+  $optionEntries += @{ key = 'qfl_cockpit_yaw_deg'; value = $CockpitYawDeg }
+}
+
+$launchOptionsPath = Join-Path $OutputDir 'launch_options.json'
+@{ options = $optionEntries } | ConvertTo-Json -Depth 4 | Set-Content -Path $launchOptionsPath -Encoding UTF8
+& $AdbExe shell "mkdir -p /sdcard/Android/data/$PackageId/files/QuestFlightLab" | Out-Null
+if ($ResetSeatCalibration) {
+  & $AdbExe shell "rm -f /sdcard/Android/data/$PackageId/files/QuestFlightLab/seat_calibration/seat_calibration_current.json" | Out-Null
+}
+& $AdbExe push $launchOptionsPath "/sdcard/Android/data/$PackageId/files/QuestFlightLab/launch_options.json" |
+  Set-Content -Path (Join-Path $OutputDir 'adb_push_launch_options.txt') -Encoding UTF8
+
 $launch = (& $AdbExe @launchArgs | Out-String)
 Set-Content -Path (Join-Path $OutputDir 'app_launch.txt') -Value $launch -Encoding UTF8
 
@@ -99,7 +193,8 @@ if ($CaptureLogcat) {
 $pullRoots = @(
   'scenery_runtime',
   'first_view_diagnostics',
-  'demo_pilot'
+  'demo_pilot',
+  'seat_calibration'
 )
 
 foreach ($root in $pullRoots) {

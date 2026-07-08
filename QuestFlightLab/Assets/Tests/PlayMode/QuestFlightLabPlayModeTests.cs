@@ -153,6 +153,131 @@ namespace QuestFlightLab.Tests.PlayMode
         }
 
         [Test]
+        public void ImportedC172AssetLoadsWithRenderableGeometry()
+        {
+            GameObject prefab = Resources.Load<GameObject>(QuestFirstViewRuntimeRepair.ImportedC172ResourcePath);
+            Assert.That(prefab, Is.Not.Null, $"Expected imported C172 at Resources/{QuestFirstViewRuntimeRepair.ImportedC172ResourcePath}");
+
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
+                Assert.That(renderers.Length, Is.GreaterThan(10));
+
+                bool hasBounds = false;
+                Bounds bounds = default;
+                foreach (Renderer renderer in renderers)
+                {
+                    if (!hasBounds)
+                    {
+                        bounds = renderer.bounds;
+                        hasBounds = true;
+                    }
+                    else
+                    {
+                        bounds.Encapsulate(renderer.bounds);
+                    }
+                }
+
+                Assert.That(hasBounds, Is.True);
+                TestContext.WriteLine($"Imported C172 renderer count={renderers.Length} bounds center={bounds.center} size={bounds.size}");
+                Assert.That(bounds.size.x, Is.GreaterThan(4f));
+                Assert.That(bounds.size.y, Is.GreaterThan(1f));
+                Assert.That(bounds.size.z, Is.GreaterThan(4f));
+                Assert.That(bounds.size.x, Is.LessThan(25f));
+                Assert.That(bounds.size.y, Is.LessThan(10f));
+                Assert.That(bounds.size.z, Is.LessThan(25f));
+
+                instance.transform.localRotation = Quaternion.Euler(QuestFirstViewRuntimeRepair.ImportedC172LocalEuler);
+                Bounds alignedBounds = BoundsForTest(renderers);
+                TestContext.WriteLine($"Imported C172 aligned full bounds center={alignedBounds.center} size={alignedBounds.size}");
+                Assert.That(alignedBounds.size.y, Is.LessThan(5f));
+                Assert.That(alignedBounds.size.z, Is.GreaterThan(7f));
+
+                foreach (Renderer renderer in renderers)
+                {
+                    string path = PathForTest(renderer.transform);
+                    if (!path.Contains("Cessna_Interior") &&
+                        !path.Contains("GlassPartNew") &&
+                        !path.Contains("Steering") &&
+                        !path.Contains("Meter") &&
+                        !path.Contains("Seats"))
+                    {
+                        continue;
+                    }
+
+                    TestContext.WriteLine($"Imported C172 aligned renderer={renderer.name} center={renderer.bounds.center} size={renderer.bounds.size}");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
+        [Test]
+        public void ImportedC172PilotEyeStartsInLeftSeatCabinEnvelope()
+        {
+            Vector3 pilotEye = QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal;
+            Assert.That(Mathf.Abs(pilotEye.x), Is.LessThan(0.2f));
+            Assert.That(pilotEye.y, Is.GreaterThan(0.45f));
+            Assert.That(pilotEye.y, Is.LessThan(1.1f));
+            Assert.That(Mathf.Abs(pilotEye.z), Is.LessThan(0.3f));
+
+            Vector3 importedEye = QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye;
+            Assert.That(importedEye.x, Is.LessThan(-0.15f));
+            Assert.That(importedEye.x, Is.GreaterThan(-0.45f));
+            Assert.That(importedEye.y, Is.GreaterThan(-0.8f));
+            Assert.That(importedEye.y, Is.LessThan(-0.2f));
+            Assert.That(importedEye.z, Is.GreaterThan(1.55f));
+            Assert.That(importedEye.z, Is.LessThan(1.8f));
+            Assert.That(QuestFirstViewRuntimeRepair.ImportedC172LocalEuler.x, Is.EqualTo(-90f).Within(0.01f));
+            Assert.That(QuestFirstViewRuntimeRepair.ImportedC172LocalEuler.y, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(QuestFirstViewRuntimeRepair.ImportedC172LocalEuler.z, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye.x, Is.LessThan(0f));
+            Assert.That(QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEyeEuler.x, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEyeEuler.y, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEyeEuler.z, Is.EqualTo(0f).Within(0.01f));
+
+            Quaternion modelInCamera = Quaternion.Euler(QuestFirstViewRuntimeRepair.ImportedC172LocalEuler);
+            Assert.That(Vector3.Dot(modelInCamera * Vector3.forward, Vector3.up), Is.GreaterThan(0.95f));
+            Assert.That(Vector3.Dot(modelInCamera * Vector3.up, Vector3.back), Is.GreaterThan(0.95f));
+        }
+
+        private static Bounds BoundsForTest(Renderer[] renderers)
+        {
+            Bounds bounds = default;
+            bool hasBounds = false;
+            foreach (Renderer renderer in renderers)
+            {
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            return bounds;
+        }
+
+        private static string PathForTest(Transform transform)
+        {
+            string path = transform.name;
+            Transform current = transform.parent;
+            while (current != null)
+            {
+                path = current.name + "/" + path;
+                current = current.parent;
+            }
+
+            return path;
+        }
+
+        [Test]
         public void ShortPlaytestDemoPilotSequenceProvidesTakeoffControls()
         {
             AircraftControlState sweep = ShortPlaytestDemoPilot.ControlsForElapsedSeconds(5f, out string sweepPhase);

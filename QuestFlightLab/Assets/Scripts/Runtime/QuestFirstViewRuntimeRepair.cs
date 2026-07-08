@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using QuestFlightLab.Aircraft;
 using QuestFlightLab.Flight;
@@ -12,30 +14,80 @@ namespace QuestFlightLab.Runtime
     public class QuestFirstViewRuntimeRepair : MonoBehaviour
     {
         private const string LogPrefix = "[QuestFlightLab][FirstView]";
+        private const int SeatCalibrationSchemaVersion = 2;
+        public const string ImportedC172ResourcePath = "QuestFlightLab/ImportedAssets/Cessna172KogThorns/cessna172";
+        public static readonly Vector3 ImportedC172PilotEyeLocal = new Vector3(0f, 0.72f, 0f);
+        public static readonly Vector3 ImportedC172LocalEuler = new Vector3(-90f, 0f, 0f);
+        public static readonly Vector3 ImportedC172CockpitModelEye = new Vector3(-0.28f, -0.45f, 1.69f);
+        public static readonly Vector3 ImportedC172CockpitModelEyeEuler = Vector3.zero;
 
         public static QuestFirstViewRuntimeRepair Instance { get; private set; }
 
-        public Vector3 pilotEyeLocal = new Vector3(-0.34f, 0.86f, 1.1f);
+        public Vector3 pilotEyeLocal = ImportedC172PilotEyeLocal;
+        public Vector3 importedC172LocalPosition = Vector3.zero;
+        public Vector3 importedC172LocalEuler = ImportedC172LocalEuler;
+        public Vector3 importedC172LocalScale = Vector3.one;
+        public Vector3 importedC172CockpitModelEye = ImportedC172CockpitModelEye;
+        public Vector3 importedC172PilotViewOffset = Vector3.zero;
+        public float importedC172CockpitYawDeg;
         public bool followAircraft = true;
         public bool applyHeadPoseFromXrDevice = true;
         public float headPositionScale = 1f;
+        public float headPositionClampMeters = 0.45f;
+        public float headPoseRecenterThresholdMeters = 0.85f;
+        public float seatCalibrationSpeedMetersPerSecond = 0.22f;
+        public float cockpitYawCalibrationSpeedDegPerSecond = 42f;
+        public float seatCalibrationFineScale = 0.25f;
 
+        public bool ImportedC172Loaded { get; private set; }
+        public int ImportedExteriorRendererHiddenCount { get; private set; }
+        public Vector3 ImportedC172BoundsSize { get; private set; }
+        public Vector3 ImportedC172CockpitModelEyeUsed => importedC172CockpitModelEye;
+        public Vector3 ImportedC172PilotViewOffsetUsed => importedC172PilotViewOffset;
+        public Vector3 PilotEyeLocalUsed => pilotEyeLocal;
+        public float ImportedC172CockpitYawDegUsed => importedC172CockpitYawDeg;
+        public bool SeatCalibrationEnabled { get; private set; }
+        public bool SeatCalibrationAdjustmentActive { get; private set; }
+        public bool SeatCalibrationModeActive { get; private set; }
+        public string SeatCalibrationCapturePath { get; private set; } = string.Empty;
+        public string SeatCalibrationStatus { get; private set; } = string.Empty;
+        public bool SavedSeatCalibrationLoaded { get; private set; }
+        public string SavedSeatCalibrationPath { get; private set; } = string.Empty;
         public bool ManualHeadPoseApplied { get; private set; }
         public bool HeadDevicePoseValid { get; private set; }
         public bool HeadDeviceTracked { get; private set; }
+        public bool HeadUserPresent { get; private set; }
         public float HeadYawDeltaDeg { get; private set; }
         public float HeadPitchDeltaDeg { get; private set; }
         public float HeadPositionDeltaMeters { get; private set; }
+        public float HeadAppliedPositionDeltaMeters { get; private set; }
+        public int HeadBaselineRecaptureCount { get; private set; }
+        public string HeadBaselineStatus { get; private set; } = string.Empty;
+        public string HeadPoseMode => applyHeadPoseFromXrDevice ? "manual_device_override" : "native_xr_camera";
 
         private Camera _camera;
         private Transform _xrOrigin;
         private Transform _aircraft;
         private Vector3 _neutralCameraLocalPosition;
         private Quaternion _neutralCameraLocalRotation = Quaternion.identity;
+        private Quaternion _seatForwardLocalRotation = Quaternion.identity;
         private Vector3 _headBaselinePosition;
         private Quaternion _headBaselineRotation = Quaternion.identity;
+        private Quaternion _headBaselineYawRotation = Quaternion.identity;
         private bool _headBaselineCaptured;
+        private bool _headWasTracked;
+        private bool _headWasPresent;
+        private bool _forceHeadBaselineRecapture;
+        private string _pendingHeadBaselineReason = "requested";
         private bool _ready;
+        private Transform _importedC172Visual;
+        private bool _rightPrimaryWasDown;
+        private bool _rightSecondaryWasDown;
+        private bool _leftPrimaryWasDown;
+        private float _nextSeatCalibrationLogTime;
+        private Vector2 _lastLeftCalibrationAxis;
+        private Vector2 _lastRightCalibrationAxis;
+        private static readonly List<InputDevice> ControllerDeviceScratch = new List<InputDevice>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -78,9 +130,13 @@ namespace QuestFlightLab.Runtime
             }
 
             CaptureNeutralCameraPose();
+            ApplyLaunchOverrides();
             HidePilotSeatOccluders();
-            EnsureC172ExteriorVisuals();
-            EnsurePlaytestCockpitCues();
+            if (!TryAddImportedC172Model())
+            {
+                EnsureC172ExteriorVisuals();
+                EnsurePlaytestCockpitCues();
+            }
             ApplyFramePose();
             _ready = true;
             Debug.Log($"{LogPrefix} Pilot view active. camera={_camera.name} origin={_xrOrigin.name} aircraft={_aircraft.name} pilotEyeLocal={pilotEyeLocal}");
@@ -95,6 +151,7 @@ namespace QuestFlightLab.Runtime
                 ResolveSceneReferences();
             }
 
+            UpdateSeatCalibration();
             ApplyFramePose();
         }
 
@@ -160,35 +217,181 @@ namespace QuestFlightLab.Runtime
         {
             _neutralCameraLocalPosition = _xrOrigin.InverseTransformPoint(_camera.transform.position);
             _neutralCameraLocalRotation = Quaternion.Inverse(_xrOrigin.rotation) * _camera.transform.rotation;
+            _seatForwardLocalRotation = YawOnlyRotation(_neutralCameraLocalRotation);
+            Debug.Log($"{LogPrefix} Captured pilot recenter pose. neutralLocalEuler={_neutralCameraLocalRotation.eulerAngles} seatForwardEuler={_seatForwardLocalRotation.eulerAngles}");
+        }
+
+        private void ApplyLaunchOverrides()
+        {
+            bool resetCalibration = QuestLaunchOptions.ResetSeatCalibrationRequested();
+            if (resetCalibration)
+            {
+                DeleteSavedSeatCalibration();
+            }
+
+            applyHeadPoseFromXrDevice = QuestLaunchOptions.ReadBool(QuestLaunchOptions.ManualHeadPoseKey, applyHeadPoseFromXrDevice);
+
+            bool hasExplicitCockpitEyeZ = QuestLaunchOptions.TryReadFloat(QuestLaunchOptions.CockpitEyeZKey, out float cockpitEyeZ);
+            if (hasExplicitCockpitEyeZ)
+            {
+                importedC172CockpitModelEye.z = cockpitEyeZ;
+            }
+
+            Vector3 offset = importedC172PilotViewOffset;
+            bool hasExplicitOffset = false;
+            if (QuestLaunchOptions.TryReadFloat(QuestLaunchOptions.PilotViewOffsetXKey, out float offsetX))
+            {
+                offset.x = offsetX;
+                hasExplicitOffset = true;
+            }
+
+            if (QuestLaunchOptions.TryReadFloat(QuestLaunchOptions.PilotViewOffsetYKey, out float offsetY))
+            {
+                offset.y = offsetY;
+                hasExplicitOffset = true;
+            }
+
+            if (QuestLaunchOptions.TryReadFloat(QuestLaunchOptions.PilotViewOffsetZKey, out float offsetZ))
+            {
+                offset.z = offsetZ;
+                hasExplicitOffset = true;
+            }
+
+            if (hasExplicitOffset)
+            {
+                importedC172PilotViewOffset = ClampPilotViewOffset(offset);
+            }
+
+            bool hasExplicitCockpitYaw = QuestLaunchOptions.TryReadFloat(QuestLaunchOptions.CockpitYawDegKey, out float cockpitYawDeg);
+            if (hasExplicitCockpitYaw)
+            {
+                importedC172CockpitYawDeg = NormalizeAngle(cockpitYawDeg);
+            }
+
+            if (!resetCalibration && TryLoadSavedSeatCalibration(out SeatCalibrationEvidence savedCalibration))
+            {
+                if (!hasExplicitCockpitEyeZ)
+                {
+                    importedC172CockpitModelEye = savedCalibration.importedC172CockpitModelEye;
+                }
+
+                if (!hasExplicitOffset)
+                {
+                    importedC172PilotViewOffset = ClampPilotViewOffset(savedCalibration.importedC172PilotViewOffset);
+                }
+
+                if (!hasExplicitCockpitYaw)
+                {
+                    importedC172CockpitYawDeg = NormalizeAngle(savedCalibration.importedC172CockpitYawDeg);
+                }
+
+                SavedSeatCalibrationLoaded = true;
+                SeatCalibrationStatus = "loaded saved";
+            }
+
+            ApplyPilotSeatCalibrationOffset();
+            SeatCalibrationEnabled = QuestLaunchOptions.SeatCalibrationEnabled();
+            if (resetCalibration)
+            {
+                SeatCalibrationStatus = "reset clean";
+            }
+
+            Debug.Log($"{LogPrefix} Imported C172 cockpit eye calibration={importedC172CockpitModelEye} pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1} seatCalibration={SeatCalibrationEnabled} headPoseMode={HeadPoseMode}");
         }
 
         private void ApplyManualHeadPoseFromDevice()
         {
             ManualHeadPoseApplied = false;
             HeadDevicePoseValid = false;
-            if (!applyHeadPoseFromXrDevice || _camera == null) return;
-            if (!TryGetHeadPose(out Vector3 devicePosition, out Quaternion deviceRotation, out bool tracked)) return;
+            if (_camera == null) return;
+            if (!TryGetHeadPose(out Vector3 devicePosition, out Quaternion deviceRotation, out bool tracked, out bool userPresent)) return;
             HeadDevicePoseValid = true;
+            HeadDeviceTracked = tracked;
+            HeadUserPresent = userPresent;
 
-            if (!_headBaselineCaptured)
+            if (!tracked)
             {
-                _headBaselinePosition = devicePosition;
-                _headBaselineRotation = deviceRotation;
-                _headBaselineCaptured = true;
+                _headWasTracked = false;
+                HeadBaselineStatus = "tracking lost";
+                return;
+            }
+
+            if (!userPresent)
+            {
+                _headWasPresent = false;
+                HeadBaselineStatus = "waiting for headset";
+                return;
+            }
+
+            if (!_headBaselineCaptured || !_headWasTracked || !_headWasPresent || _forceHeadBaselineRecapture)
+            {
+                string reason = !_headBaselineCaptured
+                    ? "initial tracked pose"
+                    : !_headWasTracked
+                        ? "tracking reacquired"
+                        : !_headWasPresent
+                            ? "headset worn"
+                            : _pendingHeadBaselineReason;
+                CaptureHeadBaseline(devicePosition, deviceRotation, reason);
             }
 
             Vector3 positionDelta = devicePosition - _headBaselinePosition;
-            Quaternion rotationDelta = Quaternion.Inverse(_headBaselineRotation) * deviceRotation;
+            if (positionDelta.magnitude > Mathf.Max(headPoseRecenterThresholdMeters, 0.05f))
+            {
+                CaptureHeadBaseline(devicePosition, deviceRotation, $"large pose jump {positionDelta.magnitude:F2}m");
+                positionDelta = Vector3.zero;
+            }
 
-            _camera.transform.localPosition = _neutralCameraLocalPosition + positionDelta * headPositionScale;
-            _camera.transform.localRotation = _neutralCameraLocalRotation * rotationDelta;
+            Quaternion rotationDelta = Quaternion.Inverse(_headBaselineYawRotation) * deviceRotation;
+            Vector3 appliedPositionDelta = Vector3.ClampMagnitude(positionDelta, Mathf.Max(headPositionClampMeters, 0f));
 
             Vector3 euler = rotationDelta.eulerAngles;
             HeadYawDeltaDeg = NormalizeAngle(euler.y);
             HeadPitchDeltaDeg = NormalizeAngle(euler.x);
             HeadPositionDeltaMeters = positionDelta.magnitude;
-            HeadDeviceTracked = tracked;
+            HeadAppliedPositionDeltaMeters = appliedPositionDelta.magnitude;
+            _headWasTracked = true;
+            _headWasPresent = true;
+
+            if (!applyHeadPoseFromXrDevice) return;
+
+            _camera.transform.localPosition = _neutralCameraLocalPosition + appliedPositionDelta * headPositionScale;
+            _camera.transform.localRotation = _seatForwardLocalRotation * rotationDelta;
             ManualHeadPoseApplied = true;
+        }
+
+        private void RequestHeadBaselineRecapture(string reason)
+        {
+            _forceHeadBaselineRecapture = true;
+            _pendingHeadBaselineReason = string.IsNullOrWhiteSpace(reason) ? "requested" : reason;
+            HeadBaselineStatus = $"pending recenter: {_pendingHeadBaselineReason}";
+        }
+
+        private void RecenterHeadBaselineNowOrNext(string reason)
+        {
+            if (TryGetHeadPose(out Vector3 devicePosition, out Quaternion deviceRotation, out bool tracked, out bool userPresent) && tracked && userPresent)
+            {
+                CaptureHeadBaseline(devicePosition, deviceRotation, reason);
+            }
+            else
+            {
+                RequestHeadBaselineRecapture(reason);
+            }
+        }
+
+        private void CaptureHeadBaseline(Vector3 devicePosition, Quaternion deviceRotation, string reason)
+        {
+            _headBaselinePosition = devicePosition;
+            _headBaselineRotation = deviceRotation;
+            _headBaselineYawRotation = YawOnlyRotation(deviceRotation);
+            _headBaselineCaptured = true;
+            _headWasTracked = true;
+            _headWasPresent = true;
+            _forceHeadBaselineRecapture = false;
+            _pendingHeadBaselineReason = string.Empty;
+            HeadBaselineRecaptureCount++;
+            HeadBaselineStatus = $"recentered: {reason}";
+            Debug.Log($"{LogPrefix} Head pose baseline recentered reason={reason} position={devicePosition} yaw={NormalizeAngle(_headBaselineYawRotation.eulerAngles.y):F1} count={HeadBaselineRecaptureCount}");
         }
 
         private void ApplyPilotSeatPose()
@@ -197,7 +400,7 @@ namespace QuestFlightLab.Runtime
                 _aircraft,
                 pilotEyeLocal,
                 _neutralCameraLocalPosition,
-                _neutralCameraLocalRotation,
+                _seatForwardLocalRotation,
                 out Vector3 originPosition,
                 out Quaternion originRotation);
 
@@ -265,6 +468,448 @@ namespace QuestFlightLab.Runtime
             {
                 Debug.Log($"{LogPrefix} Hid {hidden} solid placeholder renderer(s) that blocked the pilot view.");
             }
+        }
+
+        private bool TryAddImportedC172Model()
+        {
+            if (_aircraft == null) return false;
+            Transform existing = _aircraft.Find("Imported C172 Cockpit Interior Visual");
+            if (existing != null)
+            {
+                _importedC172Visual = existing;
+                ApplyImportedCockpitPose(_importedC172Visual);
+                return true;
+            }
+
+            GameObject prefab = Resources.Load<GameObject>(ImportedC172ResourcePath);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"{LogPrefix} Imported C172 model not available at Resources/{ImportedC172ResourcePath}; using procedural fallback.");
+                return false;
+            }
+
+            GameObject instance = Instantiate(prefab, _aircraft);
+            instance.name = "Imported C172 Cockpit Interior Visual";
+            _importedC172Visual = instance.transform;
+            ApplyImportedCockpitPose(instance.transform);
+            instance.transform.localScale = importedC172LocalScale;
+
+            foreach (Collider collider in instance.GetComponentsInChildren<Collider>(true))
+            {
+                Destroy(collider);
+            }
+
+            ConfigureImportedC172Materials(instance);
+            ImportedExteriorRendererHiddenCount = HideImportedExteriorForCockpit(instance);
+            ImportedC172Loaded = true;
+
+            if (TryGetRendererBounds(instance, out Bounds bounds))
+            {
+                ImportedC172BoundsSize = bounds.size;
+                Debug.Log($"{LogPrefix} Imported C172 model loaded. boundsCenter={bounds.center} boundsSize={bounds.size} resource={ImportedC172ResourcePath}");
+            }
+            else
+            {
+                Debug.Log($"{LogPrefix} Imported C172 model loaded without renderer bounds. resource={ImportedC172ResourcePath}");
+            }
+
+            return true;
+        }
+
+        private void ApplyImportedCockpitPose(Transform cockpit)
+        {
+            Quaternion modelRotation = Quaternion.Euler(importedC172LocalEuler);
+            Quaternion cameraInModelRotation = Quaternion.Euler(ImportedC172CockpitModelEyeEuler);
+            Quaternion modelInCameraRotation = Quaternion.Inverse(cameraInModelRotation) * modelRotation;
+
+            Quaternion cockpitYaw = Quaternion.Euler(0f, importedC172CockpitYawDeg, 0f);
+            cockpit.localRotation = cockpitYaw * modelInCameraRotation;
+            Vector3 baseSeatTarget = ImportedC172PilotEyeLocal + importedC172LocalPosition;
+            cockpit.localPosition = baseSeatTarget - cockpit.localRotation * importedC172CockpitModelEye;
+        }
+
+        private void UpdateSeatCalibration()
+        {
+            if (!SeatCalibrationEnabled || _importedC172Visual == null)
+            {
+                SeatCalibrationAdjustmentActive = false;
+                SeatCalibrationModeActive = false;
+                return;
+            }
+
+            bool rightPrimaryPressed = ButtonDown(XRNode.RightHand, CommonUsages.primaryButton, ref _rightPrimaryWasDown);
+            bool rightSecondaryPressed = ButtonDown(XRNode.RightHand, CommonUsages.secondaryButton, ref _rightSecondaryWasDown);
+            bool leftPrimaryPressed = ButtonDown(XRNode.LeftHand, CommonUsages.primaryButton, ref _leftPrimaryWasDown);
+            bool gripHeld = ButtonHeld(XRNode.LeftHand, CommonUsages.gripButton) ||
+                            ButtonHeld(XRNode.RightHand, CommonUsages.gripButton);
+
+            if (rightPrimaryPressed)
+            {
+                if (SeatCalibrationModeActive)
+                {
+                    CaptureSeatCalibration();
+                    SeatCalibrationModeActive = false;
+                    SeatCalibrationStatus = "saved";
+                }
+                else
+                {
+                    SeatCalibrationModeActive = true;
+                    SeatCalibrationStatus = "seat adjust on";
+                    RecenterHeadBaselineNowOrNext("seat adjustment opened");
+                }
+            }
+
+            SeatCalibrationAdjustmentActive = SeatCalibrationModeActive || gripHeld;
+
+            if (leftPrimaryPressed && SeatCalibrationAdjustmentActive)
+            {
+                RecenterHeadBaselineNowOrNext("user forward recenter");
+                SeatCalibrationStatus = "forward recentered";
+            }
+
+            Vector3 pilotDelta = ReadPilotViewCalibrationDelta();
+            float yawDelta = ReadCockpitYawCalibrationDelta();
+            if (pilotDelta.sqrMagnitude > 0.0000001f)
+            {
+                importedC172PilotViewOffset = ClampPilotViewOffset(importedC172PilotViewOffset + pilotDelta);
+                ApplyPilotSeatCalibrationOffset();
+                SeatCalibrationStatus = "adjusting";
+            }
+
+            if (Mathf.Abs(yawDelta) > 0.0001f)
+            {
+                importedC172CockpitYawDeg = NormalizeAngle(importedC172CockpitYawDeg + yawDelta);
+                ApplyImportedCockpitPose(_importedC172Visual);
+                SeatCalibrationStatus = "adjusting";
+            }
+
+            if (rightSecondaryPressed && SeatCalibrationAdjustmentActive)
+            {
+                importedC172PilotViewOffset = Vector3.zero;
+                importedC172CockpitYawDeg = 0f;
+                ApplyPilotSeatCalibrationOffset();
+                ApplyImportedCockpitPose(_importedC172Visual);
+                RecenterHeadBaselineNowOrNext("seat calibration reset");
+                Debug.Log($"{LogPrefix} Seat calibration reset. pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal}");
+            }
+
+            if (Time.unscaledTime >= _nextSeatCalibrationLogTime)
+            {
+                _nextSeatCalibrationLogTime = Time.unscaledTime + 1f;
+                Debug.Log($"{LogPrefix} Seat calibration available modeActive={SeatCalibrationModeActive} adjustmentActive={SeatCalibrationAdjustmentActive} offset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1} leftAxis={_lastLeftCalibrationAxis} rightAxis={_lastRightCalibrationAxis} leftDevice={DeviceLabel(XRNode.LeftHand)} rightDevice={DeviceLabel(XRNode.RightHand)}");
+            }
+        }
+
+        private void ApplyPilotSeatCalibrationOffset()
+        {
+            pilotEyeLocal = ImportedC172PilotEyeLocal + importedC172PilotViewOffset;
+        }
+
+        private Vector3 ReadPilotViewCalibrationDelta()
+        {
+            Vector2 leftAxis = ReadPrimary2DAxis(XRNode.LeftHand);
+            Vector2 rightAxis = ReadPrimary2DAxis(XRNode.RightHand);
+
+            leftAxis = ApplyDeadzone(leftAxis, 0.18f);
+            rightAxis = ApplyDeadzone(rightAxis, 0.18f);
+            _lastLeftCalibrationAxis = leftAxis;
+            _lastRightCalibrationAxis = rightAxis;
+
+            if (!SeatCalibrationAdjustmentActive) return Vector3.zero;
+            if (leftAxis == Vector2.zero && rightAxis == Vector2.zero) return Vector3.zero;
+
+            float speed = seatCalibrationSpeedMetersPerSecond;
+            if (ButtonHeld(XRNode.LeftHand, CommonUsages.gripButton) &&
+                ButtonHeld(XRNode.RightHand, CommonUsages.gripButton))
+            {
+                speed *= seatCalibrationFineScale;
+            }
+
+            float dt = Mathf.Min(0.05f, Time.unscaledDeltaTime);
+            return new Vector3(leftAxis.x, rightAxis.y, leftAxis.y) * speed * dt;
+        }
+
+        private float ReadCockpitYawCalibrationDelta()
+        {
+            if (!SeatCalibrationAdjustmentActive) return 0f;
+            float yawAxis = _lastRightCalibrationAxis.x;
+            if (Mathf.Abs(yawAxis) < 0.001f) return 0f;
+
+            float speed = cockpitYawCalibrationSpeedDegPerSecond;
+            if (ButtonHeld(XRNode.LeftHand, CommonUsages.gripButton) &&
+                ButtonHeld(XRNode.RightHand, CommonUsages.gripButton))
+            {
+                speed *= seatCalibrationFineScale;
+            }
+
+            float dt = Mathf.Min(0.05f, Time.unscaledDeltaTime);
+            return yawAxis * speed * dt;
+        }
+
+        private void CaptureSeatCalibration()
+        {
+            try
+            {
+                string dir = SeatCalibrationDirectory();
+                Directory.CreateDirectory(dir);
+                string path = Path.Combine(dir, $"seat_calibration_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json");
+                string currentPath = SeatCalibrationCurrentPath();
+                SeatCalibrationEvidence evidence = new SeatCalibrationEvidence
+                {
+                    schemaVersion = SeatCalibrationSchemaVersion,
+                    generatedUtc = DateTime.UtcNow.ToString("O"),
+                    sceneryMode = QuestLaunchOptions.SceneryMode(),
+                    demoMode = QuestLaunchOptions.DemoMode(),
+                    importedC172CockpitModelEye = importedC172CockpitModelEye,
+                    importedC172PilotViewOffset = importedC172PilotViewOffset,
+                    importedC172CockpitYawDeg = importedC172CockpitYawDeg,
+                    pilotEyeLocal = pilotEyeLocal,
+                    importedC172LocalPosition = importedC172LocalPosition,
+                    instructions = "Left stick adjusts the pilot seat left/right and forward/back. Right stick up/down adjusts pilot seat height. Right stick left/right rotates cockpit yaw. A saves. B resets. Hold grip for fine adjustment."
+                };
+
+                string json = JsonUtility.ToJson(evidence, true);
+                File.WriteAllText(path, json);
+                File.WriteAllText(currentPath, json);
+                SeatCalibrationCapturePath = currentPath;
+                SavedSeatCalibrationPath = currentPath;
+                SavedSeatCalibrationLoaded = true;
+                SeatCalibrationStatus = "saved";
+                RecenterHeadBaselineNowOrNext("seat calibration saved");
+                Debug.Log($"{LogPrefix} Seat calibration captured path={path} current={currentPath} cockpitModelEye={importedC172CockpitModelEye} pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"{LogPrefix} Seat calibration capture failed: {ex.Message}");
+                SeatCalibrationStatus = "save failed";
+            }
+        }
+
+        private bool TryLoadSavedSeatCalibration(out SeatCalibrationEvidence evidence)
+        {
+            evidence = null;
+            string path = SeatCalibrationCurrentPath();
+            if (!File.Exists(path)) return false;
+
+            try
+            {
+                evidence = JsonUtility.FromJson<SeatCalibrationEvidence>(File.ReadAllText(path));
+                if (evidence == null) return false;
+                if (evidence.schemaVersion < SeatCalibrationSchemaVersion)
+                {
+                    Debug.LogWarning($"{LogPrefix} Ignoring old seat calibration schema {evidence.schemaVersion} at {path}; recalibration is required.");
+                    SeatCalibrationStatus = "old save ignored";
+                    return false;
+                }
+
+                SavedSeatCalibrationPath = path;
+                Debug.Log($"{LogPrefix} Loaded saved seat calibration path={path} cockpitModelEye={evidence.importedC172CockpitModelEye} pilotViewOffset={evidence.importedC172PilotViewOffset} pilotEyeLocal={evidence.pilotEyeLocal} cockpitYawDeg={evidence.importedC172CockpitYawDeg:F1}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"{LogPrefix} Saved seat calibration load failed: {ex.Message}");
+                SeatCalibrationStatus = "load failed";
+                return false;
+            }
+        }
+
+        private void DeleteSavedSeatCalibration()
+        {
+            string currentPath = SeatCalibrationCurrentPath();
+            try
+            {
+                if (File.Exists(currentPath))
+                {
+                    File.Delete(currentPath);
+                    Debug.Log($"{LogPrefix} Deleted saved seat calibration {currentPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"{LogPrefix} Saved seat calibration delete failed: {ex.Message}");
+            }
+
+            SavedSeatCalibrationLoaded = false;
+            SavedSeatCalibrationPath = string.Empty;
+            SeatCalibrationCapturePath = string.Empty;
+        }
+
+        private static string SeatCalibrationDirectory()
+        {
+            return Path.Combine(Application.persistentDataPath, "QuestFlightLab", "seat_calibration");
+        }
+
+        private static string SeatCalibrationCurrentPath()
+        {
+            return Path.Combine(SeatCalibrationDirectory(), "seat_calibration_current.json");
+        }
+
+        private static Vector3 ClampPilotViewOffset(Vector3 offset)
+        {
+            return new Vector3(
+                Mathf.Clamp(offset.x, -0.8f, 0.8f),
+                Mathf.Clamp(offset.y, -0.8f, 0.8f),
+                Mathf.Clamp(offset.z, -1.2f, 1.2f));
+        }
+
+        private static Vector2 ReadPrimary2DAxis(XRNode node)
+        {
+            if (!TryGetControllerDevice(node, out InputDevice device)) return Vector2.zero;
+            if (!device.isValid) return Vector2.zero;
+            return device.TryGetFeatureValue(CommonUsages.primary2DAxis, out Vector2 value) ? value : Vector2.zero;
+        }
+
+        private static Vector2 ApplyDeadzone(Vector2 value, float deadzone)
+        {
+            return value.magnitude < deadzone ? Vector2.zero : value;
+        }
+
+        private static bool ButtonHeld(XRNode node, InputFeatureUsage<bool> usage)
+        {
+            if (!TryGetControllerDevice(node, out InputDevice device)) return false;
+            return device.isValid && device.TryGetFeatureValue(usage, out bool pressed) && pressed;
+        }
+
+        private static bool ButtonDown(XRNode node, InputFeatureUsage<bool> usage, ref bool wasDown)
+        {
+            bool pressed = ButtonHeld(node, usage);
+            bool down = pressed && !wasDown;
+            wasDown = pressed;
+            return down;
+        }
+
+        private static string DeviceLabel(XRNode node)
+        {
+            if (!TryGetControllerDevice(node, out InputDevice device)) return "invalid";
+            if (!device.isValid) return "invalid";
+            return $"{device.name}/{device.characteristics}";
+        }
+
+        private static bool TryGetControllerDevice(XRNode node, out InputDevice device)
+        {
+            device = InputDevices.GetDeviceAtXRNode(node);
+            if (device.isValid) return true;
+
+            InputDeviceCharacteristics hand = node == XRNode.LeftHand
+                ? InputDeviceCharacteristics.Left
+                : InputDeviceCharacteristics.Right;
+
+            ControllerDeviceScratch.Clear();
+            InputDevices.GetDevicesWithCharacteristics(
+                InputDeviceCharacteristics.HeldInHand | InputDeviceCharacteristics.Controller | hand,
+                ControllerDeviceScratch);
+
+            for (int i = 0; i < ControllerDeviceScratch.Count; i++)
+            {
+                if (!ControllerDeviceScratch[i].isValid) continue;
+                device = ControllerDeviceScratch[i];
+                return true;
+            }
+
+            ControllerDeviceScratch.Clear();
+            InputDevices.GetDevicesWithCharacteristics(
+                InputDeviceCharacteristics.Controller | hand,
+                ControllerDeviceScratch);
+
+            for (int i = 0; i < ControllerDeviceScratch.Count; i++)
+            {
+                if (!ControllerDeviceScratch[i].isValid) continue;
+                device = ControllerDeviceScratch[i];
+                return true;
+            }
+
+            return false;
+        }
+
+        [Serializable]
+        private class SeatCalibrationEvidence
+        {
+            public int schemaVersion;
+            public string generatedUtc;
+            public string sceneryMode;
+            public string demoMode;
+            public Vector3 importedC172CockpitModelEye;
+            public Vector3 importedC172PilotViewOffset;
+            public float importedC172CockpitYawDeg;
+            public Vector3 pilotEyeLocal;
+            public Vector3 importedC172LocalPosition;
+            public string instructions;
+        }
+
+        private static int HideImportedExteriorForCockpit(GameObject root)
+        {
+            int hidden = 0;
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer == null || !renderer.enabled) continue;
+
+                string path = PathFor(renderer.transform);
+                if (!path.Contains("Cessna_Exterior_", StringComparison.OrdinalIgnoreCase)) continue;
+
+                renderer.enabled = false;
+                hidden++;
+            }
+
+            if (hidden > 0)
+            {
+                Debug.Log($"{LogPrefix} Hid {hidden} imported exterior renderer(s) for first-person cockpit view.");
+            }
+
+            return hidden;
+        }
+
+        private static void ConfigureImportedC172Materials(GameObject root)
+        {
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] materials = renderer.materials;
+                bool changed = false;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    Material material = materials[i];
+                    if (material == null) continue;
+
+                    string materialName = material.name.ToLowerInvariant();
+                    if (!materialName.Contains("glass")) continue;
+
+                    Color color = material.HasProperty("_BaseColor")
+                        ? material.GetColor("_BaseColor")
+                        : material.color;
+
+                    float brightness = Mathf.Max(color.r, color.g, color.b);
+                    if (brightness < 0.08f)
+                    {
+                        color = new Color(0.55f, 0.82f, 0.96f, color.a);
+                    }
+
+                    color.a = Mathf.Min(color.a <= 0f ? 0.18f : color.a, 0.22f);
+                    SetTransparentMaterial(material, color);
+                    changed = true;
+                }
+
+                if (changed) renderer.materials = materials;
+            }
+        }
+
+        private static bool TryGetRendererBounds(GameObject root, out Bounds bounds)
+        {
+            bounds = default;
+            bool hasBounds = false;
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            return hasBounds;
         }
 
         private void EnsureC172ExteriorVisuals()
@@ -662,34 +1307,78 @@ namespace QuestFlightLab.Runtime
         private static Material TransparentMaterial(string name, Color color)
         {
             Material material = Material(name, color);
-            material.SetFloat("_Mode", 3f);
-            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-            material.SetInt("_ZWrite", 0);
-            material.DisableKeyword("_ALPHATEST_ON");
-            material.EnableKeyword("_ALPHABLEND_ON");
-            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-            material.renderQueue = (int)RenderQueue.Transparent;
+            SetTransparentMaterial(material, color);
             return material;
         }
 
-        private static bool TryGetHeadPose(out Vector3 position, out Quaternion rotation, out bool tracked)
+        private static void SetTransparentMaterial(Material material, Color color)
+        {
+            Shader standard = Shader.Find("Standard");
+            if (standard != null && material.shader != standard)
+            {
+                material.shader = standard;
+            }
+
+            material.color = color;
+            material.SetOverrideTag("RenderType", "Transparent");
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            if (material.HasProperty("_Mode")) material.SetFloat("_Mode", 3f);
+            if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
+            if (material.HasProperty("_Blend")) material.SetFloat("_Blend", 0f);
+            if (material.HasProperty("_AlphaClip")) material.SetFloat("_AlphaClip", 0f);
+            if (material.HasProperty("_SrcBlend")) material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            if (material.HasProperty("_DstBlend")) material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            if (material.HasProperty("_ZWrite")) material.SetInt("_ZWrite", 0);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue = (int)RenderQueue.Transparent;
+        }
+
+        private static bool TryGetHeadPose(out Vector3 position, out Quaternion rotation, out bool tracked, out bool userPresent)
         {
             position = Vector3.zero;
             rotation = Quaternion.identity;
             tracked = false;
+            userPresent = false;
 
             InputDevice head = InputDevices.GetDeviceAtXRNode(XRNode.Head);
             if (!head.isValid) return false;
 
-            if (head.TryGetFeatureValue(CommonUsages.isTracked, out bool isTracked))
+            bool hasTrackedFeature = head.TryGetFeatureValue(CommonUsages.isTracked, out bool isTracked);
+            if (hasTrackedFeature)
             {
                 tracked = isTracked;
             }
 
             bool hasPosition = head.TryGetFeatureValue(CommonUsages.devicePosition, out position);
             bool hasRotation = head.TryGetFeatureValue(CommonUsages.deviceRotation, out rotation);
+            if (!hasTrackedFeature && (hasPosition || hasRotation))
+            {
+                tracked = true;
+            }
+
+            bool hasUserPresence = head.TryGetFeatureValue(CommonUsages.userPresence, out userPresent);
+            if (!hasUserPresence && (hasPosition || hasRotation))
+            {
+                userPresent = true;
+            }
+
             return hasPosition || hasRotation;
+        }
+
+        private static Quaternion YawOnlyRotation(Quaternion rotation)
+        {
+            Vector3 forward = rotation * Vector3.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f)
+            {
+                return Quaternion.identity;
+            }
+
+            return Quaternion.LookRotation(forward.normalized, Vector3.up);
         }
 
         private static float NormalizeAngle(float angle)
@@ -700,6 +1389,20 @@ namespace QuestFlightLab.Runtime
         private static string NameOrNull(UnityEngine.Object value)
         {
             return value != null ? value.name : "null";
+        }
+
+        private static string PathFor(Transform transform)
+        {
+            if (transform == null) return string.Empty;
+            string path = transform.name;
+            Transform current = transform.parent;
+            while (current != null)
+            {
+                path = current.name + "/" + path;
+                current = current.parent;
+            }
+
+            return path;
         }
     }
 }

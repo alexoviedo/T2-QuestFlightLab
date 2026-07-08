@@ -136,11 +136,11 @@ namespace QuestFlightLab.UI
             Material panelMat = Material("Playtest HUD Panel", new Color(0.018f, 0.02f, 0.024f));
             Material textMat = Material("Playtest HUD Text", new Color(0.78f, 0.96f, 0.88f));
 
-            Cube(Root.transform, "PlaytestHudBackground", new Vector3(0f, 0f, 0.04f), new Vector3(0.94f, 0.3f, 0.025f), panelMat);
+            Cube(Root.transform, "PlaytestHudBackground", new Vector3(0f, 0f, 0.04f), new Vector3(0.98f, 0.42f, 0.025f), panelMat);
 
             GameObject textObject = new GameObject("PlaytestHudText");
             textObject.transform.SetParent(Root.transform, false);
-            textObject.transform.localPosition = new Vector3(-0.44f, 0.12f, -0.02f);
+            textObject.transform.localPosition = new Vector3(-0.46f, 0.18f, -0.02f);
             _text = textObject.AddComponent<TextMesh>();
             _text.anchor = TextAnchor.UpperLeft;
             _text.alignment = TextAlignment.Left;
@@ -167,6 +167,7 @@ namespace QuestFlightLab.UI
             GamepadInputSnapshot g = _reader != null ? _reader.Current : GamepadInputSnapshot.Disconnected(Time.unscaledTime, 0f);
             ShortPlaytestDemoPilot demo = ShortPlaytestDemoPilot.Instance;
             FirstViewPlaytestDiagnostics diagnostics = FirstViewPlaytestDiagnostics.Instance;
+            QuestFirstViewRuntimeRepair repair = QuestFirstViewRuntimeRepair.Instance;
 
             string mode = QuestLaunchOptions.SceneryMode();
             string demoLabel = demo != null ? "DEMO PILOT MODE" : "LIVE INPUT";
@@ -181,7 +182,20 @@ namespace QuestFlightLab.UI
             _buffer.AppendLine($"CTL A {c.aileron:+0.00;-0.00;0.00}  E {c.elevator:+0.00;-0.00;0.00}  R {c.rudder:+0.00;-0.00;0.00}  THR {c.throttle:0.00}");
             _buffer.AppendLine($"INPUT {input}  SCENERY {scenery}");
             _buffer.AppendLine($"PHASE {phase}  HEAD {tracking}");
-            _buffer.Append("Look around: runway, cockpit, world scenery shift.");
+            if (repair != null && repair.SeatCalibrationEnabled)
+            {
+                Vector3 offset = repair.ImportedC172PilotViewOffsetUsed;
+                float yaw = repair.ImportedC172CockpitYawDegUsed;
+                _buffer.AppendLine($"SEAT X {offset.x:+0.00;-0.00;0.00}  Y {offset.y:+0.00;-0.00;0.00}  Z {offset.z:+0.00;-0.00;0.00}  YAW {yaw:+000;-000;000}");
+                string status = string.IsNullOrWhiteSpace(repair.SeatCalibrationStatus) ? "adjusting" : repair.SeatCalibrationStatus;
+                string active = repair.SeatCalibrationModeActive ? "SEAT ON" : repair.SeatCalibrationAdjustmentActive ? "QUICK ADJUST" : "seat ready";
+                _buffer.AppendLine($"A seat/save  X forward  B reset  {active}");
+                _buffer.Append($"ON or grip+sticks adjust  both grips=fine  {status}");
+            }
+            else
+            {
+                _buffer.Append("Look around: runway, cockpit, world scenery shift.");
+            }
 
             LastRenderedText = _buffer.ToString();
             VisibleLineCount = LastRenderedText.Split('\n').Length;
@@ -211,7 +225,9 @@ namespace QuestFlightLab.UI
             if (repair != null && repair.HeadDevicePoseValid)
             {
                 string tracked = repair.HeadDeviceTracked ? "tracked" : "untracked";
-                return $"Y {repair.HeadYawDeltaDeg:+0;-0;0} P {repair.HeadPitchDeltaDeg:+0;-0;0} Pos {repair.HeadPositionDeltaMeters:0.00} {tracked}";
+                string worn = repair.HeadUserPresent ? "worn" : "offhead";
+                string mode = repair.ManualHeadPoseApplied ? "manual" : "native";
+                return $"{mode} Y {repair.HeadYawDeltaDeg:+0;-0;0} P {repair.HeadPitchDeltaDeg:+0;-0;0} Pos {repair.HeadAppliedPositionDeltaMeters:0.00}/{repair.HeadPositionDeltaMeters:0.00} R{repair.HeadBaselineRecaptureCount} {tracked}/{worn}";
             }
 
             return diagnostics != null && diagnostics.EvidencePath.Length > 0 ? "diagnostics on" : "diagnostics starting";
