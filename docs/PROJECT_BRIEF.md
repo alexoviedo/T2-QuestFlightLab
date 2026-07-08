@@ -47,3 +47,14 @@ Flight Sim Core v0.6b adds `aras-p/UnityGaussianSplatting` v1.1.1 as an isolated
 ## Claim Boundary
 
 This prototype is not FAA-approved training, not a BATD/AATD, not pilot-training credit, not a broad Quest compatibility claim, and not final C172 fidelity.
+
+## v0.9 Production Direction
+
+The next direction is an evidence-gated fidelity pipeline, not more blind placeholder work:
+
+- `visual_fidelity_demo` is the recommended safe demo alias while visual quality improves.
+- JSBSim is the candidate serious flight-dynamics reference path, first as an offline oracle for Unity tests.
+- Blender/OpenVSP form the preferred aircraft geometry path for owned C172-style cockpit/exterior assets.
+- Poly Haven or similarly clear CC0 sources are preferred for PBR materials/HDRIs.
+- Cesium/3D Tiles/geospatial work remains a research gate until Quest runtime, licensing, and offline/cache constraints are understood.
+- Gaussian splats remain diagnostic or small-background candidates until Quest XR stereo/world-lock evidence improves.

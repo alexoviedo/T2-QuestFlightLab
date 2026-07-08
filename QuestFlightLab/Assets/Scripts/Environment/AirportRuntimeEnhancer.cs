@@ -21,6 +21,12 @@ namespace QuestFlightLab.Environment
             Material grass = VisualMaterial("High Plains Grass Baseline", new Color(0.27f, 0.38f, 0.18f), 0f, 0.12f);
             Material hangar = VisualMaterial("Hangar Painted Metal Baseline", new Color(0.68f, 0.7f, 0.68f), 0.05f, 0.28f);
             Material roof = VisualMaterial("Hangar Roof Baseline", new Color(0.18f, 0.2f, 0.22f), 0.08f, 0.34f);
+            Material rubber = VisualMaterial("Runway Rubber Wear Baseline", new Color(0.012f, 0.013f, 0.014f), 0f, 0.12f);
+            Material asphaltPatch = VisualMaterial("Runway Asphalt Patch Baseline", new Color(0.075f, 0.078f, 0.08f), 0f, 0.16f);
+            Material concreteJoint = VisualMaterial("Concrete Joint Baseline", new Color(0.18f, 0.18f, 0.17f), 0f, 0.14f);
+            Material grassLight = VisualMaterial("Dry Grass Variation Baseline", new Color(0.38f, 0.43f, 0.20f), 0f, 0.12f);
+            Material grassDark = VisualMaterial("Mowed Grass Variation Baseline", new Color(0.17f, 0.29f, 0.13f), 0f, 0.12f);
+            Material coneOrange = VisualMaterial("Airport Cone Orange Baseline", new Color(1f, 0.31f, 0.04f), 0f, 0.18f);
             Material treeTrunk = VisualMaterial("Tree Trunk Baseline", new Color(0.27f, 0.18f, 0.1f), 0f, 0.16f);
             Material treeCanopy = VisualMaterial("Tree Canopy Baseline", new Color(0.12f, 0.3f, 0.12f), 0f, 0.18f);
             Material hill = VisualMaterial("Foothill Baseline", new Color(0.28f, 0.32f, 0.25f), 0f, 0.2f);
@@ -49,7 +55,7 @@ namespace QuestFlightLab.Environment
             }
             if (root.transform.Find("VisualBaselineRoot") == null)
             {
-                AddVisualBaseline(root.transform, asphalt, concrete, grass, white, yellow, hangar, roof, treeTrunk, treeCanopy, hill, lightWarm, green, red);
+                AddVisualBaseline(root.transform, asphalt, concrete, grass, white, yellow, hangar, roof, rubber, asphaltPatch, concreteJoint, grassLight, grassDark, coneOrange, treeTrunk, treeCanopy, hill, lightWarm, green, red);
             }
             if (QuestLaunchOptions.PlaytestHudEnabled())
             {
@@ -82,6 +88,12 @@ namespace QuestFlightLab.Environment
             Material yellow,
             Material hangar,
             Material roof,
+            Material rubber,
+            Material asphaltPatch,
+            Material concreteJoint,
+            Material grassLight,
+            Material grassDark,
+            Material coneOrange,
             Material treeTrunk,
             Material treeCanopy,
             Material hill,
@@ -101,6 +113,7 @@ namespace QuestFlightLab.Environment
             AddRunwayLights(baseline.transform, lightWarm, green, red);
             AddTaxiwaySigns(baseline.transform, yellow, asphalt);
             AddHangarsAndApron(baseline.transform, hangar, roof, concrete);
+            AddVisualFidelitySurfaceDetails(baseline.transform, rubber, asphaltPatch, concreteJoint, grassLight, grassDark, coneOrange, white, yellow);
             AddVegetationAndFoothills(baseline.transform, treeTrunk, treeCanopy, hill);
         }
 
@@ -206,6 +219,74 @@ namespace QuestFlightLab.Environment
 
             Cube(parent, "BaselineFuelIsland", new Vector3(-286f, 1.4f, -134f), Quaternion.identity, new Vector3(14f, 2.8f, 9f), roof);
             Cylinder(parent, "BaselineFuelPump", new Vector3(-286f, 2.8f, -128f), Quaternion.identity, new Vector3(1.3f, 2.8f, 1.3f), hangar);
+        }
+
+        private static void AddVisualFidelitySurfaceDetails(
+            Transform parent,
+            Material rubber,
+            Material asphaltPatch,
+            Material concreteJoint,
+            Material grassLight,
+            Material grassDark,
+            Material coneOrange,
+            Material white,
+            Material yellow)
+        {
+            for (int i = -5; i <= 5; i++)
+            {
+                float x = i * 18f;
+                Cube(parent, $"TouchdownRubberNorth_{i + 5}", new Vector3(-510f + x, 0.113f, 3.4f), Quaternion.Euler(0f, 0f, 0f), new Vector3(11f, 0.01f, 0.55f), rubber);
+                Cube(parent, $"TouchdownRubberSouth_{i + 5}", new Vector3(-510f + x, 0.114f, -3.4f), Quaternion.Euler(0f, 0f, 0f), new Vector3(10f, 0.01f, 0.5f), rubber);
+                Cube(parent, $"OppositeTouchdownRubberNorth_{i + 5}", new Vector3(510f - x, 0.113f, 3.2f), Quaternion.identity, new Vector3(9.5f, 0.01f, 0.5f), rubber);
+                Cube(parent, $"OppositeTouchdownRubberSouth_{i + 5}", new Vector3(510f - x, 0.114f, -3.2f), Quaternion.identity, new Vector3(10.5f, 0.01f, 0.55f), rubber);
+            }
+
+            for (int i = 0; i < 8; i++)
+            {
+                float x = -420f + i * 120f;
+                float z = i % 2 == 0 ? 6.8f : -7.1f;
+                Cube(parent, $"RunwayPatch_{i}", new Vector3(x, 0.111f, z), Quaternion.Euler(0f, (i % 3 - 1) * 4f, 0f), new Vector3(34f, 0.01f, 3.8f), asphaltPatch);
+            }
+
+            for (int i = 0; i < 14; i++)
+            {
+                float x = -585f + i * 90f;
+                Cube(parent, $"RunwayExpansionJoint_{i}", new Vector3(x, 0.116f, 0f), Quaternion.identity, new Vector3(0.45f, 0.01f, 22.2f), concreteJoint);
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                float x = -610f + i * 135f;
+                Material mat = i % 2 == 0 ? grassLight : grassDark;
+                Cube(parent, $"RunwayGrassVariationNorth_{i}", new Vector3(x, 0.074f, 45f), Quaternion.Euler(0f, i * 7f, 0f), new Vector3(82f, 0.008f, 15f), mat);
+                Cube(parent, $"RunwayGrassVariationSouth_{i}", new Vector3(x + 34f, 0.074f, -47f), Quaternion.Euler(0f, -i * 5f, 0f), new Vector3(78f, 0.008f, 13f), mat);
+            }
+
+            for (int i = 0; i < 9; i++)
+            {
+                float x = -430f + i * 20f;
+                Cube(parent, $"ApronConcreteJointLong_{i}", new Vector3(x, 0.111f, -145f), Quaternion.identity, new Vector3(0.26f, 0.01f, 96f), concreteJoint);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                float z = -188f + i * 21f;
+                Cube(parent, $"ApronConcreteJointLat_{i}", new Vector3(-360f, 0.112f, z), Quaternion.identity, new Vector3(166f, 0.01f, 0.24f), concreteJoint);
+            }
+
+            for (int i = 0; i < 6; i++)
+            {
+                float x = -424f + i * 24f;
+                Cube(parent, $"TieDownStripe_{i}", new Vector3(x, 0.122f, -117f), Quaternion.Euler(0f, 22f, 0f), new Vector3(7f, 0.01f, 0.36f), white);
+                Cylinder(parent, $"TieDownRing_{i}", new Vector3(x, 0.18f, -124f), Quaternion.identity, new Vector3(1.1f, 0.08f, 1.1f), yellow);
+            }
+
+            for (int i = 0; i < 8; i++)
+            {
+                float x = -250f + i * 18f;
+                Cylinder(parent, $"TaxiCone_{i}", new Vector3(x, 0.42f, -91f), Quaternion.identity, new Vector3(0.8f, 0.8f, 0.8f), coneOrange);
+                Cube(parent, $"TaxiConeStripe_{i}", new Vector3(x, 0.61f, -91f), Quaternion.identity, new Vector3(0.82f, 0.06f, 0.82f), white);
+            }
         }
 
         private static void AddVegetationAndFoothills(Transform parent, Material treeTrunk, Material treeCanopy, Material hill)

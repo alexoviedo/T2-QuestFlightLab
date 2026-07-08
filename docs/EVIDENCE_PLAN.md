@@ -112,6 +112,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_visual_qa.ps1
 
 This executes `QuestFlightLab.Editor.VisualQaBatchRunner.RunVisualQa`, captures deterministic editor screenshots, creates `visual_qa_contact_sheet.png`, writes `visual_qa_report.json`, `visual_qa_report.csv`, `visual_qa_summary.md`, and runs `tools\visual_qa_analyze.py` to produce `visual_qa_analysis.json` and `visual_qa_analysis.md`. Treat this as fail-fast visual evidence only; it does not prove Quest comfort, Quest stereo rendering, USB2BLE hardware input, production visual quality, or Quest Gaussian splat viability.
 
+For v0.9 production-fidelity direction work, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_visual_qa.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\run_editor_scenario_tests.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\run_unity_tests.ps1 -TestPlatform PlayMode
+python .\tools\generate_c172_style_assets.py --dry-run --output <artifact-root>\asset_pipeline\c172_style_baseline.glb
+python .\tools\jsbsim_probe\run_c172_probe.py --output-dir <artifact-root>\jsbsim_probe\run
+powershell -ExecutionPolicy Bypass -File .\scripts\build_quest.ps1
+```
+
+This captures visual QA/contact sheets, Unity simulator regressions, PlayMode tests, a dry-run/generated aircraft asset manifest, JSBSim C172-like reference telemetry, build logs, and APK hash evidence. Treat JSBSim as an offline reference oracle until Android/Quest native integration is proven. Treat Blender/OpenVSP/Cesium outputs as research or import candidates until visual QA and Android build evidence pass.
+
 The supplemental PlayMode probe is:
 
 ```powershell

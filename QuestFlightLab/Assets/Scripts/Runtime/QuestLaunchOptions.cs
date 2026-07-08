@@ -39,7 +39,12 @@ namespace QuestFlightLab.Runtime
         public static bool ShortPlaytestDemoRequested()
         {
             string mode = DemoMode();
-            return mode == "short" || mode == "short_playtest" || mode == "demo" || mode == "demo_pilot";
+            return mode == "short" || mode == "short_playtest" || mode == "demo" || mode == "demo_pilot" || mode == "visual_fidelity_demo";
+        }
+
+        public static bool VisualFidelityDemoRequested()
+        {
+            return SceneryMode() == "visual_fidelity_demo" || DemoMode() == "visual_fidelity_demo";
         }
 
         public static bool PlaytestHudEnabled()
@@ -50,7 +55,7 @@ namespace QuestFlightLab.Runtime
                 return ParseBool(explicitValue, true);
             }
 
-            return Application.platform == RuntimePlatform.Android || ShortPlaytestDemoRequested();
+            return Application.platform == RuntimePlatform.Android || ShortPlaytestDemoRequested() || VisualFidelityDemoRequested();
         }
 
         public static bool VerboseHudEnabled()
@@ -65,7 +70,7 @@ namespace QuestFlightLab.Runtime
 
         public static bool SeatCalibrationEnabled()
         {
-            return ReadBool(SeatCalibrationKey, Application.platform == RuntimePlatform.Android || ShortPlaytestDemoRequested());
+            return ReadBool(SeatCalibrationKey, Application.platform == RuntimePlatform.Android || ShortPlaytestDemoRequested() || VisualFidelityDemoRequested());
         }
 
         public static bool ResetSeatCalibrationRequested()

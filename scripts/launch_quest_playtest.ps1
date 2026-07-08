@@ -1,6 +1,6 @@
 param(
-  [ValidateSet('mesh','playable_visual_baseline','playable_demo','scenic_mesh_enhanced','scenic_splat_medium')]
-  [string]$Mode = 'playable_demo',
+  [ValidateSet('mesh','playable_visual_baseline','playable_demo','visual_fidelity_demo','scenic_mesh_enhanced','scenic_splat_medium')]
+  [string]$Mode = 'visual_fidelity_demo',
   [ValidateSet('','short_playtest')]
   [string]$DemoMode = '',
   [switch]$SplatDiagnostic,
@@ -45,7 +45,7 @@ if ($devices -notmatch '(?m)^\S+\s+device\b') {
 & $AdbExe shell input keyevent KEYCODE_WAKEUP | Out-Null
 if ($CaptureLogcat) { & $AdbExe logcat -c }
 
-if ($Mode -eq 'playable_demo' -and [string]::IsNullOrWhiteSpace($DemoMode)) {
+if (($Mode -eq 'playable_demo' -or $Mode -eq 'visual_fidelity_demo') -and [string]::IsNullOrWhiteSpace($DemoMode)) {
   $DemoMode = 'short_playtest'
 }
 

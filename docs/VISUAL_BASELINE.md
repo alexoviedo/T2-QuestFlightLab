@@ -2,11 +2,11 @@
 
 ## Goal
 
-`playable_demo` / `playable_visual_baseline` should give Alex a readable, world-locked Quest flight-demo view even when experimental Gaussian splats are disabled.
+`visual_fidelity_demo` / `playable_demo` / `playable_visual_baseline` should give Alex a readable, world-locked Quest flight-demo view even when experimental Gaussian splats are disabled.
 
 This baseline is a prototype visual pass, not production photorealism, not a final C172 cockpit, and not a full-airport scenery system.
 
-## Current v0.8 Baseline
+## Current v0.9 Baseline
 
 Runtime systems:
 
@@ -23,7 +23,7 @@ Runtime systems:
   - writes runtime evidence JSON
   - captures a diagnostic mono camera PNG from the Quest scene when ADB/scrcpy headset mirrors are black
 - `AirportRuntimeEnhancer`
-  - adds self-generated runway surface detail, runway lights, runway numerals/stripes, taxiway signs, apron/hangars/fuel island, tree rows, and distant foothills
+  - adds self-generated runway surface detail, rubber touchdown wear, asphalt patches, expansion joints, apron seams, tie-downs, cones, grass variation, runway lights, runway numerals/stripes, taxiway signs, apron/hangars/fuel island, tree rows, and distant foothills
   - hides large training pattern gates/labels during playtest HUD mode so the default view is not cluttered by training scaffolding
 - `PlaytestHud`
   - shows a compact HUD and hides verbose telemetry/menu/performance panels by default
@@ -33,10 +33,10 @@ Runtime systems:
 ## Recommended Launch
 
 ```powershell
-.\scripts\launch_quest_playtest.ps1 -Mode playable_demo -CaptureLogcat -DurationSeconds 85
+.\scripts\launch_quest_playtest.ps1 -Mode visual_fidelity_demo -CaptureLogcat -DurationSeconds 85
 ```
 
-`playable_demo` starts the short deterministic demo pilot sequence automatically. `playable_visual_baseline` and `scenic_mesh_enhanced` are mesh/procedural visual-baseline aliases.
+`visual_fidelity_demo` and `playable_demo` start the short deterministic demo pilot sequence automatically. `playable_visual_baseline` and `scenic_mesh_enhanced` are mesh/procedural visual-baseline aliases.
 
 For no-headset visual inspection:
 

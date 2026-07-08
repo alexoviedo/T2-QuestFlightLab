@@ -53,7 +53,7 @@ namespace QuestFlightLab.Editor
             };
 
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            System.Environment.SetEnvironmentVariable(QuestLaunchOptions.SceneryModeKey, "playable_visual_baseline");
+            System.Environment.SetEnvironmentVariable(QuestLaunchOptions.SceneryModeKey, "visual_fidelity_demo");
             System.Environment.SetEnvironmentVariable(QuestLaunchOptions.DemoModeKey, "short_playtest");
             System.Environment.SetEnvironmentVariable(QuestLaunchOptions.PlaytestHudKey, "true");
             System.Environment.SetEnvironmentVariable(QuestLaunchOptions.SeatCalibrationKey, "true");

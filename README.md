@@ -22,6 +22,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v0.7 playable scenery path: an opt-in, project-owned procedural scenic splat patch adds airfield/foothills background modes (`scenic_splat_low`, `scenic_splat_medium`, optional `scenic_splat_high`) while mesh/terrain fallback remains the default playable airport
 - v0.8 visual recovery path: `playable_demo` / `playable_visual_baseline` uses self-generated C172-style cockpit/exterior and airport geometry, hides cluttered training gates in playtest mode, and gates the real Gaussian renderer on Quest XR because headset captures showed a one-eye/headset-locked stereo composite failure
 - v0.9 autonomous visual QA path: `scripts\run_visual_qa.ps1` captures deterministic Unity Editor screenshots/contact sheets for cockpit, HUD, runway, aircraft, airport, scenic/fallback, demo-pilot, and viewpoint-calibration views without Quest, ESP32, or headset access
+- v0.9 production-direction path: `visual_fidelity_demo` keeps the safe visual baseline playable while JSBSim, Blender/OpenVSP, Poly Haven-class materials, and geospatial/Cesium research are evaluated behind evidence gates
 
 ## Build
 
@@ -51,7 +52,7 @@ On Quest, a VR launch may be intercepted until the headset is worn and Touch con
 Recommended short visual demo:
 
 ```powershell
-.\scripts\launch_quest_playtest.ps1 -Mode playable_demo -CaptureLogcat -DurationSeconds 85
+.\scripts\launch_quest_playtest.ps1 -Mode visual_fidelity_demo -CaptureLogcat -DurationSeconds 85
 ```
 
 `scenic_splat_medium` is gated to the mesh/procedural baseline in normal Quest playtest mode until the real Gaussian renderer is proven stereo/world-locked. Use `-SplatDiagnostic` only for bounded renderer debugging.
@@ -102,6 +103,7 @@ Repo evidence notes:
 - `docs/evidence/PLAYABLE_SCENIC_SPLAT_DEMO_WITNESS_2026-06-13.md`
 - `docs/evidence/QUEST_VISUAL_RECOVERY_PLAYTEST_2026-07-03.md`
 - `docs/evidence/AUTONOMOUS_VISUAL_QA_WITNESS_2026-07-08.md`
+- `docs/evidence/PRODUCTION_FIDELITY_DIRECTION_WITNESS_2026-07-08.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 

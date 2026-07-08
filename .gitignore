@@ -40,6 +40,9 @@ sysinfo.txt
 QuestFlightLab/Assets/Experimental/Splats/Generated/
 QuestFlightLab/Assets/Experimental/Splats/Generated.meta
 
+# JSBSim local probe scratch output
+JSBout*.csv
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

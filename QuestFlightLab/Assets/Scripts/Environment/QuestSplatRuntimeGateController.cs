@@ -333,7 +333,7 @@ namespace QuestFlightLab.Environment
                     return new RuntimeSplatLaunchProfile { sampleKey = QuestSplatRuntimeConfig.ScenicProfile, budgetProfile = "scenic_splat_high", splatCount = 100000 };
                 }
 
-                if (normalized == "playable_demo" || normalized == "playable_visual_baseline" || normalized == "scenic_mesh_enhanced")
+                if (normalized == "playable_demo" || normalized == "visual_fidelity_demo" || normalized == "playable_visual_baseline" || normalized == "scenic_mesh_enhanced")
                 {
                     return new RuntimeSplatLaunchProfile { sampleKey = "mesh", budgetProfile = "playable_visual_baseline", splatCount = 0 };
                 }
