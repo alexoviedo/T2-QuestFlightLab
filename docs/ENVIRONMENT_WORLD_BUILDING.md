@@ -44,6 +44,22 @@ The v2.1 pass keeps the imported aircraft/cockpit placeholder unchanged and expa
 - render quality profile extends far clip/draw distance so approach and external views carry more distance cues,
 - visual QA confirms 14/14 shots pass, including cockpit, runway, ramp/hangar, terrain, final approach, and render-detail views.
 
+## Quality Gate v1 Visual Upgrade
+
+The quality-gate pass focuses on the environment still reading too much like procedural placeholder terrain:
+
+- adds broad irregular prairie/field/sage color patches over the terrain,
+- increases near/mid terrain mesh resolution while keeping the world bounded,
+- deepens far scenery with middle/back ridge layers and transparent atmospheric haze bands,
+- uses a generated procedural daylight skybox instead of a flat camera background,
+- adds a dedicated airport quality-gate surface layer for faded runway paint, aiming points, aggregate streaking, runway shoulder gravel, apron oil stains, and ramp markings.
+
+Final visual QA world evidence:
+
+```text
+profile=visual_fidelity_demo_medium size=14560x14560m chunks=169 lodGroups=462 renderers=686 meshes=686 tris~34108 materials=18 textures=16 draw=9200m
+```
+
 ## Known Limits
 
 - Not navigation-accurate KBDU.

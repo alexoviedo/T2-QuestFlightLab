@@ -84,31 +84,32 @@ namespace QuestFlightLab.Editor
 
         private static VisualQaContext BuildVisualQaScene(int width, int height, VisualQaReport report)
         {
-            RenderSettings.ambientLight = new Color(0.48f, 0.52f, 0.58f);
+            RenderSettings.ambientLight = new Color(0.46f, 0.50f, 0.54f);
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.60f, 0.70f, 0.82f);
-            RenderSettings.fogDensity = 0.00013f;
+            RenderSettings.fogColor = new Color(0.58f, 0.68f, 0.80f);
+            RenderSettings.fogDensity = 0.00016f;
+            QuestRenderQualityConfigurator.ApplyProceduralSkybox();
 
             GameObject sunObject = new GameObject("Visual QA Sun");
             Light sun = sunObject.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.intensity = 1.35f;
-            sunObject.transform.rotation = Quaternion.Euler(48f, -28f, 0f);
+            sun.intensity = 1.25f;
+            sunObject.transform.rotation = Quaternion.Euler(45f, -34f, 0f);
 
             GameObject fillObject = new GameObject("Visual QA Cockpit Fill");
             Light fill = fillObject.AddComponent<Light>();
             fill.type = LightType.Directional;
-            fill.intensity = 0.35f;
+            fill.intensity = 0.26f;
             fillObject.transform.rotation = Quaternion.Euler(12f, 140f, 0f);
 
             GameObject cameraObject = new GameObject("Visual QA Camera");
             cameraObject.tag = "MainCamera";
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.nearClipPlane = 0.03f;
-            camera.farClipPlane = 11000f;
+            camera.farClipPlane = 12000f;
             camera.fieldOfView = 76f;
-            camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.56f, 0.72f, 0.94f);
+            camera.clearFlags = CameraClearFlags.Skybox;
+            camera.backgroundColor = new Color(0.54f, 0.70f, 0.91f);
             camera.aspect = width / (float)height;
             cameraObject.AddComponent<AudioListener>();
 

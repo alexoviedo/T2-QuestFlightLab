@@ -132,3 +132,27 @@ Latest v2.1 visual QA artifact:
 ```text
 C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_visual_physics_v2_20260707_233843\after_visual_qa_final
 ```
+
+## Quality Gate v1 Visual Result
+
+The quality-gate pass keeps the imported C172 placeholder and improves the world/readback around it:
+
+- baseline manual score: 4/10,
+- final manual score: 6/10,
+- procedural daylight skybox replaces the flat solid-color editor sky,
+- atmospheric haze and far ridge layers improve Boulder/Front Range distance cues,
+- irregular prairie/field color patches break up the flat green terrain read,
+- runway/apron surface details add faded paint, shoulder gravel, runway streaks, oil stains, and ramp markings,
+- final visual QA remains green: 14/14 shots passed.
+
+Latest quality-gate visual QA artifact:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\quality_gate_20260708_005435\after_visual_qa_final
+```
+
+Before/after contact sheet:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\quality_gate_20260708_005435\visual_qa_before_after_contact_sheet.png
+```

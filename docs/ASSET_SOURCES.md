@@ -114,6 +114,29 @@ The v2.1 pass does not add paid, downloaded, or questionable-license visual asse
 
 No raw OSM/USGS/Google data, no APKs, no screenshots, and no large downloaded archives are committed for v2.1.
 
+## Quality Gate v1 Sources
+
+The playable simulator quality gate does not add paid or downloaded visual assets. It uses project-authored procedural materials/geometry and the existing imported C172 placeholder:
+
+- procedural sky/render profile:
+  - path: `QuestFlightLab/Assets/Scripts/Runtime/QuestRenderQualityConfigurator.cs`
+  - source: project-authored Unity render settings and procedural skybox material
+  - use: daylight sky/atmospheric profile and Quest-safe render settings
+- airport surface quality layer:
+  - path: `QuestFlightLab/Assets/Scripts/Environment/AirportRuntimeEnhancer.cs`
+  - source: project-authored procedural geometry/material noise
+  - use: faded runway paint, aggregate streaks, shoulder gravel, apron stains, and ramp markings
+- terrain/world quality layer:
+  - path: `QuestFlightLab/Assets/Scripts/Environment/KbduInspiredWorldBuilder.cs`
+  - source: project-authored procedural mesh/material generation
+  - use: irregular prairie/field color patches, higher-detail terrain rings, ridge/haze layers
+- JSBSim Editor bridge:
+  - paths: `tools/jsbsim_probe/jsbsim_editor_bridge.py`, `QuestFlightLab/Assets/Editor/JSBSimEditorBridgeRunner.cs`
+  - source: project-authored bridge code using Python `jsbsim 1.3.1`
+  - use: Editor-only JSBSim telemetry import/proxy application proof
+
+No raw screenshots, raw logs, APKs, raw DEM/OSM downloads, Google-derived assets, or large texture archives are committed for the quality-gate pass.
+
 ## Rules For Future Visual Assets
 
 - Prefer self-generated procedural Unity/Blender assets for quick iteration.

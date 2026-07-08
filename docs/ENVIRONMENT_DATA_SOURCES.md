@@ -51,3 +51,15 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_visual_physic
 ```
 
 The next data step should be a bounded USGS 3DEP/The National Map elevation import proof that keeps raw downloads in artifacts and commits only small processed data if it materially improves the Quest demo.
+
+## Quality Gate v1 Data Use
+
+The quality-gate pass did not commit new external raw data. It uses project-authored procedural terrain/material/sky changes on top of the existing KBDU-inspired environment.
+
+Artifact root:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\quality_gate_20260708_005435
+```
+
+The next realism step remains a bounded USGS 3DEP elevation proof. Raw terrain downloads should stay in artifacts unless a small optimized derivative is intentionally committed with source/attribution.

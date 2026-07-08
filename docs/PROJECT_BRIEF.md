@@ -87,3 +87,14 @@ The v2.1 milestone preserves the imported C172 placeholder and tightens the firs
 - `visual_fidelity_demo` expands the KBDU-inspired procedural world to 14.56 km x 14.56 km with 169 chunks, denser field/road/reservoir/ridge cues, and refreshed LOD/render-quality evidence.
 - Matched-control JSBSim/Unity scenarios now compare takeoff, climb, turns, approach, and go-around profiles.
 - The accepted runtime tune is intentionally small because more aggressive config-only tuning broke existing traffic-pattern and approach gates.
+
+## Playable Simulator Quality Gate v1
+
+The quality-gate pass asks whether the current approach can become a convincing simulator demo without another aircraft remodel:
+
+- Current imported C172 placeholder remains in place.
+- Baseline visual score was recorded as 4/10 after manual contact-sheet inspection.
+- Final visual score is recorded as 6/10: worth headset testing, but still not photoreal or final.
+- `visual_fidelity_demo` now uses a procedural daylight skybox, stronger atmospheric haze, more varied procedural terrain color patches, and richer runway/apron surface detail.
+- Visual QA remains deterministic editor capture and does not prove Quest headset shimmer/frame timing.
+- JSBSim Editor sidecar bridge now runs from Unity, imports 451 JSBSim samples, and applies 451 Unity proxy poses. Quest runtime physics remains Unity-driven until an interactive JSBSim driver/native integration is proven.

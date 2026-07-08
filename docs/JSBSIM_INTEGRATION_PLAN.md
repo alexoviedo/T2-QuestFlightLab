@@ -114,6 +114,30 @@ Aggregate before/after:
 
 The modest improvement came from a small thrust reduction that preserves all existing Unity scenario gates. More aggressive config-only tuning broke the traffic-pattern/stabilized-approach scenarios, so deeper realism should move toward a JSBSim runtime/bridge feasibility path instead of overfitting this prototype Unity model.
 
+## Quality Gate v1 Editor Bridge
+
+The quality-gate pass proves a narrow Editor-side JSBSim bridge:
+
+```powershell
+.\scripts\run_jsbsim_editor_bridge.ps1 -ArtifactDir <artifact-root>\jsbsim_editor_bridge
+```
+
+Bridge pieces:
+
+- Unity runner: `QuestFlightLab.Editor.JSBSimEditorBridgeRunner.RunBridge`
+- Python sidecar: `tools/jsbsim_probe/jsbsim_editor_bridge.py`
+- JSBSim aircraft: `c172x`
+- Result classification: `editor_sidecar_bridge_unity_applied`
+- Samples imported: 451
+- Unity proxy poses applied: 451
+- Max airspeed: 101.5 kt
+- Max AGL: 49.3 ft / 15.0 m
+- Ground track: 936.6 m
+
+This proves Unity Editor can invoke JSBSim, import telemetry, convert it into Unity-space poses, and apply those poses to a proxy object. It does not prove interactive runtime control, Android/Quest native integration, final coordinate conversion, or final C172 fidelity.
+
+Next backend step: make the Editor bridge interactive, with Unity controls advancing JSBSim step-by-step and JSBSim state driving the visible aircraft. Only after that should the project evaluate an Android ARM64 native plugin or other Quest runtime bridge.
+
 ## Integration Path
 
 ### Short Term: Offline Reference Oracle
@@ -153,6 +177,7 @@ Only consider JSBSim as the actual flight-dynamics backend after:
 
 - Open-loop probe is not a stable autopilot.
 - Matched-control profiles still diverge strongly in airborne cases because initialization, aircraft definitions, and control mappings are not equivalent yet.
+- Quality Gate v1 bridge is sidecar/import/apply only, not an interactive flight backend.
 - Current Unity physics remains a prototype approximation.
 - The probe is not calibrated to current Unity aircraft mass/aero/engine values.
 - No Android/Quest JSBSim runtime work was attempted in this chunk.

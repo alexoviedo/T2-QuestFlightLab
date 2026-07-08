@@ -261,3 +261,11 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_visual_physic
 ```
 
 This folder contains repo/tooling state, baseline audit notes, baseline/final visual QA, corrected pilot-eye evidence, render-quality report, editor scenario results, PlayMode XML, matched-control JSBSim comparison before/after reports, copied Android build logs, APK hash evidence, and optional Quest-smoke notes. The result is editor/build evidence only; no headset runtime performance, comfort, or splat stereo proof was captured.
+
+## 2026-07-08 Playable Simulator Quality Gate Artifact Root
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\quality_gate_20260708_005435
+```
+
+This folder contains repo/tooling state, an honest baseline quality score, minimum demo target, baseline/final visual QA, before/after contact sheet, render-quality report, JSBSim Editor bridge proof, matched-control JSBSim comparison, editor scenario results, PlayMode XML, copied Android build logs, APK hash evidence, and optional Quest-smoke notes. The result is still editor/build evidence only; no headset runtime frame timing or shimmer proof was captured.

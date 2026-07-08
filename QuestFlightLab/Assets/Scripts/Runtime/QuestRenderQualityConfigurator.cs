@@ -52,28 +52,29 @@ namespace QuestFlightLab.Runtime
             QualitySettings.antiAliasing = msaa;
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
             QualitySettings.globalTextureMipmapLimit = 0;
-            QualitySettings.lodBias = android ? 1.35f : 1.75f;
+            QualitySettings.lodBias = android ? 1.45f : 1.90f;
             QualitySettings.maximumLODLevel = 0;
-            QualitySettings.shadowDistance = android ? 62f : 115f;
+            QualitySettings.shadowDistance = android ? 72f : 135f;
             QualitySettings.shadowResolution = android ? ShadowResolution.Low : ShadowResolution.Medium;
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = android ? 72 : -1;
             GL.sRGBWrite = false;
 
-            XRSettings.eyeTextureResolutionScale = android ? 1.12f : 1.0f;
+            XRSettings.eyeTextureResolutionScale = android ? 1.15f : 1.0f;
 
-            RenderSettings.ambientLight = new Color(0.50f, 0.54f, 0.58f);
+            RenderSettings.ambientLight = new Color(0.46f, 0.50f, 0.54f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.60f, 0.70f, 0.82f);
-            RenderSettings.fogDensity = 0.00013f;
+            RenderSettings.fogColor = new Color(0.58f, 0.68f, 0.80f);
+            RenderSettings.fogDensity = 0.00016f;
+            ApplyProceduralSkybox();
 
             foreach (Camera camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
             {
                 camera.allowMSAA = true;
                 camera.allowHDR = false;
-                camera.farClipPlane = Mathf.Max(camera.farClipPlane, 11000f);
-                camera.nearClipPlane = Mathf.Min(camera.nearClipPlane, 0.03f);
+                camera.farClipPlane = Mathf.Max(camera.farClipPlane, 12000f);
+                camera.nearClipPlane = Mathf.Clamp(camera.nearClipPlane, 0.04f, 0.08f);
             }
 
             RenderQualityEvidence evidence = CaptureEvidence(profileName);
@@ -84,6 +85,24 @@ namespace QuestFlightLab.Runtime
             }
 
             return evidence;
+        }
+
+        public static void ApplyProceduralSkybox()
+        {
+            Shader shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            Material sky = new Material(shader)
+            {
+                name = "QuestFlightLab Colorado Daylight Procedural Sky"
+            };
+            sky.SetColor("_SkyTint", new Color(0.50f, 0.64f, 0.82f));
+            sky.SetColor("_GroundColor", new Color(0.47f, 0.50f, 0.45f));
+            sky.SetFloat("_AtmosphereThickness", 0.92f);
+            sky.SetFloat("_Exposure", 1.08f);
+            sky.SetFloat("_SunSize", 0.035f);
+            sky.SetFloat("_SunSizeConvergence", 4.0f);
+            RenderSettings.skybox = sky;
+            DynamicGI.UpdateEnvironment();
         }
 
         private void Start()

@@ -14,6 +14,8 @@ v2 makes another conservative JSBSim-informed tune while preserving the current 
 
 v2.1 adds matched-control JSBSim/Unity scenario twins for takeoff, climb, turns, approach, and go-around. The final accepted tune keeps the proven lift/drag/pitch/roll envelope and only slightly reduces static/max thrust, because more aggressive config-only tuning broke the traffic-pattern and stabilized-approach regression gates. The matched-control aggregate improved slightly from 142.14 to 141.99 weighted error, with airspeed RMSE improving from 26.9 kt to 26.7 kt. This is calibration progress, not final fidelity.
 
+Quality Gate v1 does not retune Unity physics further because the JSBSim Editor bridge now runs successfully. Unity can invoke a Python JSBSim sidecar, import 451 samples, and apply 451 proxy poses in Editor. The matched-control comparator remains unchanged at 141.99 weighted error, which reinforces that the serious fidelity path should move from config-only Unity tuning toward an interactive JSBSim-driven Editor backend.
+
 See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 
 ## Approximate Seed Constants
@@ -52,6 +54,7 @@ See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 - v1 modestly increases damping/stability and reduces prototype pitch/bank/rate caps to keep the trainer from feeling too light while JSBSim comparison work matures.
 - v2 reduces thrust/pitch response further, increases induced drag slightly, and raises roll authority/bank limits enough to move shallow-turn response closer to the JSBSim trend while keeping editor scenarios green.
 - v2.1 keeps the runtime model inside the green scenario envelope and reduces static/max thrust slightly from 3600/4100 N to 3550/4050 N. Attempts to increase roll/turn authority further produced traffic-pattern stall warnings and were backed out.
+- Quality Gate v1 adds JSBSim sidecar bridge evidence and leaves runtime Unity physics unchanged.
 
 ## Acceptance Metrics
 

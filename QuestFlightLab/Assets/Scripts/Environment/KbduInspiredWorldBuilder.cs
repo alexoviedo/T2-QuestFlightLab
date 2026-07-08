@@ -21,9 +21,11 @@ namespace QuestFlightLab.Environment
             Transform existing = airportRoot.Find(RootName);
             if (existing != null) return existing.gameObject;
 
-            Material prairie = Material("Dry Prairie Chunk", new Color(0.33f, 0.39f, 0.21f), 0f, 0.48f, 16f);
-            Material darkerGrass = Material("Mowed Field Chunk", new Color(0.18f, 0.31f, 0.15f), 0f, 0.46f, 18f);
-            Material dirt = Material("Dry Dirt Gravel", new Color(0.38f, 0.31f, 0.22f), 0f, 0.68f, 10f);
+            Material prairie = Material("Dry Prairie Chunk", new Color(0.37f, 0.40f, 0.23f), 0f, 0.54f, 18f);
+            Material darkerGrass = Material("Mowed Field Chunk", new Color(0.22f, 0.33f, 0.17f), 0f, 0.50f, 20f);
+            Material sage = Material("High Plains Sage Variation", new Color(0.28f, 0.34f, 0.22f), 0f, 0.56f, 14f);
+            Material tanGrass = Material("Sun Cured Grass Wash", new Color(0.46f, 0.42f, 0.22f), 0f, 0.62f, 12f);
+            Material dirt = Material("Dry Dirt Gravel", new Color(0.40f, 0.32f, 0.23f), 0f, 0.72f, 12f);
             Material road = Material("Local Road Asphalt", new Color(0.055f, 0.058f, 0.06f), 0f, 0.42f);
             Material concrete = Material("Light Industrial Concrete", new Color(0.42f, 0.41f, 0.37f), 0f, 0.36f, 12f);
             Material roof = Material("Industrial Roof Varied", new Color(0.18f, 0.2f, 0.22f), 0.05f, 0.48f, 6f);
@@ -36,17 +38,19 @@ namespace QuestFlightLab.Environment
             Material fieldGreen = Material("Irrigated Field Green", new Color(0.20f, 0.36f, 0.16f), 0f, 0.5f, 14f);
             Material treeLine = Material("Cottonwood Tree Line", new Color(0.09f, 0.22f, 0.10f), 0f, 0.42f, 5f);
             Material scrub = Material("Foothill Scrub Brush", new Color(0.22f, 0.28f, 0.16f), 0f, 0.56f, 7f);
+            Material ridgeHaze = Material("Front Range Atmospheric Haze", new Color(0.56f, 0.65f, 0.72f, 0.32f), 0f, 0.15f);
 
             GameObject root = new GameObject(RootName);
             root.transform.SetParent(airportRoot, false);
 
             int terrainChunkCount = AddTerrainChunks(root.transform, prairie, darkerGrass, dirt);
+            AddLargeScaleTerrainColorCues(root.transform, sage, tanGrass, fieldGold, fieldGreen, dirt);
             AddFieldParcels(root.transform, fieldGold, fieldGreen, dirt);
             AddRoadNetwork(root.transform, road, concrete);
             AddAirportNeighborhood(root.transform, concrete, roof, dirt);
             AddReservoirAndDrainage(root.transform, water, dirt);
             AddPerimeterAndFieldCues(root.transform, fence, dirt, concrete, treeLine, scrub);
-            AddFarFoothills(root.transform, foothill, mountain, snow);
+            AddFarFoothills(root.transform, foothill, mountain, snow, ridgeHaze);
             AddObjectLodGroups(root.transform);
 
             WorldPerformanceBudget budget = root.AddComponent<WorldPerformanceBudget>();
@@ -66,9 +70,10 @@ namespace QuestFlightLab.Environment
                 {
                     float x = ix * chunk;
                     float z = iz * chunk;
-                    Material material = ((ix + iz) & 1) == 0 ? prairie : darkerGrass;
+                    float prairieBias = Mathf.PerlinNoise((ix + 19) * 0.23f, (iz + 31) * 0.19f);
+                    Material material = prairieBias > 0.44f ? prairie : darkerGrass;
                     int ring = Mathf.Max(Mathf.Abs(ix), Mathf.Abs(iz));
-                    int resolution = ring <= 1 ? 14 : ring <= 3 ? 9 : ring <= 5 ? 5 : 3;
+                    int resolution = ring <= 1 ? 20 : ring <= 3 ? 12 : ring <= 5 ? 7 : 4;
                     GameObject tile = TerrainChunk(parent, $"TerrainChunk_{ix}_{iz}", new Vector3(x, 0f, z), chunk + 8f, resolution, material);
                     tile.isStatic = true;
                     count++;
@@ -84,6 +89,33 @@ namespace QuestFlightLab.Environment
             }
 
             return count;
+        }
+
+        private static void AddLargeScaleTerrainColorCues(
+            Transform parent,
+            Material sage,
+            Material tanGrass,
+            Material fieldGold,
+            Material fieldGreen,
+            Material dirt)
+        {
+            Material[] palette = { sage, tanGrass, fieldGold, fieldGreen, dirt };
+            for (int i = 0; i < 54; i++)
+            {
+                float x = -6200f + (i % 18) * 720f + Mathf.Sin(i * 0.71f) * 160f;
+                float z = -3320f + (i / 18) * 1680f + Mathf.Cos(i * 0.43f) * 260f;
+                float radiusX = 260f + (i % 5) * 85f;
+                float radiusZ = 105f + (i % 4) * 60f;
+                float yaw = -14f + (i % 9) * 4.5f;
+                IrregularGroundPatch(parent, $"NativePrairieColorPatch_{i}", new Vector3(x, 0f, z), radiusX, radiusZ, yaw, palette[i % palette.Length], 700 + i);
+            }
+
+            for (int i = 0; i < 18; i++)
+            {
+                float x = -5400f + i * 640f;
+                float z = 2860f + Mathf.Sin(i * 0.55f) * 180f;
+                IrregularGroundPatch(parent, $"FoothillSlopeColorBreak_{i}", new Vector3(x, 0f, z), 360f, 95f, 6f + i * 1.6f, i % 2 == 0 ? sage : tanGrass, 900 + i);
+            }
         }
 
         private static void AddFieldParcels(Transform parent, Material fieldGold, Material fieldGreen, Material dirt)
@@ -189,17 +221,20 @@ namespace QuestFlightLab.Environment
             }
         }
 
-        private static void AddFarFoothills(Transform parent, Material foothill, Material mountain, Material snow)
+        private static void AddFarFoothills(Transform parent, Material foothill, Material mountain, Material snow, Material ridgeHaze)
         {
-            Ridge(parent, "FrontRangeFoothillLowRidge", -7200f, 14400f, 4300f, 980f, 18f, 132f, 30, 11, foothill);
-            Ridge(parent, "FrontRangeFoothillBackRidge", -7800f, 15600f, 5600f, 1180f, 48f, 230f, 34, 29, foothill);
-            Ridge(parent, "FrontRangeMountainBackRidge", -8400f, 16800f, 7600f, 1480f, 120f, 560f, 38, 47, mountain);
+            Ridge(parent, "FrontRangeFoothillLowRidge", -7600f, 15200f, 4300f, 980f, 18f, 148f, 38, 11, foothill);
+            Ridge(parent, "FrontRangeFoothillMiddleRidge", -8300f, 16600f, 5050f, 1080f, 34f, 205f, 42, 19, foothill);
+            Ridge(parent, "FrontRangeFoothillBackRidge", -8800f, 17600f, 6100f, 1260f, 58f, 285f, 46, 29, foothill);
+            Ridge(parent, "FrontRangeMountainBackRidge", -9600f, 19200f, 8200f, 1680f, 130f, 640f, 52, 47, mountain);
+            Cube(parent, "FrontRangeLowAtmosphericHazeBand", new Vector3(0f, 118f, 4850f), Quaternion.identity, new Vector3(15600f, 96f, 18f), ridgeHaze);
+            Cube(parent, "FrontRangeBackAtmosphericHazeBand", new Vector3(0f, 250f, 6900f), Quaternion.identity, new Vector3(18400f, 150f, 18f), ridgeHaze);
 
             for (int i = 0; i < 11; i++)
             {
-                float x = -6300f + i * 1260f;
-                float y = 460f + Mathf.Sin(i * 0.8f) * 48f;
-                Cube(parent, $"FrontRangeSnowCap_{i}", new Vector3(x, y, 7600f + Mathf.Cos(i * 0.51f) * 115f), Quaternion.Euler(0f, i * 6f, -7f + i % 3 * 5f), new Vector3(430f, 11f, 54f), snow);
+                float x = -7200f + i * 1440f;
+                float y = 530f + Mathf.Sin(i * 0.8f) * 58f;
+                Cube(parent, $"FrontRangeSnowCap_{i}", new Vector3(x, y, 8200f + Mathf.Cos(i * 0.51f) * 130f), Quaternion.Euler(0f, i * 6f, -7f + i % 3 * 5f), new Vector3(520f, 12f, 58f), snow);
             }
         }
 
@@ -214,6 +249,8 @@ namespace QuestFlightLab.Environment
                     !child.name.StartsWith("BoulderValleyFieldFurrow_", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("CottonwoodTreeLine", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("FoothillScrubPatch_", StringComparison.OrdinalIgnoreCase) &&
+                    !child.name.StartsWith("NativePrairieColorPatch_", StringComparison.OrdinalIgnoreCase) &&
+                    !child.name.StartsWith("FoothillSlopeColorBreak_", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("DistantFarmTrack_", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("DryFieldPatch_", StringComparison.OrdinalIgnoreCase))
                 {
@@ -294,6 +331,61 @@ namespace QuestFlightLab.Environment
             renderer.sharedMaterial = material;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = true;
+            return go;
+        }
+
+        private static GameObject IrregularGroundPatch(
+            Transform parent,
+            string name,
+            Vector3 center,
+            float radiusX,
+            float radiusZ,
+            float yawDeg,
+            Material material,
+            int seed)
+        {
+            const int segments = 11;
+            Vector3[] vertices = new Vector3[segments + 1];
+            Vector2[] uvs = new Vector2[vertices.Length];
+            int[] triangles = new int[segments * 3];
+            Quaternion rotation = Quaternion.Euler(0f, yawDeg, 0f);
+            vertices[0] = new Vector3(center.x, TerrainHeight(center.x, center.z) + 0.042f, center.z);
+            uvs[0] = Vector2.one * 0.5f;
+
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = i * Mathf.PI * 2f / segments;
+                float n = 0.74f + Noise01(seed, i) * 0.38f;
+                Vector3 local = new Vector3(Mathf.Cos(angle) * radiusX * n, 0f, Mathf.Sin(angle) * radiusZ * (0.76f + Noise01(seed + 37, i) * 0.34f));
+                Vector3 world = center + rotation * local;
+                vertices[i + 1] = new Vector3(world.x, TerrainHeight(world.x, world.z) + 0.044f, world.z);
+                uvs[i + 1] = new Vector2(0.5f + Mathf.Cos(angle) * 0.5f, 0.5f + Mathf.Sin(angle) * 0.5f);
+            }
+
+            for (int i = 0; i < segments; i++)
+            {
+                int t = i * 3;
+                triangles[t] = 0;
+                triangles[t + 1] = i + 1;
+                triangles[t + 2] = i == segments - 1 ? 1 : i + 2;
+            }
+
+            Mesh mesh = new Mesh { name = name + "_Mesh" };
+            mesh.vertices = vertices;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            MeshFilter filter = go.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
+            MeshRenderer renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = true;
+            go.isStatic = true;
             return go;
         }
 
@@ -483,19 +575,21 @@ namespace QuestFlightLab.Environment
         private static float TerrainHeight(float x, float z)
         {
             float runwayFlat = Mathf.Clamp01(1f - Mathf.Max(Mathf.Abs(x) / 1300f, Mathf.Abs(z) / 720f));
-            float northRise = Mathf.Clamp01((z - 980f) / 3900f) * 32f;
-            float westRise = Mathf.Clamp01((-x - 1450f) / 3600f) * 11f;
-            float foothillLift = Mathf.Clamp01((z - 3100f) / 4200f) * Mathf.Clamp01((-x + 800f) / 5200f) * 36f;
-            float ripple = Mathf.Sin(x * 0.0036f + z * 0.0024f) * 2.8f +
-                           Mathf.Sin(x * 0.0072f - z * 0.0017f) * 1.5f +
-                           Mathf.Sin((x + z) * 0.0011f) * 3.4f;
-            float height = -0.18f + northRise + westRise + foothillLift + ripple;
+            float northRise = Mathf.Clamp01((z - 840f) / 4200f) * 42f;
+            float westRise = Mathf.Clamp01((-x - 1320f) / 3900f) * 16f;
+            float foothillLift = Mathf.Clamp01((z - 2850f) / 4300f) * Mathf.Clamp01((-x + 1200f) / 5600f) * 58f;
+            float broadValleyTilt = Mathf.Sin((x - 900f) * 0.00072f) * 4.5f + Mathf.Cos((z + 1100f) * 0.00058f) * 5.2f;
+            float ripple = Mathf.Sin(x * 0.0036f + z * 0.0024f) * 3.4f +
+                           Mathf.Sin(x * 0.0072f - z * 0.0017f) * 2.0f +
+                           Mathf.Sin((x + z) * 0.0011f) * 4.4f +
+                           Mathf.Sin((x * 0.0018f) + Mathf.Sin(z * 0.0011f) * 2.2f) * 3.0f;
+            float height = -0.18f + northRise + westRise + foothillLift + broadValleyTilt + ripple;
             return Mathf.Lerp(height, -0.18f, runwayFlat);
         }
 
         private static Texture2D NoiseTexture(string name, Color color)
         {
-            const int size = 64;
+            const int size = 96;
             Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, true)
             {
                 name = name + "_Noise",
@@ -510,8 +604,10 @@ namespace QuestFlightLab.Environment
                 for (int x = 0; x < size; x++)
                 {
                     float n = Noise01(seed + y * 17, x);
-                    float band = Mathf.Sin((x + seed % 13) * 0.43f + y * 0.17f) * 0.035f;
-                    float scale = 0.86f + n * 0.22f + band;
+                    float n2 = Noise01(seed + x * 23, y);
+                    float band = Mathf.Sin((x + seed % 13) * 0.31f + y * 0.11f) * 0.045f;
+                    float broad = Mathf.Sin(x * 0.065f + seed * 0.001f) * Mathf.Cos(y * 0.052f) * 0.055f;
+                    float scale = 0.82f + n * 0.18f + n2 * 0.12f + band + broad;
                     Color c = new Color(
                         Mathf.Clamp01(color.r * scale),
                         Mathf.Clamp01(color.g * scale),

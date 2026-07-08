@@ -26,6 +26,7 @@ This is a prototype designed toward training quality. It does not claim FAA-appr
 - v1 production visual/physics upgrade path: the recommended demo keeps the previous imported C172 placeholder cockpit/aircraft, expands the KBDU-inspired mesh/procedural environment to an 8.8 km x 7.8 km playable visual footprint with 81 terrain chunks, far ridge impostors, roads/field/perimeter cues, a Quest-friendly render-quality profile, and JSBSim-vs-Unity comparator evidence
 - v2 KBDU environment/physics path: `visual_fidelity_demo` expands the world to 11.8 km x 11.8 km with terrain detail rings, OSM-referenced airport/road/building/water cues, denser taxiway/apron/runway wear, render-quality evidence, LOD/budget metrics, and a conservative JSBSim-informed Unity flight-config tune while preserving the current imported aircraft/cockpit
 - v2.1 pilot-eye/environment/physics path: default imported-C172 pilot eye is raised to a plausible seated reference before calibration, the procedural KBDU-inspired world expands to 14.56 km x 14.56 km with 169 chunks and denser distance cues, render/LOD budgets are refreshed, and matched-control JSBSim comparison is added while JSBSim remains offline-reference only
+- quality-gate v1 path: `visual_fidelity_demo` gets a more believable procedural sky/atmosphere, richer terrain color variation, stronger runway/apron surface detail, updated render settings, and an Editor-only JSBSim sidecar bridge that imports telemetry and applies it to a Unity proxy; Quest runtime physics is still Unity-driven
 
 ## Build
 
@@ -110,6 +111,7 @@ Repo evidence notes:
 - `docs/evidence/PRODUCTION_VISUAL_PHYSICS_UPGRADE_2026-07-08.md`
 - `docs/evidence/KBDU_ENVIRONMENT_RENDERING_PHYSICS_UPGRADE_2026-07-08.md`
 - `docs/evidence/KBDU_VISUAL_PHYSICS_V2_WITNESS_2026-07-08.md`
+- `docs/evidence/PLAYABLE_SIMULATOR_QUALITY_GATE_2026-07-08.md`
 
 Autonomous simulator evidence from the v0.2 flight-core pass is under:
 

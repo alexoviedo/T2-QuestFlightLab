@@ -16,10 +16,10 @@ namespace QuestFlightLab.Environment
             Material blue = KbduApproxAirport.Material("Pattern Blue Runtime", new Color(0.1f, 0.35f, 0.8f));
             Material green = KbduApproxAirport.Material("Pattern Gate Green Runtime", new Color(0.1f, 0.75f, 0.35f));
             Material amber = KbduApproxAirport.Material("Pattern Reference Amber Runtime", new Color(1f, 0.62f, 0.08f));
-            Material asphalt = VisualMaterial("Runway Asphalt Baseline", new Color(0.045f, 0.048f, 0.052f), 0f, 0.18f);
-            Material concrete = VisualMaterial("Apron Concrete Baseline", new Color(0.42f, 0.41f, 0.38f), 0f, 0.22f);
-            Material grass = VisualMaterial("High Plains Grass Baseline", new Color(0.27f, 0.38f, 0.18f), 0f, 0.12f);
-            Material hangar = VisualMaterial("Hangar Painted Metal Baseline", new Color(0.68f, 0.7f, 0.68f), 0.05f, 0.28f);
+            Material asphalt = VisualMaterial("Runway Asphalt Quality Gate", new Color(0.052f, 0.055f, 0.057f), 0f, 0.20f);
+            Material concrete = VisualMaterial("Apron Concrete Quality Gate", new Color(0.46f, 0.45f, 0.40f), 0f, 0.25f);
+            Material grass = VisualMaterial("High Plains Grass Quality Gate", new Color(0.31f, 0.39f, 0.19f), 0f, 0.16f);
+            Material hangar = VisualMaterial("Hangar Painted Metal Quality Gate", new Color(0.66f, 0.68f, 0.64f), 0.05f, 0.32f);
             Material roof = VisualMaterial("Hangar Roof Baseline", new Color(0.18f, 0.2f, 0.22f), 0.08f, 0.34f);
             Material rubber = VisualMaterial("Runway Rubber Wear Baseline", new Color(0.012f, 0.013f, 0.014f), 0f, 0.12f);
             Material asphaltPatch = VisualMaterial("Runway Asphalt Patch Baseline", new Color(0.075f, 0.078f, 0.08f), 0f, 0.16f);
@@ -32,6 +32,9 @@ namespace QuestFlightLab.Environment
             Material hill = VisualMaterial("Foothill Baseline", new Color(0.28f, 0.32f, 0.25f), 0f, 0.2f);
             Material lightWarm = VisualMaterial("Warm Runway Light Baseline", new Color(1f, 0.82f, 0.46f), 0f, 0.1f, new Color(1f, 0.65f, 0.24f));
             Material red = VisualMaterial("Red Light Baseline", new Color(0.8f, 0.05f, 0.04f), 0f, 0.12f, new Color(0.9f, 0.02f, 0.01f));
+            Material fadedPaint = VisualMaterial("Faded Runway Paint Quality Gate", new Color(0.72f, 0.72f, 0.66f), 0f, 0.42f);
+            Material oilStain = VisualMaterial("Apron Oil Stain Quality Gate", new Color(0.025f, 0.024f, 0.022f), 0f, 0.18f);
+            Material gravel = VisualMaterial("Runway Shoulder Gravel Quality Gate", new Color(0.30f, 0.27f, 0.22f), 0f, 0.66f);
 
             if (root.transform.Find("RunwayEdgeLineLeft") == null)
             {
@@ -56,6 +59,10 @@ namespace QuestFlightLab.Environment
             if (root.transform.Find("VisualBaselineRoot") == null)
             {
                 AddVisualBaseline(root.transform, asphalt, concrete, grass, white, yellow, hangar, roof, rubber, asphaltPatch, concreteJoint, grassLight, grassDark, coneOrange, treeTrunk, treeCanopy, hill, lightWarm, green, red);
+            }
+            if (root.transform.Find("QualityGateAirportSurfaceRoot") == null)
+            {
+                AddQualityGateAirportSurfaceDetails(root.transform, asphaltPatch, concreteJoint, rubber, fadedPaint, oilStain, gravel, white, yellow, coneOrange);
             }
             if (QuestLaunchOptions.PlaytestHudEnabled())
             {
@@ -330,6 +337,67 @@ namespace QuestFlightLab.Environment
             }
         }
 
+        private static void AddQualityGateAirportSurfaceDetails(
+            Transform root,
+            Material asphaltPatch,
+            Material concreteJoint,
+            Material rubber,
+            Material fadedPaint,
+            Material oilStain,
+            Material gravel,
+            Material white,
+            Material yellow,
+            Material coneOrange)
+        {
+            GameObject quality = new GameObject("QualityGateAirportSurfaceRoot");
+            quality.transform.SetParent(root, false);
+
+            for (int i = 0; i < 20; i++)
+            {
+                float x = -570f + i * 60f;
+                float z = -7.6f + (i % 5) * 3.8f;
+                Cube(quality.transform, $"QualityGateRunwayAggregateStreak_{i}", new Vector3(x, 0.129f, z), Quaternion.Euler(0f, -1.5f + i % 4, 0f), new Vector3(48f, 0.008f, 0.38f), i % 3 == 0 ? rubber : asphaltPatch);
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                float x = -520f + i * 116f;
+                Cube(quality.transform, $"FadedCenterlineOverpaint_{i}", new Vector3(x, 0.132f, 0f), Quaternion.identity, new Vector3(30f, 0.008f, 0.86f), fadedPaint);
+            }
+
+            Cube(quality.transform, "Runway08AimingPointLeft", new Vector3(-445f, 0.134f, 5.4f), Quaternion.identity, new Vector3(38f, 0.01f, 2.1f), fadedPaint);
+            Cube(quality.transform, "Runway08AimingPointRight", new Vector3(-445f, 0.134f, -5.4f), Quaternion.identity, new Vector3(38f, 0.01f, 2.1f), fadedPaint);
+            Cube(quality.transform, "Runway26AimingPointLeft", new Vector3(445f, 0.134f, 5.4f), Quaternion.identity, new Vector3(38f, 0.01f, 2.1f), fadedPaint);
+            Cube(quality.transform, "Runway26AimingPointRight", new Vector3(445f, 0.134f, -5.4f), Quaternion.identity, new Vector3(38f, 0.01f, 2.1f), fadedPaint);
+
+            for (int i = 0; i < 14; i++)
+            {
+                float x = -610f + i * 94f;
+                Cube(quality.transform, $"RunwayEdgeGravelNorth_{i}", new Vector3(x, 0.082f, 24.5f), Quaternion.Euler(0f, i * 5f, 0f), new Vector3(74f, 0.012f, 5.8f), gravel);
+                Cube(quality.transform, $"RunwayEdgeGravelSouth_{i}", new Vector3(x + 34f, 0.082f, -24.5f), Quaternion.Euler(0f, -i * 4f, 0f), new Vector3(70f, 0.012f, 5.4f), gravel);
+            }
+
+            for (int i = 0; i < 15; i++)
+            {
+                float x = -430f + (i % 5) * 36f;
+                float z = -184f + (i / 5) * 32f;
+                Cube(quality.transform, $"ApronOilStain_{i}", new Vector3(x, 0.128f, z), Quaternion.Euler(0f, i * 13f, 0f), new Vector3(13f + i % 3 * 5f, 0.008f, 4f + i % 2 * 2f), oilStain);
+            }
+
+            for (int i = 0; i < 11; i++)
+            {
+                float x = -530f + i * 37f;
+                Cube(quality.transform, $"RampTieDownNumberStroke_{i}", new Vector3(x, 0.132f, -105f), Quaternion.Euler(0f, 90f, 0f), new Vector3(6f, 0.008f, 0.24f), white);
+                Cube(quality.transform, $"RampTaxiLeadDash_{i}", new Vector3(x + 8f, 0.133f, -90f), Quaternion.identity, new Vector3(9f, 0.008f, 0.34f), yellow);
+            }
+
+            for (int i = 0; i < 6; i++)
+            {
+                float x = -118f + i * 22f;
+                Cylinder(quality.transform, $"QualityGateCone_{i}", new Vector3(x, 0.42f, -68f), Quaternion.identity, new Vector3(0.72f, 0.72f, 0.72f), coneOrange);
+            }
+        }
+
         private static void AddVegetationAndFoothills(Transform parent, Material treeTrunk, Material treeCanopy, Material hill)
         {
             for (int i = 0; i < 20; i++)
@@ -429,7 +497,7 @@ namespace QuestFlightLab.Environment
             {
                 Texture2D noise = CreateNoiseTexture(name, color);
                 material.mainTexture = noise;
-                material.mainTextureScale = new Vector2(10f, 10f);
+                material.mainTextureScale = new Vector2(14f, 14f);
             }
 
             if (emission.maxColorComponent > 0f)
@@ -443,7 +511,7 @@ namespace QuestFlightLab.Environment
 
         private static Texture2D CreateNoiseTexture(string name, Color baseColor)
         {
-            const int size = 48;
+            const int size = 96;
             Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, true)
             {
                 name = name + "_Noise",
@@ -458,8 +526,10 @@ namespace QuestFlightLab.Environment
                 for (int x = 0; x < size; x++)
                 {
                     float n = Noise01(seed, x + y * size);
-                    float streak = Mathf.Sin((x + seed % 11) * 0.35f + y * 0.07f) * 0.035f;
-                    float scale = 0.86f + n * 0.24f + streak;
+                    float n2 = Noise01(seed + x * 31, y);
+                    float streak = Mathf.Sin((x + seed % 11) * 0.27f + y * 0.055f) * 0.05f;
+                    float broad = Mathf.Sin(x * 0.06f + y * 0.025f) * 0.045f;
+                    float scale = 0.80f + n * 0.22f + n2 * 0.12f + streak + broad;
                     texture.SetPixel(x, y, new Color(
                         Mathf.Clamp01(baseColor.r * scale),
                         Mathf.Clamp01(baseColor.g * scale),
