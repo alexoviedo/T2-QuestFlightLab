@@ -16,6 +16,8 @@ v2.1 adds matched-control JSBSim/Unity scenario twins for takeoff, climb, turns,
 
 Quality Gate v1 does not retune Unity physics further because the JSBSim Editor bridge now runs successfully. Unity can invoke a Python JSBSim sidecar, import 451 samples, and apply 451 proxy poses in Editor. The matched-control comparator remains unchanged at 141.99 weighted error, which reinforces that the serious fidelity path should move from config-only Unity tuning toward an interactive JSBSim-driven Editor backend.
 
+The JSBSim live-driver pass adds that interactive Editor backend proof: Unity sends per-frame controls and timesteps to a Python JSBSim sidecar, receives `c172x` state, and applies 1,801 returned poses to the visible imported C172 in the KBDU-inspired scene. The result is still Editor-only. It proves the bridge shape but also shows the next physics problem clearly: the current open-loop `c172x` control schedule and initial-condition setup produce heading/bank transients, so a real JSBSim-backed runtime path needs control-law and coordinate/initialization work before replacing Unity physics.
+
 See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 
 ## Approximate Seed Constants
@@ -55,6 +57,7 @@ See `docs/C172_REFERENCE_TARGETS.md` for source links and target values.
 - v2 reduces thrust/pitch response further, increases induced drag slightly, and raises roll authority/bank limits enough to move shallow-turn response closer to the JSBSim trend while keeping editor scenarios green.
 - v2.1 keeps the runtime model inside the green scenario envelope and reduces static/max thrust slightly from 3600/4100 N to 3550/4050 N. Attempts to increase roll/turn authority further produced traffic-pattern stall warnings and were backed out.
 - Quality Gate v1 adds JSBSim sidecar bridge evidence and leaves runtime Unity physics unchanged.
+- The live-driver pass adds Editor-only frame-by-frame JSBSim control/state plumbing and leaves Quest runtime Unity physics unchanged.
 
 ## Acceptance Metrics
 

@@ -10,8 +10,8 @@
 
 ## Next Milestones
 
-1. Run a Quest runtime visual-fidelity smoke for the quality-gate build to capture headset shimmer, frame timing, and pilot-eye comfort evidence.
-2. Promote the JSBSim Editor sidecar bridge into an interactive Editor driver that advances from Unity controls and drives the aircraft transform.
+1. Run a Quest runtime visual-fidelity smoke for the live-driver build to capture headset shimmer, frame timing, and pilot-eye comfort evidence.
+2. Turn the Editor JSBSim live driver into a stable control-law/initial-condition prototype: straight climb, coordinated shallow turns, and replayable failure cases before any Quest runtime replacement.
 3. Add a real terrain/elevation source gate, likely USGS 3DEP-derived offline height data, while keeping the Quest runtime local and bounded.
 4. Establish an owned/OpenVSP/Blender aircraft asset path when the environment baseline is convincing enough to revisit cockpit/exterior art.
 5. Expand cockpit/instrument layout from placeholders toward inspectable analog/G1000-style training views.

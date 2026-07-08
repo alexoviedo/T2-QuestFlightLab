@@ -138,6 +138,33 @@ This proves Unity Editor can invoke JSBSim, import telemetry, convert it into Un
 
 Next backend step: make the Editor bridge interactive, with Unity controls advancing JSBSim step-by-step and JSBSim state driving the visible aircraft. Only after that should the project evaluate an Android ARM64 native plugin or other Quest runtime bridge.
 
+## JSBSim Live Editor Driver
+
+The live-driver pass promotes the batch/import proof into an Editor-only frame loop:
+
+```powershell
+.\scripts\run_jsbsim_live_editor_driver.ps1 -ArtifactDir <artifact-root>\live_driver_final
+```
+
+Driver pieces:
+
+- Unity runner: `QuestFlightLab.Editor.JSBSimLiveEditorDriverRunner.RunLiveDriver`
+- Python sidecar: `tools/jsbsim_probe/jsbsim_live_sidecar.py`
+- JSBSim aircraft: `c172x`
+- Result classification: `editor_interactive_sidecar_frame_loop`
+- Controls/timesteps sent from Unity to JSBSim: 1,801
+- JSBSim poses immediately applied to the visible Unity aircraft root: 1,801
+- Current imported C172 visual asset: preserved and driven by the JSBSim state
+- KBDU-inspired world: built in the same Editor evidence scene
+
+Latest artifact root:
+
+```text
+C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\jsbsim_live_driver_20260708_012959\live_driver_final
+```
+
+The accepted run proves interactive process/data/pose plumbing: Unity sends each frame's controls and timestep, JSBSim advances, and Unity applies the returned aircraft state before capturing evidence. It does not prove a stable final control law. The conservative takeoff/climb schedule reached 1,801 applied samples, 879.4 m ground track, 9.9 m max AGL, and 89.7 kt max airspeed. The JSBSim `c172x` / `reset00` / simple open-loop control setup still shows heading and bank transients, so controlled turns and runtime replacement need a proper initialization and control-law pass.
+
 ## Integration Path
 
 ### Short Term: Offline Reference Oracle
