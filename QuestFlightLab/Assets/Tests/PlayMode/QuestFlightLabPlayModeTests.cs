@@ -224,7 +224,13 @@ namespace QuestFlightLab.Tests.PlayMode
             Assert.That(pilotEye.x, Is.GreaterThan(-0.45f));
             Assert.That(pilotEye.y, Is.GreaterThan(0.45f));
             Assert.That(pilotEye.y, Is.LessThan(1.1f));
-            Assert.That(Mathf.Abs(pilotEye.z), Is.LessThan(0.3f));
+            Assert.That(pilotEye.z, Is.EqualTo(-PilotViewpointConfig.DefaultPilotEyeAftMeters).Within(0.0001f));
+            Assert.That(PilotViewpointConfig.DefaultPilotEyeAftMeters, Is.EqualTo(0.10f).Within(0.0001f));
+            Assert.That(Vector3.Dot(
+                    PilotViewpointConfig.ImportedC172DefaultPilotViewOffset,
+                    Vector3.forward),
+                Is.LessThan(0f),
+                "Aircraft local +Z is forward, so the aircraft default aft correction must be local -Z.");
 
             Vector3 importedEye = QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye;
             Assert.That(importedEye.x, Is.LessThan(-0.15f));
@@ -247,6 +253,44 @@ namespace QuestFlightLab.Tests.PlayMode
                 "The model centerline must remain on simulation-root x=0; the left seat carries the lateral offset.");
             Assert.That(Vector3.Dot(modelInCamera * Vector3.forward, Vector3.up), Is.GreaterThan(0.95f));
             Assert.That(Vector3.Dot(modelInCamera * Vector3.up, Vector3.back), Is.GreaterThan(0.95f));
+        }
+
+        [Test]
+        public void CorrectedDefaultEyeIncreasesDistanceFromImportedPanelGeometry()
+        {
+            GameObject prefab = Resources.Load<GameObject>(QuestFirstViewRuntimeRepair.ImportedC172ResourcePath);
+            Assert.That(prefab, Is.Not.Null);
+            GameObject aircraftFrame = new GameObject("AircraftVisualRootEyeGeometryProbe");
+            GameObject cockpit = Object.Instantiate(prefab, aircraftFrame.transform);
+            try
+            {
+                cockpit.transform.localRotation = Quaternion.Euler(QuestFirstViewRuntimeRepair.ImportedC172LocalEuler);
+                cockpit.transform.localPosition = QuestFirstViewRuntimeRepair.ImportedC172SeatReferenceLocal -
+                                                  cockpit.transform.localRotation *
+                                                  QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye;
+
+                Vector3 previousDefaultEye = QuestFirstViewRuntimeRepair.ImportedC172SeatReferenceLocal +
+                                             new Vector3(0f, 0.22f, 0f);
+                Assert.That(QuestFirstViewRuntimeRepair.TryMeasureEyeToPanelDistance(
+                    cockpit.transform,
+                    aircraftFrame.transform,
+                    previousDefaultEye,
+                    out float previousDistance), Is.True);
+                Assert.That(QuestFirstViewRuntimeRepair.TryMeasureEyeToPanelDistance(
+                    cockpit.transform,
+                    aircraftFrame.transform,
+                    QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal,
+                    out float correctedDistance), Is.True);
+
+                TestContext.WriteLine(
+                    $"Imported panel distance previous={previousDistance:F3}m corrected={correctedDistance:F3}m");
+                Assert.That(correctedDistance, Is.GreaterThan(previousDistance + 0.06f));
+                Assert.That(correctedDistance, Is.InRange(0.35f, 1.50f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(aircraftFrame);
+            }
         }
 
         [Test]
@@ -359,6 +403,9 @@ namespace QuestFlightLab.Tests.PlayMode
             CreateReferenceFrameProbe(out GameObject simulation, out Camera camera, out AircraftReferenceFrameRig rig);
             try
             {
+                Vector3 correctedDefaultSeat = rig.PilotSeatAnchor.localPosition;
+                Vector3 savedCalibration = new Vector3(0.04f, 0.03f, -0.06f);
+                rig.ApplyCalibration(savedCalibration, 2.5f);
                 Transform cameraOffset = camera.transform.parent;
                 cameraOffset.localPosition = new Vector3(0.04f, 0.02f, -0.03f);
                 cameraOffset.localRotation = Quaternion.Euler(0f, 3f, 0f);
@@ -380,6 +427,24 @@ namespace QuestFlightLab.Tests.PlayMode
                 Assert.That(Mathf.Abs(Mathf.DeltaAngle(0f, cameraInSeat.eulerAngles.y)), Is.LessThan(0.01f));
                 Assert.That(Vector3.Distance(camera.transform.localPosition, trackedCameraLocalPosition), Is.LessThan(0.0001f));
                 Assert.That(Quaternion.Angle(camera.transform.localRotation, trackedCameraLocalRotation), Is.LessThan(0.001f));
+                Assert.That(Vector3.Distance(rig.PilotSeatAnchor.localPosition, correctedDefaultSeat), Is.LessThan(0.0001f));
+                Assert.That(Vector3.Distance(
+                        rig.PilotSeatAnchor.localPosition,
+                        PilotViewpointConfig.ImportedC172DefaultPilotEyeLocal),
+                    Is.LessThan(0.0001f),
+                    "Startup recenter must preserve the corrected aircraft default seat anchor.");
+                Assert.That(Vector3.Distance(rig.CalibrationOffset, savedCalibration), Is.LessThan(0.0001f),
+                    "Saved calibration remains additive and must survive origin-only recentering.");
+
+                rig.ApplyCalibration(Vector3.zero, 0f);
+                Assert.That(rig.RecenterTrackingSpaceToSeat(), Is.True);
+                Assert.That(Vector3.Distance(rig.CalibrationOffset, Vector3.zero), Is.LessThan(0.0001f));
+                Assert.That(Vector3.Distance(
+                        rig.UserViewCalibrationOffset.InverseTransformPoint(camera.transform.position),
+                        Vector3.zero),
+                    Is.LessThan(0.0001f),
+                    "Reset must place the current tracked head on the corrected default without writing the camera.");
+                Assert.That(Vector3.Distance(camera.transform.localPosition, trackedCameraLocalPosition), Is.LessThan(0.0001f));
                 Assert.That(Vector3.Distance(simulation.transform.position, aircraftPosition), Is.LessThan(0.0001f));
                 Assert.That(Quaternion.Angle(simulation.transform.rotation, aircraftRotation), Is.LessThan(0.001f));
             }

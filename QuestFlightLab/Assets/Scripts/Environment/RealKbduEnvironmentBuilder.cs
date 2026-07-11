@@ -21,8 +21,10 @@ namespace QuestFlightLab.Environment
         public const int MaximumExpectedTriangles = 350000;
         public const float RecommendedRunwayStartInsetMeters = 70f;
         public const float RecommendedAircraftRootHeightAboveRunwayMeters = 1.25f;
+        public const string ProceduralFallbackRootName = "KBDU_Inspired_Expanded_World_NotForNavigation";
+        public const float FarTerrainStableMeshSpacingMeters = 200f;
+        public const float StableNormalSampleDistanceMeters = 25f;
 
-        private const string ProceduralFallbackRootName = "KBDU_Inspired_Expanded_World_NotForNavigation";
         private const float TerrainSeamEpsilon = 0.01f;
 
         public static bool LastBuildUsedRealData { get; private set; }
@@ -69,20 +71,23 @@ namespace QuestFlightLab.Environment
                 return false;
             }
 
-            Transform existing = airportRoot.Find(RootName);
-            if (existing != null)
-            {
-                world = existing.gameObject;
-                LastBuildUsedRealData = true;
-                LastBuildMessage = "reused existing real-data world";
-                return true;
-            }
-
             if (string.Equals(System.Environment.GetEnvironmentVariable("QFL_FORCE_PROCEDURAL_KBDU"), "1", StringComparison.Ordinal))
             {
                 error = "QFL_FORCE_PROCEDURAL_KBDU=1";
                 LastBuildMessage = error;
                 return false;
+            }
+
+            Transform existing = airportRoot.Find(RootName);
+            if (existing != null)
+            {
+                existing.gameObject.SetActive(true);
+                int disabledConflicts = HideLegacyFlatPlaceholders(airportRoot, existing);
+                EnsureMountainStabilityProbe(existing, airportRoot);
+                world = existing.gameObject;
+                LastBuildUsedRealData = true;
+                LastBuildMessage = $"reused existing real-data world; disabled {disabledConflicts} conflicting renderers";
+                return true;
             }
 
             TextAsset terrainText = Resources.Load<TextAsset>(TerrainResourcePath);
@@ -124,6 +129,15 @@ namespace QuestFlightLab.Environment
                     out int batchCount);
 
                 Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+                foreach (Renderer renderer in renderers)
+                {
+                    if (!QuestEnvironmentMaterialFactory.IsGroundMaterial(renderer.sharedMaterial)) continue;
+                    bool terrainContinuity = renderer.name.StartsWith("RealTerrain_", StringComparison.Ordinal);
+                    QuestEnvironmentMaterialFactory.ApplyDeterministicBatchVariation(
+                        renderer,
+                        renderer.name,
+                        preserveGlobalContinuity: terrainContinuity);
+                }
                 MeshFilter[] meshes = root.GetComponentsInChildren<MeshFilter>(true);
                 int actualTriangles = CountTriangles(meshes);
                 if (actualTriangles != terrainTriangles + runwayTriangles + vectorTriangles)
@@ -170,6 +184,8 @@ namespace QuestFlightLab.Environment
                 status.notes =
                     $"Four USGS resolution layers plus combined OSM spatial/material/category batches. " +
                     $"Disabled {hiddenLegacyRenderers} legacy flat/placeholder renderers. No NAIP pixels committed. " +
+                    root.GetComponent<RealKbduWaterStatus>()?.Summary + ". " +
+                    "Three attributed CC0 ground maps use one world-space anti-tile shader. " +
                     "Existing airport colliders remain the prototype ground-physics fallback; not for navigation.";
 
                 WorldPerformanceBudget budget = root.AddComponent<WorldPerformanceBudget>();
@@ -187,10 +203,13 @@ namespace QuestFlightLab.Environment
                 budget.farDrawRadiusMeters = 12000f;
                 budget.notes = status.Summary + "; " + status.faaRunwaySummary + "; " + status.osmAttribution;
 
+                EnsureMountainStabilityProbe(root.transform, airportRoot);
+
                 world = root;
                 LastBuildUsedRealData = true;
                 LastBuildMessage = status.Summary;
-                Debug.Log($"[QuestFlightLab][RealKBDU] {status.Summary} runway={runwaySummary}");
+                RealKbduWaterStatus waterStatus = root.GetComponent<RealKbduWaterStatus>();
+                Debug.Log($"[QuestFlightLab][RealKBDU] {status.Summary} runway={runwaySummary} water={waterStatus?.Summary}");
                 return true;
             }
             catch (Exception exception)
@@ -293,6 +312,7 @@ namespace QuestFlightLab.Environment
             foreach (RuntimeTerrainLayer layer in layers.Values.OrderBy(item => item.Source.priority))
             {
                 Mesh mesh = BuildTerrainMesh(layer, layers);
+                ApplyStableTerrainNormals(mesh, sampler);
                 triangleCount += mesh.triangles.Length / 3;
                 GameObject tile = new GameObject("RealTerrain_" + layer.Source.id);
                 tile.transform.SetParent(parent, false);
@@ -306,6 +326,7 @@ namespace QuestFlightLab.Environment
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = layer.Source.priority <= 1;
                 renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
+                renderer.allowOcclusionWhenDynamic = false;
                 tile.isStatic = true;
             }
             return sampler;
@@ -396,26 +417,33 @@ namespace QuestFlightLab.Environment
         {
             RealKbduTerrainLayer source = outer.Source;
             float radius = source.inner_radius_meters;
-            float negativeOuterLine = PreviousGridCoordinate(source, -radius);
-            float positiveOuterLine = NextGridCoordinate(source, radius);
+            float stableSpacing = StableMeshSpacing(source);
+            int refinement = Mathf.Max(1, Mathf.RoundToInt(source.spacing_meters / stableSpacing));
+            int maximumTriangles = source.expected_triangle_count * refinement * refinement + 2048;
+            float negativeOuterLine = PreviousGridCoordinate(source, -radius, stableSpacing);
+            float positiveOuterLine = NextGridCoordinate(source, radius, stableSpacing);
             if (negativeOuterLine >= -radius - TerrainSeamEpsilon ||
                 positiveOuterLine <= radius + TerrainSeamEpsilon)
             {
                 throw new InvalidOperationException($"Terrain seam grid is invalid for {source.id}");
             }
 
-            TerrainMeshAssembler mesh = new TerrainMeshAssembler(source.id, source.expected_triangle_count + 1024);
+            TerrainMeshAssembler mesh = new TerrainMeshAssembler(
+                source.id + "_Stable" + Mathf.RoundToInt(stableSpacing) + "m",
+                maximumTriangles);
 
             // Keep all complete coarse cells beyond the transition band. The transition band is
             // generated below, so no coplanar surface remains underneath the finer ring.
-            for (int row = 0; row < source.height - 1; row++)
+            int rowCount = Mathf.RoundToInt((source.max_z_meters - source.min_z_meters) / stableSpacing);
+            int columnCount = Mathf.RoundToInt((source.max_x_meters - source.min_x_meters) / stableSpacing);
+            for (int row = 0; row < rowCount; row++)
             {
-                float z0 = source.min_z_meters + row * source.spacing_meters;
-                float z1 = z0 + source.spacing_meters;
-                for (int column = 0; column < source.width - 1; column++)
+                float z0 = source.min_z_meters + row * stableSpacing;
+                float z1 = row == rowCount - 1 ? source.max_z_meters : z0 + stableSpacing;
+                for (int column = 0; column < columnCount; column++)
                 {
-                    float x0 = source.min_x_meters + column * source.spacing_meters;
-                    float x1 = x0 + source.spacing_meters;
+                    float x0 = source.min_x_meters + column * stableSpacing;
+                    float x1 = column == columnCount - 1 ? source.max_x_meters : x0 + stableSpacing;
                     bool beyondTransition = x1 <= negativeOuterLine + TerrainSeamEpsilon ||
                                             x0 >= positiveOuterLine - TerrainSeamEpsilon ||
                                             z1 <= negativeOuterLine + TerrainSeamEpsilon ||
@@ -428,7 +456,7 @@ namespace QuestFlightLab.Environment
             }
 
             List<float> innerCoordinates = GridCoordinates(inner.Source, -radius, radius);
-            List<float> outerCoordinates = GridCoordinates(source, -radius, radius);
+            List<float> outerCoordinates = GridCoordinates(source, -radius, radius, stableSpacing);
 
             // West/east transition strips, ordered south to north.
             mesh.AddVerticalTransition(
@@ -471,34 +499,49 @@ namespace QuestFlightLab.Environment
 
             Mesh result = mesh.ToMesh();
             int triangleCount = result.triangles.Length / 3;
-            if (triangleCount <= 0 || triangleCount > source.expected_triangle_count + 1024)
+            if (triangleCount <= 0 || triangleCount > maximumTriangles)
             {
                 throw new InvalidOperationException(
-                    $"Terrain seam triangle budget invalid in {source.id}: {triangleCount}/{source.expected_triangle_count + 1024}");
+                    $"Terrain seam triangle budget invalid in {source.id}: {triangleCount}/{maximumTriangles}");
             }
             return result;
         }
 
-        private static float PreviousGridCoordinate(RealKbduTerrainLayer source, float value)
+        private static float StableMeshSpacing(RealKbduTerrainLayer source)
         {
-            int index = Mathf.CeilToInt((value - source.min_x_meters) / source.spacing_meters) - 1;
-            index = Mathf.Clamp(index, 0, source.width - 1);
-            return source.min_x_meters + index * source.spacing_meters;
+            return string.Equals(source.id, "far_24km", StringComparison.Ordinal)
+                ? Mathf.Min(source.spacing_meters, FarTerrainStableMeshSpacingMeters)
+                : source.spacing_meters;
         }
 
-        private static float NextGridCoordinate(RealKbduTerrainLayer source, float value)
+        private static float PreviousGridCoordinate(RealKbduTerrainLayer source, float value, float spacing)
         {
-            int index = Mathf.FloorToInt((value - source.min_x_meters) / source.spacing_meters) + 1;
-            index = Mathf.Clamp(index, 0, source.width - 1);
-            return source.min_x_meters + index * source.spacing_meters;
+            int count = Mathf.RoundToInt((source.max_x_meters - source.min_x_meters) / spacing);
+            int index = Mathf.CeilToInt((value - source.min_x_meters) / spacing) - 1;
+            index = Mathf.Clamp(index, 0, count);
+            return source.min_x_meters + index * spacing;
         }
 
-        private static List<float> GridCoordinates(RealKbduTerrainLayer source, float minimum, float maximum)
+        private static float NextGridCoordinate(RealKbduTerrainLayer source, float value, float spacing)
         {
+            int count = Mathf.RoundToInt((source.max_x_meters - source.min_x_meters) / spacing);
+            int index = Mathf.FloorToInt((value - source.min_x_meters) / spacing) + 1;
+            index = Mathf.Clamp(index, 0, count);
+            return source.min_x_meters + index * spacing;
+        }
+
+        private static List<float> GridCoordinates(
+            RealKbduTerrainLayer source,
+            float minimum,
+            float maximum,
+            float spacing = -1f)
+        {
+            if (spacing <= TerrainSeamEpsilon) spacing = source.spacing_meters;
             List<float> coordinates = new List<float> { minimum };
-            for (int index = 0; index < source.width; index++)
+            int count = Mathf.RoundToInt((source.max_x_meters - source.min_x_meters) / spacing);
+            for (int index = 0; index <= count; index++)
             {
-                float coordinate = source.min_x_meters + index * source.spacing_meters;
+                float coordinate = source.min_x_meters + index * spacing;
                 if (coordinate > minimum + TerrainSeamEpsilon && coordinate < maximum - TerrainSeamEpsilon)
                 {
                     coordinates.Add(coordinate);
@@ -506,6 +549,25 @@ namespace QuestFlightLab.Environment
             }
             coordinates.Add(maximum);
             return coordinates;
+        }
+
+        private static void ApplyStableTerrainNormals(Mesh mesh, TerrainSampler sampler)
+        {
+            if (mesh == null || sampler == null) return;
+            Vector3[] vertices = mesh.vertices;
+            Vector3[] normals = new Vector3[vertices.Length];
+            float delta = StableNormalSampleDistanceMeters;
+            for (int index = 0; index < vertices.Length; index++)
+            {
+                Vector3 vertex = vertices[index];
+                float west = sampler.Sample(vertex.x - delta, vertex.z);
+                float east = sampler.Sample(vertex.x + delta, vertex.z);
+                float south = sampler.Sample(vertex.x, vertex.z - delta);
+                float north = sampler.Sample(vertex.x, vertex.z + delta);
+                normals[index] = new Vector3(west - east, delta * 2f, south - north).normalized;
+            }
+            mesh.normals = normals;
+            mesh.RecalculateBounds();
         }
 
         private static void BuildFaaRunway(
@@ -602,6 +664,13 @@ namespace QuestFlightLab.Environment
             renderedFeatures = 0;
             skippedFeatures = 0;
             float quantization = context.coordinate_quantization_meters;
+            WaterwayMeshBuilder.BuildStatistics aggregateWater = new WaterwayMeshBuilder.BuildStatistics();
+            int sourceWaterLines = 0;
+            int sourceWaterPolygons = 0;
+            int renderedWaterLines = 0;
+            int renderedWaterPolygons = 0;
+            int rejectedWater = 0;
+            int bankedWater = 0;
 
             foreach (RealKbduContextFeature feature in context.openstreetmap.features)
             {
@@ -639,7 +708,61 @@ namespace QuestFlightLab.Environment
                 }
 
                 bool added = false;
-                if (feature.category == "building" && feature.geometry_type == "polygon")
+                if (feature.category == "water")
+                {
+                    WaterwayMeshBuilder.MeshBuffers waterBuffers = new WaterwayMeshBuilder.MeshBuffers(
+                        batch.Vertices,
+                        batch.Uvs,
+                        batch.Triangles);
+                    if (feature.geometry_type == "polyline")
+                    {
+                        sourceWaterLines++;
+                        MeshAccumulator bankBatch = null;
+                        // Banks are most useful in the near airport ring. Keeping distant drainage
+                        // to one opaque draw avoids spending the Quest budget on invisible edging.
+                        if (ring == 0)
+                        {
+                            string bankKey = $"{ring}|{tileX}|{tileZ}|water_bank|water_bank";
+                            bankBatch = GetAccumulator(batches, bankKey, ring, "water_bank", "water_bank", points.Count * 4);
+                        }
+                        WaterwayMeshBuilder.MeshBuffers bankBuffers = bankBatch != null
+                            ? new WaterwayMeshBuilder.MeshBuffers(bankBatch.Vertices, bankBatch.Uvs, bankBatch.Triangles)
+                            : null;
+                        added = WaterwayMeshBuilder.TryAppendLinearWaterway(
+                            points,
+                            Mathf.Max(WaterwayMeshBuilder.MinimumWaterwayWidthMeters, feature.render_width_meters),
+                            sampler.Sample,
+                            waterBuffers,
+                            bankBuffers,
+                            out WaterwayMeshBuilder.BuildStatistics waterStatistics);
+                        if (added)
+                        {
+                            renderedWaterLines++;
+                            if (bankBuffers != null)
+                            {
+                                bankBatch.FeatureCount++;
+                                bankedWater++;
+                            }
+                            aggregateWater.Accumulate(waterStatistics);
+                        }
+                    }
+                    else if (feature.geometry_type == "polygon")
+                    {
+                        sourceWaterPolygons++;
+                        added = WaterwayMeshBuilder.TryAppendReservoir(
+                            points,
+                            sampler.Sample,
+                            waterBuffers,
+                            out WaterwayMeshBuilder.BuildStatistics waterStatistics);
+                        if (added)
+                        {
+                            renderedWaterPolygons++;
+                            aggregateWater.Accumulate(waterStatistics);
+                        }
+                    }
+                    if (!added) rejectedWater++;
+                }
+                else if (feature.category == "building" && feature.geometry_type == "polygon")
                 {
                     added = AddBuilding(batch, points, Mathf.Max(3.5f, feature.render_height_meters), sampler);
                 }
@@ -684,6 +807,28 @@ namespace QuestFlightLab.Environment
                     batch.CullScreenHeight);
                 batchCount++;
             }
+
+            Material waterMaterial = materials.Get("water");
+            RealKbduWaterStatus waterStatus = parent.gameObject.AddComponent<RealKbduWaterStatus>();
+            waterStatus.sourceLinearFeatures = sourceWaterLines;
+            waterStatus.sourcePolygonFeatures = sourceWaterPolygons;
+            waterStatus.renderedLinearFeatures = renderedWaterLines;
+            waterStatus.renderedPolygonFeatures = renderedWaterPolygons;
+            waterStatus.rejectedFeatures = rejectedWater;
+            waterStatus.bankedNearFeatures = bankedWater;
+            waterStatus.outputCenterlinePoints = aggregateWater.outputPointCount;
+            waterStatus.waterTriangleCount = aggregateWater.waterTriangleCount;
+            waterStatus.bankTriangleCount = aggregateWater.bankTriangleCount;
+            waterStatus.maximumTurnDegrees = aggregateWater.maximumTurnDegrees;
+            waterStatus.minimumTerrainSeparationMeters = aggregateWater.minimumTerrainSeparationMeters;
+            waterStatus.opaqueZWriteMaterial = QuestEnvironmentMaterialFactory.IsStableWaterMaterial(waterMaterial) &&
+                                               waterMaterial.GetFloat("_ZWrite") > 0.5f &&
+                                               waterMaterial.renderQueue < (int)RenderQueue.Transparent;
+            waterStatus.animatedUv = false;
+            waterStatus.waterUsesLodOrDistanceCulling = parent.GetComponentsInChildren<RealKbduBatchDistanceCuller>(true)
+                .Any(culler => culler.name.IndexOf("water", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                parent.GetComponentsInChildren<LODGroup>(true)
+                    .Any(lod => lod.name.IndexOf("water", StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
         private static MeshAccumulator GetAccumulator(
@@ -914,26 +1059,41 @@ namespace QuestFlightLab.Environment
             renderer.shadowCastingMode = name.IndexOf("building", StringComparison.OrdinalIgnoreCase) >= 0
                 ? ShadowCastingMode.On
                 : ShadowCastingMode.Off;
-            renderer.receiveShadows = true;
+            bool stableWaterSurface = QuestEnvironmentMaterialFactory.IsStableWaterMaterial(material) ||
+                                      name.IndexOf("water_bank", StringComparison.OrdinalIgnoreCase) >= 0;
+            renderer.receiveShadows = !QuestEnvironmentMaterialFactory.IsStableWaterMaterial(material);
             renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
-            RealKbduBatchDistanceCuller culler = gameObject.AddComponent<RealKbduBatchDistanceCuller>();
-            culler.targetRenderer = renderer;
-            culler.maximumDistanceMeters = maximumDistance;
-            LODGroup lod = gameObject.AddComponent<LODGroup>();
-            lod.fadeMode = LODFadeMode.None;
-            lod.SetLODs(new[] { new LOD(cullScreenHeight, new[] { renderer }) });
-            lod.RecalculateBounds();
+            QuestEnvironmentMaterialFactory.ApplyDeterministicBatchVariation(
+                renderer,
+                name,
+                preserveGlobalContinuity: false);
+            if (!stableWaterSurface)
+            {
+                RealKbduBatchDistanceCuller culler = gameObject.AddComponent<RealKbduBatchDistanceCuller>();
+                culler.targetRenderer = renderer;
+                culler.maximumDistanceMeters = maximumDistance;
+                LODGroup lod = gameObject.AddComponent<LODGroup>();
+                lod.fadeMode = LODFadeMode.None;
+                lod.SetLODs(new[] { new LOD(cullScreenHeight, new[] { renderer }) });
+                lod.RecalculateBounds();
+            }
             return gameObject;
         }
 
         private static int HideLegacyFlatPlaceholders(Transform airportRoot, Transform realRoot)
         {
             int hidden = 0;
-            Transform proceduralFallback = airportRoot.Find(ProceduralFallbackRootName);
-            if (proceduralFallback != null && proceduralFallback != realRoot)
+            Transform searchRoot = airportRoot.root;
+            Transform[] transforms = searchRoot.GetComponentsInChildren<Transform>(true);
+            List<Transform> proceduralFallbacks = new List<Transform>();
+            foreach (Transform candidate in transforms)
             {
-                hidden += proceduralFallback.GetComponentsInChildren<Renderer>(true).Count(renderer => renderer.enabled);
-                proceduralFallback.gameObject.SetActive(false);
+                if (candidate == null || candidate == realRoot || candidate.IsChildOf(realRoot)) continue;
+                if (!string.Equals(candidate.name, ProceduralFallbackRootName, StringComparison.Ordinal)) continue;
+                proceduralFallbacks.Add(candidate);
+                hidden += candidate.GetComponentsInChildren<Renderer>(true)
+                    .Count(renderer => renderer.enabled && renderer.gameObject.activeInHierarchy);
+                candidate.gameObject.SetActive(false);
             }
             string[] exact =
             {
@@ -946,18 +1106,33 @@ namespace QuestFlightLab.Environment
                 "RunwayHairlineCrack_", "RunwayGrassVariation", "QualityGateRunway", "FadedCenterlineOverpaint_",
                 "RunwayEdgeGravel"
             };
-            foreach (Renderer renderer in airportRoot.GetComponentsInChildren<Renderer>(true))
+            foreach (Renderer renderer in searchRoot.GetComponentsInChildren<Renderer>(true))
             {
                 if (renderer.transform.IsChildOf(realRoot)) continue;
-                if (proceduralFallback != null && renderer.transform.IsChildOf(proceduralFallback)) continue;
+                if (proceduralFallbacks.Any(fallback => renderer.transform.IsChildOf(fallback))) continue;
                 string objectName = renderer.gameObject.name;
                 bool shouldHide = exact.Any(item => string.Equals(item, objectName, StringComparison.OrdinalIgnoreCase)) ||
-                                  prefixes.Any(prefix => objectName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+                                  prefixes.Any(prefix => objectName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) ||
+                                  MountainTemporalStabilityProbe.IsLegacyMountainName(objectName);
                 if (!shouldHide || !renderer.enabled) continue;
                 renderer.enabled = false;
+                if (MountainTemporalStabilityProbe.IsLegacyMountainName(objectName))
+                {
+                    renderer.gameObject.SetActive(false);
+                }
                 hidden++;
             }
             return hidden;
+        }
+
+        private static MountainTemporalStabilityProbe EnsureMountainStabilityProbe(
+            Transform realRoot,
+            Transform airportRoot)
+        {
+            MountainTemporalStabilityProbe probe = realRoot.GetComponent<MountainTemporalStabilityProbe>();
+            if (probe == null) probe = realRoot.gameObject.AddComponent<MountainTemporalStabilityProbe>();
+            probe.Initialize(realRoot, airportRoot);
+            return probe;
         }
 
         private static int CountTriangles(IEnumerable<MeshFilter> filters)
@@ -1234,7 +1409,7 @@ namespace QuestFlightLab.Environment
             private readonly Texture2D _detailTexture;
 
             public int MaterialCount => _materials.Count;
-            public int TextureCount => _detailTexture != null ? 1 : 0;
+            public int TextureCount => (_detailTexture != null ? 1 : 0) + QuestEnvironmentMaterialFactory.LoadedGroundTextureCount;
 
             public MaterialLibrary()
             {
@@ -1245,6 +1420,18 @@ namespace QuestFlightLab.Environment
             {
                 if (_materials.TryGetValue(id, out Material existing)) return existing;
                 Color color = ColorFor(id);
+                if (string.Equals(id, "water", StringComparison.Ordinal))
+                {
+                    Material water = QuestEnvironmentMaterialFactory.CreateStableWaterMaterial("RealKBDU_water", color);
+                    _materials.Add(id, water);
+                    return water;
+                }
+                if (QuestEnvironmentMaterialFactory.IsGroundMaterialId(id))
+                {
+                    Material ground = QuestEnvironmentMaterialFactory.CreateGroundMaterial("RealKBDU_" + id, id, color);
+                    _materials.Add(id, ground);
+                    return ground;
+                }
                 Shader shader = Shader.Find("Standard");
                 if (shader == null) throw new InvalidOperationException("Standard shader unavailable for real KBDU materials");
                 Material material = new Material(shader)
@@ -1266,23 +1453,24 @@ namespace QuestFlightLab.Environment
             {
                 switch (id)
                 {
-                    case "irrigated_field": return Hex("#4F7434");
-                    case "harvested_field": return Hex("#8B7B39");
-                    case "orchard": return Hex("#3F672F");
-                    case "meadow": return Hex("#6B8248");
-                    case "forest": return Hex("#294529");
-                    case "quarry": return Hex("#82796C");
-                    case "industrial_ground": return Hex("#77736C");
+                    case "irrigated_field": return Hex("#B7D9A2");
+                    case "harvested_field": return Hex("#D5C286");
+                    case "orchard": return Hex("#9FC18E");
+                    case "meadow": return Hex("#B5C991");
+                    case "forest": return Hex("#829679");
+                    case "quarry": return Hex("#B6AA98");
+                    case "industrial_ground": return Hex("#B1AAA0");
                     case "water": return Hex("#28536B");
+                    case "water_bank": return Hex("#837156");
                     case "asphalt": return Hex("#343536");
                     case "concrete": return Hex("#777777");
                     case "gravel": return Hex("#756A57");
-                    case "airfield_turf": return Hex("#647542");
+                    case "airfield_turf": return Hex("#ACB987");
                     case "building_footprint": return Hex("#696866");
                     case "runway_marking": return Hex("#E5E3D5");
-                    case "terrain_mid": return Hex("#777447");
-                    case "terrain_far": return Hex("#676B59");
-                    default: return Hex("#6F7442");
+                    case "terrain_mid": return Hex("#A3A071");
+                    case "terrain_far": return Hex("#929578");
+                    default: return Hex("#A2A875");
                 }
             }
 

@@ -23,6 +23,13 @@ namespace QuestFlightLab.Runtime
         public int remainingRealtimeShadowCasterCount;
         public int remainingRealtimeShadowReceiverCount;
         public int remainingActiveOcclusionMaterialCount;
+        public float staticDepthStrength;
+        public float staticDepthMinimumVertexFactor = 1f;
+        public int staticDepthRendererCount;
+        public int staticDepthMeshCount;
+        public int staticDepthMeshWriteCount;
+        public int staticDepthVertexCount;
+        public int staticDepthUnreadableMeshCount;
 
         // Retained for report compatibility with earlier evidence readers. The new
         // cockpit-safe policy deliberately leaves the active caster/receiver values
@@ -44,11 +51,16 @@ namespace QuestFlightLab.Runtime
     /// authored base colour, and the static sky reflection remain enabled. Authored
     /// AO/lightmap inputs are also neutralized because this particular source model
     /// packs broad baked darkness into low-density atlases on the interior shell.
+    /// A deterministic, camera-independent vertex-depth bake replaces those maps on
+    /// the major cabin surfaces. It adds no pass, texture sample, material, realtime
+    /// shadow lookup, or per-frame work.
     /// </summary>
     public static class QuestCockpitLightingPolicy
     {
         public const float GlassSmoothness = 0.78f;
         public const float MaximumGlassAlpha = 0.22f;
+        public const float DefaultStaticDepthStrength = 0.30f;
+        public const float MaximumStaticDepthStrength = 0.42f;
 
         private const string StableGlassSuffix = " Quest Stable Glass";
         private const string StableOpaqueSuffix = " Quest Stable Opaque";
@@ -87,13 +99,35 @@ namespace QuestFlightLab.Runtime
             "static_txt", "static_display"
         };
 
-        public static CockpitLightingReport ConfigureImportedAircraft(GameObject root)
+        private static readonly string[] StaticDepthGeometryTokens =
+        {
+            "interior_body", "static_base", "seats_mat", "seatgear",
+            "seatbelt", "steering", "paddle"
+        };
+
+        private static readonly HashSet<int> ConfiguredStaticDepthMeshIds = new HashSet<int>();
+        private static readonly Dictionary<int, float> ConfiguredStaticDepthMinimumFactors =
+            new Dictionary<int, float>();
+
+        private sealed class StaticDepthGeometry
+        {
+            public Renderer renderer;
+            public Mesh mesh;
+            public Vector3[] vertices;
+            public Vector3[] normals;
+            public float semanticCavity;
+        }
+
+        public static CockpitLightingReport ConfigureImportedAircraft(
+            GameObject root,
+            float staticDepthStrength = DefaultStaticDepthStrength)
         {
             if (root == null) throw new ArgumentNullException(nameof(root));
 
             CockpitLightingReport report = new CockpitLightingReport
             {
-                strategy = "no_cockpit_shadow_map_plus_neutral_ao_and_static_sky_reflections"
+                strategy = "no_cockpit_shadow_map_plus_static_vertex_depth_and_sky_reflections",
+                staticDepthStrength = Mathf.Clamp(staticDepthStrength, 0f, MaximumStaticDepthStrength)
             };
             Dictionary<Material, Material> glassClones = new Dictionary<Material, Material>();
             Dictionary<Material, Material> opaqueClones = new Dictionary<Material, Material>();
@@ -194,6 +228,8 @@ namespace QuestFlightLab.Runtime
                     report.microDetailShadowCasterCountDisabled++;
             }
 
+            ApplyStaticVertexDepth(root, report.staticDepthStrength, report);
+
             foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
             {
                 if (renderer == null) continue;
@@ -218,8 +254,211 @@ namespace QuestFlightLab.Runtime
                 $"remainingCasters={report.remainingRealtimeShadowCasterCount} " +
                 $"remainingReceivers={report.remainingRealtimeShadowReceiverCount} " +
                 $"remainingActiveAO={report.remainingActiveOcclusionMaterialCount} " +
+                $"staticDepth={report.staticDepthStrength:F2} meshes={report.staticDepthMeshCount} " +
+                $"vertices={report.staticDepthVertexCount} minimumFactor={report.staticDepthMinimumVertexFactor:F2} " +
                 $"glassMaterials={report.glassMaterialCloneCount} strategy={report.strategy}");
             return report;
+        }
+
+        private static void ApplyStaticVertexDepth(
+            GameObject root,
+            float strength,
+            CockpitLightingReport report)
+        {
+            if (strength <= 0.0001f) return;
+
+            Transform aircraftFrame = root.transform.parent != null
+                ? root.transform.parent
+                : root.transform;
+            List<StaticDepthGeometry> pending = new List<StaticDepthGeometry>();
+            HashSet<int> meshesSeenThisPass = new HashSet<int>();
+            float minimumAircraftY = float.PositiveInfinity;
+            float maximumAircraftY = float.NegativeInfinity;
+
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!IsStaticDepthCandidate(renderer)) continue;
+                MeshFilter filter = renderer.GetComponent<MeshFilter>();
+                Mesh mesh = filter != null ? filter.sharedMesh : null;
+                if (mesh == null) continue;
+
+                int meshId = mesh.GetInstanceID();
+                if (!meshesSeenThisPass.Add(meshId)) continue;
+
+                report.staticDepthRendererCount++;
+                report.staticDepthMeshCount++;
+                report.staticDepthVertexCount += mesh.vertexCount;
+                if (ConfiguredStaticDepthMeshIds.Contains(meshId))
+                {
+                    if (ConfiguredStaticDepthMinimumFactors.TryGetValue(meshId, out float configuredMinimum))
+                        report.staticDepthMinimumVertexFactor = Mathf.Min(
+                            report.staticDepthMinimumVertexFactor,
+                            configuredMinimum);
+                    continue;
+                }
+
+                if (!mesh.isReadable)
+                {
+                    report.staticDepthUnreadableMeshCount++;
+                    continue;
+                }
+
+                Vector3[] vertices = mesh.vertices;
+                Vector3[] normals = mesh.normals;
+                if (vertices == null || vertices.Length == 0)
+                {
+                    report.staticDepthUnreadableMeshCount++;
+                    continue;
+                }
+
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    float aircraftY = aircraftFrame.InverseTransformPoint(
+                        renderer.transform.TransformPoint(vertices[i])).y;
+                    minimumAircraftY = Mathf.Min(minimumAircraftY, aircraftY);
+                    maximumAircraftY = Mathf.Max(maximumAircraftY, aircraftY);
+                }
+
+                pending.Add(new StaticDepthGeometry
+                {
+                    renderer = renderer,
+                    mesh = mesh,
+                    vertices = vertices,
+                    normals = normals,
+                    semanticCavity = StaticDepthSemanticCavity(renderer)
+                });
+            }
+
+            float heightRange = Mathf.Max(0.001f, maximumAircraftY - minimumAircraftY);
+            foreach (StaticDepthGeometry geometry in pending)
+            {
+                Color32[] sourceColors = geometry.mesh.colors32;
+                bool hasSourceColors = sourceColors != null &&
+                                       sourceColors.Length == geometry.vertices.Length;
+                Color32[] bakedColors = new Color32[geometry.vertices.Length];
+                float meshMinimumFactor = 1f;
+                for (int i = 0; i < geometry.vertices.Length; i++)
+                {
+                    Vector3 aircraftPosition = aircraftFrame.InverseTransformPoint(
+                        geometry.renderer.transform.TransformPoint(geometry.vertices[i]));
+                    float normalizedHeight = Mathf.Clamp01(
+                        (aircraftPosition.y - minimumAircraftY) / heightRange);
+
+                    float normalUp = 0f;
+                    if (geometry.normals != null && geometry.normals.Length == geometry.vertices.Length)
+                    {
+                        Vector3 aircraftNormal = aircraftFrame.InverseTransformDirection(
+                            geometry.renderer.transform.TransformDirection(geometry.normals[i])).normalized;
+                        normalUp = Mathf.Clamp(aircraftNormal.y, -1f, 1f);
+                    }
+
+                    float factor = CalculateStaticDepthVertexFactor(
+                        normalizedHeight,
+                        normalUp,
+                        geometry.semanticCavity,
+                        strength);
+                    meshMinimumFactor = Mathf.Min(meshMinimumFactor, factor);
+                    Color32 source = hasSourceColors
+                        ? sourceColors[i]
+                        : new Color32(255, 255, 255, 255);
+                    bakedColors[i] = new Color32(
+                        ScaleColorByte(source.r, factor),
+                        ScaleColorByte(source.g, factor),
+                        ScaleColorByte(source.b, factor),
+                        source.a);
+                }
+
+                geometry.mesh.colors32 = bakedColors;
+                int meshId = geometry.mesh.GetInstanceID();
+                ConfiguredStaticDepthMeshIds.Add(meshId);
+                ConfiguredStaticDepthMinimumFactors[meshId] = meshMinimumFactor;
+                report.staticDepthMeshWriteCount++;
+                report.staticDepthMinimumVertexFactor = Mathf.Min(
+                    report.staticDepthMinimumVertexFactor,
+                    meshMinimumFactor);
+            }
+        }
+
+        public static float CalculateStaticDepthVertexFactor(
+            float normalizedHeight,
+            float normalUp,
+            float semanticCavity,
+            float strength)
+        {
+            float boundedStrength = Mathf.Clamp(strength, 0f, MaximumStaticDepthStrength);
+            if (boundedStrength <= 0f) return 1f;
+
+            float lowerCabin = 1f - Mathf.SmoothStep(
+                0.18f,
+                0.82f,
+                Mathf.Clamp01(normalizedHeight));
+            float downwardFacing = Mathf.Clamp01((0.35f - Mathf.Clamp(normalUp, -1f, 1f)) / 1.35f);
+            float cavity = Mathf.Clamp01(
+                0.12f +
+                lowerCabin * 0.50f +
+                downwardFacing * 0.22f +
+                Mathf.Clamp01(semanticCavity) * 0.26f);
+            return Mathf.Clamp(
+                1f - boundedStrength * cavity,
+                1f - MaximumStaticDepthStrength,
+                1f);
+        }
+
+        private static bool IsStaticDepthCandidate(Renderer renderer)
+        {
+            if (renderer == null || !renderer.enabled) return false;
+            string identity = RendererIdentity(renderer);
+            bool tokenMatch = false;
+            for (int i = 0; i < StaticDepthGeometryTokens.Length; i++)
+            {
+                if (identity.IndexOf(StaticDepthGeometryTokens[i], StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+                tokenMatch = true;
+                break;
+            }
+            if (!tokenMatch) return false;
+
+            bool vertexColorShader = false;
+            foreach (Material material in renderer.sharedMaterials)
+            {
+                if (material == null) continue;
+                if (IsGlassMaterial(material)) return false;
+                string shaderName = material.shader != null ? material.shader.name : string.Empty;
+                if (shaderName.StartsWith("glTF/", StringComparison.OrdinalIgnoreCase))
+                    vertexColorShader = true;
+            }
+
+            return vertexColorShader;
+        }
+
+        private static float StaticDepthSemanticCavity(Renderer renderer)
+        {
+            string identity = RendererIdentity(renderer);
+            if (identity.IndexOf("seatgear", StringComparison.OrdinalIgnoreCase) >= 0) return 0.85f;
+            if (identity.IndexOf("seatbelt", StringComparison.OrdinalIgnoreCase) >= 0) return 0.72f;
+            if (identity.IndexOf("seats_mat", StringComparison.OrdinalIgnoreCase) >= 0) return 0.68f;
+            if (identity.IndexOf("interior_body", StringComparison.OrdinalIgnoreCase) >= 0) return 0.66f;
+            if (identity.IndexOf("static_base", StringComparison.OrdinalIgnoreCase) >= 0) return 0.60f;
+            if (identity.IndexOf("steering", StringComparison.OrdinalIgnoreCase) >= 0) return 0.52f;
+            if (identity.IndexOf("paddle", StringComparison.OrdinalIgnoreCase) >= 0) return 0.46f;
+            return 0.35f;
+        }
+
+        private static string RendererIdentity(Renderer renderer)
+        {
+            string identity = renderer != null ? renderer.name : string.Empty;
+            if (renderer == null) return identity;
+            foreach (Material material in renderer.sharedMaterials)
+            {
+                if (material != null) identity += " " + material.name;
+            }
+
+            return identity;
+        }
+
+        private static byte ScaleColorByte(byte value, float factor)
+        {
+            return (byte)Mathf.Clamp(Mathf.RoundToInt(value * factor), 0, 255);
         }
 
         public static bool IsGlassMaterial(Material material)

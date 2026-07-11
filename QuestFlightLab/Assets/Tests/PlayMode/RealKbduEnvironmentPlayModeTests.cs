@@ -1,5 +1,6 @@
 #if UNITY_INCLUDE_TESTS
 using System;
+using System.Linq;
 using NUnit.Framework;
 using QuestFlightLab.Environment;
 using UnityEngine;
@@ -32,9 +33,48 @@ namespace QuestFlightLab.Tests
                 Assert.That(status.rendererCount * 20, Is.LessThan(status.sourceVectorFeatures));
                 Assert.That(status.triangleCount, Is.LessThanOrEqualTo(RealKbduEnvironmentBuilder.MaximumExpectedTriangles));
                 Assert.That(status.materialCount, Is.LessThanOrEqualTo(20));
-                Assert.That(status.textureCount, Is.EqualTo(1));
+                Assert.That(status.textureCount, Is.EqualTo(4), "One legacy detail map plus three attributed CC0 ground maps.");
                 Assert.That(status.osmAttribution, Is.EqualTo("© OpenStreetMap contributors"));
                 Assert.That(status.imageryStatus, Is.EqualTo("available_but_not_committed"));
+
+                RealKbduWaterStatus waterStatus = world.GetComponent<RealKbduWaterStatus>();
+                Assert.That(waterStatus, Is.Not.Null);
+                Assert.That(waterStatus.sourceLinearFeatures, Is.EqualTo(620));
+                Assert.That(waterStatus.sourcePolygonFeatures, Is.EqualTo(180));
+                Assert.That(waterStatus.renderedLinearFeatures + waterStatus.renderedPolygonFeatures, Is.GreaterThan(700));
+                Assert.That(waterStatus.minimumTerrainSeparationMeters,
+                    Is.GreaterThanOrEqualTo(WaterwayMeshBuilder.MinimumAcceptedTerrainSeparationMeters));
+                Assert.That(waterStatus.maximumTurnDegrees,
+                    Is.LessThanOrEqualTo(WaterwayMeshBuilder.MaximumSegmentTurnDegrees + 0.1f));
+                Assert.That(waterStatus.opaqueZWriteMaterial, Is.True);
+                Assert.That(waterStatus.animatedUv, Is.False);
+                Assert.That(waterStatus.waterUsesLodOrDistanceCulling, Is.False);
+                Assert.That(waterStatus.waterTriangleCount, Is.LessThan(50000));
+                Assert.That(waterStatus.bankTriangleCount, Is.LessThan(50000));
+
+                Renderer[] waterRenderers = world.GetComponentsInChildren<Renderer>(true)
+                    .Where(renderer => QuestEnvironmentMaterialFactory.IsStableWaterMaterial(renderer.sharedMaterial))
+                    .ToArray();
+                Assert.That(waterRenderers.Length, Is.InRange(1, 40), "OSM water must stay spatially batched, not one renderer per feature.");
+                Material sharedWater = waterRenderers[0].sharedMaterial;
+                foreach (Renderer renderer in waterRenderers)
+                {
+                    Assert.That(renderer.sharedMaterial, Is.SameAs(sharedWater));
+                    Assert.That(renderer.GetComponent<RealKbduBatchDistanceCuller>(), Is.Null);
+                    Assert.That(renderer.GetComponent<LODGroup>(), Is.Null);
+                    Assert.That(renderer.sharedMaterial.renderQueue, Is.LessThan((int)UnityEngine.Rendering.RenderQueue.Transparent));
+                }
+
+                Renderer[] groundRenderers = world.GetComponentsInChildren<Renderer>(true)
+                    .Where(renderer => QuestEnvironmentMaterialFactory.IsGroundMaterial(renderer.sharedMaterial))
+                    .ToArray();
+                Assert.That(groundRenderers.Length, Is.GreaterThan(3));
+                Assert.That(groundRenderers.Select(renderer => renderer.sharedMaterial.shader).Distinct().Count(), Is.EqualTo(1));
+                MaterialPropertyBlock variation = new MaterialPropertyBlock();
+                Renderer contextualGround = groundRenderers.First(renderer => !renderer.name.StartsWith("RealTerrain_", StringComparison.Ordinal));
+                contextualGround.GetPropertyBlock(variation);
+                Vector4 batchTransform = variation.GetVector("_BatchUvTransform");
+                Assert.That(batchTransform.x * batchTransform.x + batchTransform.y * batchTransform.y, Is.EqualTo(1f).Within(0.001f));
 
                 AssertTerrainSeamIsSharedAndViewStable(world.transform, "inner_4km", "mid_12km", 2000f);
                 AssertTerrainSeamIsSharedAndViewStable(world.transform, "mid_12km", "far_24km", 6000f);
@@ -73,6 +113,7 @@ namespace QuestFlightLab.Tests
                 Assert.That(budget.worldSizeMeters, Is.EqualTo(new Vector2(24000f, 24000f)));
                 TestContext.WriteLine(status.Summary);
                 TestContext.WriteLine(status.faaRunwaySummary);
+                TestContext.WriteLine(waterStatus.Summary);
             }
             finally
             {
@@ -93,6 +134,13 @@ namespace QuestFlightLab.Tests
                 Assert.That(world.name, Is.EqualTo("KBDU_Inspired_Expanded_World_NotForNavigation"));
                 Assert.That(world.GetComponent<WorldPerformanceBudget>(), Is.Not.Null);
                 Assert.That(RealKbduEnvironmentBuilder.LastBuildUsedRealData, Is.False);
+
+                Renderer[] fallbackWater = world.GetComponentsInChildren<Renderer>(true)
+                    .Where(renderer => renderer.name.StartsWith("FallbackStableWater_", StringComparison.Ordinal))
+                    .ToArray();
+                Assert.That(fallbackWater.Length, Is.GreaterThanOrEqualTo(4));
+                Assert.That(fallbackWater.Count(renderer => QuestEnvironmentMaterialFactory.IsStableWaterMaterial(renderer.sharedMaterial)), Is.EqualTo(4));
+                Assert.That(fallbackWater, Has.All.Matches<Renderer>(renderer => renderer.GetComponent<LODGroup>() == null));
 
                 // A fallback can exist before real resources become available in a long-running
                 // editor session. Promoting to real data must not leave its synthetic Front Range

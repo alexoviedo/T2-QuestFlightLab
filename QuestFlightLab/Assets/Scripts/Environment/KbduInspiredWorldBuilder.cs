@@ -5,7 +5,7 @@ namespace QuestFlightLab.Environment
 {
     public static class KbduInspiredWorldBuilder
     {
-        private const string RootName = "KBDU_Inspired_Expanded_World_NotForNavigation";
+        private const string RootName = RealKbduEnvironmentBuilder.ProceduralFallbackRootName;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -26,27 +26,32 @@ namespace QuestFlightLab.Environment
             {
                 Debug.LogWarning($"[QuestFlightLab][KBDU] Real-data path unavailable ({realDataError}); using preserved procedural fallback.");
             }
+            Transform realDataRoot = airportRoot.Find(RealKbduEnvironmentBuilder.RootName);
+            if (realDataRoot != null) realDataRoot.gameObject.SetActive(false);
             Transform existing = airportRoot.Find(RootName);
-            if (existing != null) return existing.gameObject;
+            if (existing != null)
+            {
+                existing.gameObject.SetActive(true);
+                return existing.gameObject;
+            }
 
-            Material prairie = Material("Dry Prairie Chunk", new Color(0.37f, 0.40f, 0.23f), 0f, 0.54f, 18f);
-            Material darkerGrass = Material("Mowed Field Chunk", new Color(0.22f, 0.33f, 0.17f), 0f, 0.50f, 20f);
-            Material sage = Material("High Plains Sage Variation", new Color(0.28f, 0.34f, 0.22f), 0f, 0.56f, 14f);
-            Material tanGrass = Material("Sun Cured Grass Wash", new Color(0.46f, 0.42f, 0.22f), 0f, 0.62f, 12f);
-            Material dirt = Material("Dry Dirt Gravel", new Color(0.40f, 0.32f, 0.23f), 0f, 0.72f, 12f);
+            Material prairie = QuestEnvironmentMaterialFactory.CreateGroundMaterial("Dry Prairie Chunk", "dry_prairie", new Color(0.74f, 0.76f, 0.62f));
+            Material darkerGrass = QuestEnvironmentMaterialFactory.CreateGroundMaterial("Mowed Field Chunk", "airfield_turf", new Color(0.55f, 0.68f, 0.48f));
+            Material sage = QuestEnvironmentMaterialFactory.CreateGroundMaterial("High Plains Sage Variation", "meadow", new Color(0.61f, 0.67f, 0.54f));
+            Material tanGrass = QuestEnvironmentMaterialFactory.CreateGroundMaterial("Sun Cured Grass Wash", "dry_prairie", new Color(0.86f, 0.78f, 0.54f));
+            Material dirt = QuestEnvironmentMaterialFactory.CreateGroundMaterial("Dry Dirt Gravel", "industrial_ground", new Color(0.73f, 0.62f, 0.48f));
             Material road = Material("Local Road Asphalt", new Color(0.055f, 0.058f, 0.06f), 0f, 0.42f);
             Material concrete = Material("Light Industrial Concrete", new Color(0.42f, 0.41f, 0.37f), 0f, 0.36f, 12f);
             Material roof = Material("Industrial Roof Varied", new Color(0.18f, 0.2f, 0.22f), 0.05f, 0.48f, 6f);
-            Material water = Material("Reservoir Water Muted", new Color(0.12f, 0.26f, 0.34f, 0.78f), 0f, 0.15f);
+            Material water = QuestEnvironmentMaterialFactory.CreateStableWaterMaterial("Reservoir Water Stable Opaque", new Color(0.12f, 0.27f, 0.34f, 1f));
             Material foothill = Material("Front Range Foothill Far", new Color(0.27f, 0.31f, 0.25f), 0f, 0.72f, 9f);
             Material mountain = Material("Front Range Mountain Far", new Color(0.34f, 0.37f, 0.37f), 0f, 0.84f, 8f);
             Material snow = Material("High Ridge Snow Hint", new Color(0.76f, 0.78f, 0.75f), 0f, 0.7f);
             Material fence = Material("Airport Perimeter Fence", new Color(0.34f, 0.35f, 0.32f), 0.15f, 0.28f);
-            Material fieldGold = Material("Harvest Field Gold", new Color(0.47f, 0.43f, 0.20f), 0f, 0.58f, 14f);
-            Material fieldGreen = Material("Irrigated Field Green", new Color(0.20f, 0.36f, 0.16f), 0f, 0.5f, 14f);
+            Material fieldGold = QuestEnvironmentMaterialFactory.CreateGroundMaterial("Harvest Field Gold", "harvested_field", new Color(0.82f, 0.75f, 0.48f));
+            Material fieldGreen = QuestEnvironmentMaterialFactory.CreateGroundMaterial("Irrigated Field Green", "irrigated_field", new Color(0.53f, 0.72f, 0.45f));
             Material treeLine = Material("Cottonwood Tree Line", new Color(0.09f, 0.22f, 0.10f), 0f, 0.42f, 5f);
             Material scrub = Material("Foothill Scrub Brush", new Color(0.22f, 0.28f, 0.16f), 0f, 0.56f, 7f);
-            Material ridgeHaze = Material("Front Range Atmospheric Haze", new Color(0.56f, 0.65f, 0.72f, 0.32f), 0f, 0.15f);
 
             GameObject root = new GameObject(RootName);
             root.transform.SetParent(airportRoot, false);
@@ -58,7 +63,7 @@ namespace QuestFlightLab.Environment
             AddAirportNeighborhood(root.transform, concrete, roof, dirt);
             AddReservoirAndDrainage(root.transform, water, dirt);
             AddPerimeterAndFieldCues(root.transform, fence, dirt, concrete, treeLine, scrub);
-            AddFarFoothills(root.transform, foothill, mountain, snow, ridgeHaze);
+            AddFarFoothills(root.transform, foothill, mountain, snow);
             AddObjectLodGroups(root.transform);
 
             WorldPerformanceBudget budget = root.AddComponent<WorldPerformanceBudget>();
@@ -186,12 +191,7 @@ namespace QuestFlightLab.Environment
 
         private static void AddReservoirAndDrainage(Transform parent, Material water, Material dirt)
         {
-            Cube(parent, "SmallReservoirWest", new Vector3(-1280f, TerrainHeight(-1280f, 740f) + 0.018f, 740f), Quaternion.Euler(0f, -8f, 0f), new Vector3(620f, 0.018f, 260f), water);
-            Cube(parent, "ReservoirShoreWest", new Vector3(-1280f, TerrainHeight(-1280f, 740f) + 0.012f, 740f), Quaternion.Euler(0f, -8f, 0f), new Vector3(680f, 0.014f, 306f), dirt);
-            Cube(parent, "DrainageSwaleNorth", new Vector3(-120f, TerrainHeight(-120f, 850f) + 0.018f, 850f), Quaternion.Euler(0f, 5f, 0f), new Vector3(1350f, 0.012f, 34f), dirt);
-            Cube(parent, "IrrigationDitchNorthwest", new Vector3(-2200f, TerrainHeight(-2200f, 1520f) + 0.016f, 1520f), Quaternion.Euler(0f, 18f, 0f), new Vector3(1900f, 0.012f, 18f), dirt);
-            Cube(parent, "BoulderReservoirHintNorth", new Vector3(-3150f, TerrainHeight(-3150f, 3050f) + 0.018f, 3050f), Quaternion.Euler(0f, 5f, 0f), new Vector3(1250f, 0.016f, 420f), water);
-            Cube(parent, "BoulderReservoirHintShore", new Vector3(-3150f, TerrainHeight(-3150f, 3050f) + 0.012f, 3050f), Quaternion.Euler(0f, 5f, 0f), new Vector3(1360f, 0.012f, 484f), dirt);
+            FallbackStableWaterBuilder.Build(parent, TerrainHeight, water, dirt);
         }
 
         private static void AddPerimeterAndFieldCues(Transform parent, Material fence, Material dirt, Material concrete, Material treeLine, Material scrub)
@@ -229,15 +229,12 @@ namespace QuestFlightLab.Environment
             }
         }
 
-        private static void AddFarFoothills(Transform parent, Material foothill, Material mountain, Material snow, Material ridgeHaze)
+        private static void AddFarFoothills(Transform parent, Material foothill, Material mountain, Material snow)
         {
             Ridge(parent, "FrontRangeFoothillLowRidge", -7600f, 15200f, 4300f, 980f, 18f, 148f, 38, 11, foothill);
             Ridge(parent, "FrontRangeFoothillMiddleRidge", -8300f, 16600f, 5050f, 1080f, 34f, 205f, 42, 19, foothill);
             Ridge(parent, "FrontRangeFoothillBackRidge", -8800f, 17600f, 6100f, 1260f, 58f, 285f, 46, 29, foothill);
             Ridge(parent, "FrontRangeMountainBackRidge", -9600f, 19200f, 8200f, 1680f, 130f, 640f, 52, 47, mountain);
-            Cube(parent, "FrontRangeLowAtmosphericHazeBand", new Vector3(0f, 118f, 4850f), Quaternion.identity, new Vector3(15600f, 96f, 18f), ridgeHaze);
-            Cube(parent, "FrontRangeBackAtmosphericHazeBand", new Vector3(0f, 250f, 6900f), Quaternion.identity, new Vector3(18400f, 150f, 18f), ridgeHaze);
-
             for (int i = 0; i < 11; i++)
             {
                 float x = -7200f + i * 1440f;
@@ -251,7 +248,6 @@ namespace QuestFlightLab.Environment
             foreach (Transform child in root)
             {
                 if (!child.name.StartsWith("AirportIndustrial_", StringComparison.OrdinalIgnoreCase) &&
-                    !child.name.StartsWith("FrontRange", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("LowBuildingFar_", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("BoulderValleyFieldParcel_", StringComparison.OrdinalIgnoreCase) &&
                     !child.name.StartsWith("BoulderValleyFieldFurrow_", StringComparison.OrdinalIgnoreCase) &&
@@ -549,7 +545,7 @@ namespace QuestFlightLab.Environment
             budget.nearDetailRadiusMeters = 2200f;
             budget.midDetailRadiusMeters = 5200f;
             budget.farDrawRadiusMeters = 9200f;
-            budget.notes = "Procedural KBDU-inspired world with mesh terrain detail rings, OSM-referenced road/airport cues, field parcels, and ridge impostors; not navigation-accurate.";
+            budget.notes = "Procedural KBDU-inspired world with mesh terrain detail rings, OSM-referenced road/airport cues, field parcels, and fixed ridge meshes; not navigation-accurate.";
         }
 
         private static int CountUniqueMaterials(Renderer[] renderers)

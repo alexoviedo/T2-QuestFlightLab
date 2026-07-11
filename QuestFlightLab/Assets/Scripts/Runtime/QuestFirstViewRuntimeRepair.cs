@@ -39,6 +39,12 @@ namespace QuestFlightLab.Runtime
         public float seatCalibrationSpeedMetersPerSecond = 0.22f;
         public float cockpitYawCalibrationSpeedDegPerSecond = 42f;
         public float seatCalibrationFineScale = 0.25f;
+        [Header("Aircraft default pilot eye")]
+        [Range(0f, PilotViewpointConfig.MaximumDefaultPilotEyeAftMeters)]
+        public float defaultPilotEyeAftMeters = PilotViewpointConfig.DefaultPilotEyeAftMeters;
+        [Header("Stable cockpit depth")]
+        [Range(0f, QuestCockpitLightingPolicy.MaximumStaticDepthStrength)]
+        public float cockpitStaticDepthStrength = QuestCockpitLightingPolicy.DefaultStaticDepthStrength;
         [Header("Startup seat alignment")]
         [Min(2)] public int startupSeatStableFramesRequired = 10;
         [Min(0.001f)] public float startupSeatStablePositionDeltaMeters = 0.02f;
@@ -50,6 +56,13 @@ namespace QuestFlightLab.Runtime
         public Vector3 ImportedC172BoundsSize { get; private set; }
         public Vector3 ImportedC172CockpitModelEyeUsed => importedC172CockpitModelEye;
         public Vector3 ImportedC172PilotViewOffsetUsed => importedC172PilotViewOffset;
+        public Vector3 DefaultPilotEyeLocalUsed { get; private set; } = ImportedC172PilotEyeLocal;
+        public float DefaultPilotEyeAftMetersUsed => Mathf.Clamp(
+            defaultPilotEyeAftMeters,
+            0f,
+            PilotViewpointConfig.MaximumDefaultPilotEyeAftMeters);
+        public float PreviousDefaultEyeToPanelDistanceMeters { get; private set; } = -1f;
+        public float DefaultEyeToPanelDistanceMeters { get; private set; } = -1f;
         public Vector3 PilotEyeLocalUsed => pilotEyeLocal;
         public float ImportedC172CockpitYawDegUsed => importedC172CockpitYawDeg;
         public bool SeatCalibrationEnabled { get; private set; }
@@ -172,7 +185,7 @@ namespace QuestFlightLab.Runtime
             }
 
             ApplyLaunchOverrides();
-            _referenceFrameRig = AircraftReferenceFrameRig.Ensure(_aircraft, _xrOrigin, _camera, ImportedC172PilotEyeLocal);
+            _referenceFrameRig = AircraftReferenceFrameRig.Ensure(_aircraft, _xrOrigin, _camera, DefaultPilotEyeLocalUsed);
             if (_referenceFrameRig == null || !_referenceFrameRig.HierarchyReady)
             {
                 Debug.LogWarning($"{LogPrefix} Reference-frame hierarchy creation failed.");
@@ -208,7 +221,7 @@ namespace QuestFlightLab.Runtime
             }
             yield return null;
             _ready = true;
-            Debug.Log($"{LogPrefix} Pilot view active. simulation={_aircraft.name} visual={_referenceFrameRig.AircraftVisualRoot.name} seat={_referenceFrameRig.PilotSeatAnchor.name} calibration={_referenceFrameRig.UserViewCalibrationOffset.name} camera={_camera.name} hierarchyValid={_referenceFrameRig.ValidateHierarchy()} pilotEyeLocal={pilotEyeLocal} startupSeatAlignment={StartupSeatAlignmentStatus}");
+            Debug.Log($"{LogPrefix} Pilot view active. simulation={_aircraft.name} visual={_referenceFrameRig.AircraftVisualRoot.name} seat={_referenceFrameRig.PilotSeatAnchor.name} calibration={_referenceFrameRig.UserViewCalibrationOffset.name} camera={_camera.name} hierarchyValid={_referenceFrameRig.ValidateHierarchy()} defaultPilotEyeAftMeters={DefaultPilotEyeAftMetersUsed:F2} pilotEyeLocal={pilotEyeLocal} eyeToPanel={DefaultEyeToPanelDistanceMeters:F3}m startupSeatAlignment={StartupSeatAlignmentStatus}");
         }
 
         private void LateUpdate()
@@ -435,6 +448,8 @@ namespace QuestFlightLab.Runtime
 
         private void ApplyLaunchOverrides()
         {
+            DefaultPilotEyeLocalUsed = PilotViewpointConfig.ImportedC172DefaultPilotEyeLocalForAftDistance(
+                DefaultPilotEyeAftMetersUsed);
             bool resetCalibration = QuestLaunchOptions.ResetSeatCalibrationRequested();
             if (resetCalibration)
             {
@@ -503,7 +518,7 @@ namespace QuestFlightLab.Runtime
                 SeatCalibrationStatus = "reset clean";
             }
 
-            Debug.Log($"{LogPrefix} Imported C172 cockpit eye calibration={importedC172CockpitModelEye} seatReference={ImportedC172SeatReferenceLocal} defaultPilotOffset={ImportedC172DefaultPilotViewOffset} pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1} seatCalibration={SeatCalibrationEnabled} headPoseMode={HeadPoseMode}");
+            Debug.Log($"{LogPrefix} Imported C172 cockpit eye calibration={importedC172CockpitModelEye} seatReference={ImportedC172SeatReferenceLocal} defaultPilotOffset={DefaultPilotEyeLocalUsed - ImportedC172SeatReferenceLocal} defaultPilotEyeAftMeters={DefaultPilotEyeAftMetersUsed:F2} pilotViewOffset={importedC172PilotViewOffset} pilotEyeLocal={pilotEyeLocal} cockpitYawDeg={importedC172CockpitYawDeg:F1} seatCalibration={SeatCalibrationEnabled} headPoseMode={HeadPoseMode}");
         }
 
         private void ApplyManualHeadPoseFromDevice()
@@ -700,7 +715,10 @@ namespace QuestFlightLab.Runtime
                 _importedC172Visual = existing;
                 ApplyImportedCockpitPose(_importedC172Visual);
                 ImportedExteriorRendererHiddenCount = HideImportedExteriorForCockpit(existing.gameObject);
-                ImportedC172Lighting = QuestCockpitLightingPolicy.ConfigureImportedAircraft(existing.gameObject);
+                ImportedC172Lighting = QuestCockpitLightingPolicy.ConfigureImportedAircraft(
+                    existing.gameObject,
+                    cockpitStaticDepthStrength);
+                UpdateDefaultEyeToPanelMeasurements(existing);
                 ImportedC172Loaded = true;
                 complete(true);
                 yield break;
@@ -734,7 +752,10 @@ namespace QuestFlightLab.Runtime
 
             float configureStarted = Time.realtimeSinceStartup;
             ImportedExteriorRendererHiddenCount = HideImportedExteriorForCockpit(instance);
-            ImportedC172Lighting = QuestCockpitLightingPolicy.ConfigureImportedAircraft(instance);
+            ImportedC172Lighting = QuestCockpitLightingPolicy.ConfigureImportedAircraft(
+                instance,
+                cockpitStaticDepthStrength);
+            UpdateDefaultEyeToPanelMeasurements(instance.transform);
             float configureSeconds = Time.realtimeSinceStartup - configureStarted;
             ImportedC172Loaded = true;
 
@@ -762,6 +783,93 @@ namespace QuestFlightLab.Runtime
             cockpit.localRotation = modelInCameraRotation;
             Vector3 baseSeatTarget = ImportedC172SeatReferenceLocal + importedC172LocalPosition;
             cockpit.localPosition = baseSeatTarget - cockpit.localRotation * importedC172CockpitModelEye;
+        }
+
+        private void UpdateDefaultEyeToPanelMeasurements(Transform cockpit)
+        {
+            Transform aircraftFrame = _referenceFrameRig != null
+                ? _referenceFrameRig.AircraftVisualRoot
+                : _aircraft;
+            Vector3 previousDefaultEye = PilotViewpointConfig.ImportedC172SeatReferenceLocal +
+                                         new Vector3(0f, 0.22f, 0f);
+            TryMeasureEyeToPanelDistance(
+                cockpit,
+                aircraftFrame,
+                previousDefaultEye,
+                out float previousDistance);
+            TryMeasureEyeToPanelDistance(
+                cockpit,
+                aircraftFrame,
+                DefaultPilotEyeLocalUsed,
+                out float correctedDistance);
+            PreviousDefaultEyeToPanelDistanceMeters = previousDistance;
+            DefaultEyeToPanelDistanceMeters = correctedDistance;
+
+            Debug.Log(
+                $"{LogPrefix} Default eye geometry audit aft={DefaultPilotEyeAftMetersUsed:F2}m " +
+                $"previousEyeToPanel={PreviousDefaultEyeToPanelDistanceMeters:F3}m " +
+                $"correctedEyeToPanel={DefaultEyeToPanelDistanceMeters:F3}m " +
+                $"aircraftForward=local +Z calibrationAft=local -Z");
+        }
+
+        public static bool TryMeasureEyeToPanelDistance(
+            Transform cockpit,
+            Transform aircraftFrame,
+            Vector3 pilotEyeLocal,
+            out float distanceMeters)
+        {
+            distanceMeters = -1f;
+            if (cockpit == null || aircraftFrame == null) return false;
+
+            // Renderer.bounds is unsuitable here: the imported Static_Base mesh has a broad
+            // cabin AABB that contains the pilot eye, which makes Bounds.SqrDistance report
+            // zero even when the panel surface is well forward. Measure the aircraft-local
+            // forward separation to authored ButtonPlate vertices instead. This is stable,
+            // independent of camera pose, and responds exactly to the named -Z seat offset.
+            float nearestForwardDistance = float.PositiveInfinity;
+            bool foundButtonPlate = false;
+            Renderer[] renderers = cockpit.GetComponentsInChildren<Renderer>(true);
+            for (int pass = 0; pass < 2; pass++)
+            {
+                bool requireButtonPlate = pass == 0;
+                foreach (Renderer renderer in renderers)
+                {
+                    if (renderer == null || !renderer.enabled) continue;
+                    string identity = renderer.name;
+                    foreach (Material material in renderer.sharedMaterials)
+                    {
+                        if (material != null) identity += " " + material.name;
+                    }
+
+                    bool buttonPlate = identity.IndexOf("ButtonPlate", StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool staticBase = identity.IndexOf("Static_Base", StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (requireButtonPlate ? !buttonPlate : (!staticBase || foundButtonPlate)) continue;
+
+                    Mesh mesh = null;
+                    MeshFilter filter = renderer.GetComponent<MeshFilter>();
+                    if (filter != null) mesh = filter.sharedMesh;
+                    if (mesh == null && renderer is SkinnedMeshRenderer skinned) mesh = skinned.sharedMesh;
+                    if (mesh == null || !mesh.isReadable) continue;
+
+                    Vector3[] vertices = mesh.vertices;
+                    for (int index = 0; index < vertices.Length; index++)
+                    {
+                        Vector3 aircraftVertex = aircraftFrame.InverseTransformPoint(
+                            renderer.transform.TransformPoint(vertices[index]));
+                        float forwardDistance = aircraftVertex.z - pilotEyeLocal.z;
+                        if (forwardDistance <= 0.05f || forwardDistance >= nearestForwardDistance) continue;
+                        nearestForwardDistance = forwardDistance;
+                    }
+
+                    foundButtonPlate |= buttonPlate && !float.IsInfinity(nearestForwardDistance);
+                }
+
+                if (foundButtonPlate) break;
+            }
+
+            if (float.IsInfinity(nearestForwardDistance)) return false;
+            distanceMeters = nearestForwardDistance;
+            return true;
         }
 
         private void UpdateSeatCalibration()
@@ -819,8 +927,12 @@ namespace QuestFlightLab.Runtime
             {
                 importedC172PilotViewOffset = Vector3.zero;
                 importedC172CockpitYawDeg = 0f;
-                _referenceFrameRig?.ResetTrackingSpaceOffset();
                 ApplyPilotSeatCalibrationOffset();
+                // Keep the currently tracked head on the corrected aircraft
+                // default. Clearing XR Origin to its authored zero would restore
+                // the user's room-scale displacement and erase the apparent
+                // reset even though the seat anchor itself was correct.
+                _referenceFrameRig?.RecenterTrackingSpaceToSeat();
                 SeatCalibrationStatus = "default restored (save or cancel)";
             }
 
@@ -865,10 +977,12 @@ namespace QuestFlightLab.Runtime
 
         private void ApplyPilotSeatCalibrationOffset()
         {
-            pilotEyeLocal = ImportedC172PilotEyeLocal + importedC172PilotViewOffset;
+            DefaultPilotEyeLocalUsed = PilotViewpointConfig.ImportedC172DefaultPilotEyeLocalForAftDistance(
+                DefaultPilotEyeAftMetersUsed);
+            pilotEyeLocal = DefaultPilotEyeLocalUsed + importedC172PilotViewOffset;
             if (_referenceFrameRig != null)
             {
-                _referenceFrameRig.SetPilotSeatLocalPose(ImportedC172PilotEyeLocal, Quaternion.identity);
+                _referenceFrameRig.SetPilotSeatLocalPose(DefaultPilotEyeLocalUsed, Quaternion.identity);
                 _referenceFrameRig.ApplyCalibration(importedC172PilotViewOffset, importedC172CockpitYawDeg);
             }
         }
@@ -1062,7 +1176,7 @@ namespace QuestFlightLab.Runtime
                     sceneryMode = QuestLaunchOptions.SceneryMode(),
                     demoMode = QuestLaunchOptions.DemoMode(),
                     importedC172SeatReferenceLocal = ImportedC172SeatReferenceLocal,
-                    importedC172DefaultPilotViewOffset = ImportedC172DefaultPilotViewOffset,
+                    importedC172DefaultPilotViewOffset = DefaultPilotEyeLocalUsed - ImportedC172SeatReferenceLocal,
                     importedC172CockpitModelEye = importedC172CockpitModelEye,
                     importedC172PilotViewOffset = importedC172PilotViewOffset,
                     importedC172CockpitYawDeg = importedC172CockpitYawDeg,
@@ -1356,7 +1470,10 @@ namespace QuestFlightLab.Runtime
             Material placard = Material("C172 Placard White", new Color(0.8f, 0.83f, 0.78f));
 
             const float centerlineX = 0.34f;
-            Vector3 seat = ImportedC172PilotEyeLocal;
+            // Keep fallback cockpit geometry in its authored aircraft frame. The
+            // corrected pilot anchor moves aft independently so the fallback gains
+            // the same additional eye-to-panel distance as the imported model.
+            Vector3 seat = ImportedC172SeatReferenceLocal + new Vector3(0f, 0.22f, 0f);
 
             Cube(root.transform, "C172PilotSeatCushion", seat + new Vector3(0f, -1.03f, -0.05f), Quaternion.identity, new Vector3(0.48f, 0.12f, 0.58f), vinyl);
             Cube(root.transform, "C172PilotSeatBack", seat + new Vector3(0f, -0.67f, -0.37f), Quaternion.Euler(-12f, 0f, 0f), new Vector3(0.5f, 0.72f, 0.12f), vinyl);

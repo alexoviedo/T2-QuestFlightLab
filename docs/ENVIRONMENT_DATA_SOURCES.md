@@ -86,3 +86,17 @@ The manifest pins source requests, retrieval time, raw/derived SHA256 values, so
 This path improves geographic context but remains simplified, quantized, and visually stylized. It is not an aeronautical database, surveyed airport reconstruction, navigation product, performance proof for Quest hardware, or final photorealistic environment.
 
 The runtime terrain layers are fixed meshes, not camera-dependent terrain LODs. Each outer ring now replaces its first coarse cell band with a transition mesh that shares every finer-ring boundary vertex. This removes the former 50 m overlap at the 2 km join and the independently sampled height discontinuity at the 6 km join. The production camera's fogged 18 km far plane encloses the full 24 km square, including its 16.97 km corners, so view angle does not slice the mountain silhouette. If a procedural fallback world already exists when real data becomes valid, it is deactivated rather than rendered over the USGS terrain.
+
+## Quest Visual Stability V2 Water And Ground Rendering
+
+The committed OSM derivative remains the source for 620 linear waterways and 180 water polygons. Runtime construction no longer feeds water through generic unsmoothed ribbons or centroid fans. `WaterwayMeshBuilder` now:
+
+- applies deterministic endpoint-preserving corner cutting and 12 m arc-length resampling to linear features;
+- rejects self-intersecting centerlines and enforces a 55° maximum resampled turn;
+- generates arc-length-UV ribbon meshes with near-airport dirt banks;
+- ear-clips actual reservoir polygons at one fixed horizontal level;
+- maintains at least 0.12 m accepted terrain separation (0.18 m nominal clearance) instead of the previous 0.045 m near-coplanar layer;
+- uses one opaque, ZWrite-enabled, non-animated material with no transparency, refraction, screen-space reflection, or realtime probe dependency;
+- keeps water renderers free of distance LOD/crossfade so a seated head turn cannot swap their mesh or enabled state.
+
+The explicit procedural fallback uses the same stable mesh/material path instead of thin transparent reservoir cubes. This geometry remains contextual and not hydrologically surveyed. Ground land-cover rendering uses the three Poly Haven CC0 maps and import policy documented in `docs/ASSET_SOURCES.md`; the OSM/FAA/USGS data licenses and attribution above are unchanged.

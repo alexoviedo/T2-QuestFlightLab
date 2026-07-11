@@ -910,19 +910,19 @@
       "sha256": "7749e3ab20f3d5750f43e4a9524ca9d942d407f9cc0b0ddd31af5370e30c805b"
     },
     {
-      "bytes": 66653,
+      "bytes": 77671,
       "path": "QuestFlightLab/Assets/Scripts/Environment/RealKbduEnvironmentBuilder.cs",
-      "sha256": "012565c92229f91f8a8a3bbd91d2a1cbbbfe3eaca5d50ea8256864b60b99d5e9"
+      "sha256": "9baaa75985d712abf1bcd1789f64a707f54c27e105b8bb2381b8dde1ab403f3f"
     },
     {
-      "bytes": 33689,
+      "bytes": 32717,
       "path": "QuestFlightLab/Assets/Scripts/Environment/KbduInspiredWorldBuilder.cs",
-      "sha256": "9a9f0bcd9e29b5d43067e980c3056d3ff569d187169ff6d3d052cd4bd1ca357f"
+      "sha256": "6d83049dc9bd2e85454731f09881a79e7a44c66774109f4c78ab46580016218f"
     },
     {
-      "bytes": 9254,
+      "bytes": 13037,
       "path": "QuestFlightLab/Assets/Tests/PlayMode/RealKbduEnvironmentPlayModeTests.cs",
-      "sha256": "6dbeb782f9f7bab144957f1d5c409c86dce5d035789038ba03e0306fa452ede5"
+      "sha256": "376c9a90e025ea0bba4e9ab533bd1ae22a7162a173d580eb566df6da8406eeea"
     }
   ]
 }

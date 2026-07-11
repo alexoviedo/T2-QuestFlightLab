@@ -21,13 +21,19 @@ Aircraft motion owns the simulation root. The fixed pilot seat and the saved cal
 The imported placeholder's left-seat reference is:
 
 ```text
-PilotSeatAnchor local position: (-0.28, 0.94, 0.00) m
+PilotSeatAnchor local position: (-0.28, 0.94,-0.10) m
 Default calibration offset:     ( 0.00, 0.00, 0.00) m
 ```
 
-This resolves from the model-specific seat reference `(-0.28, 0.72, 0.00)` plus the default eye-height offset `(0.00, 0.22, 0.00)`. Calibration adjusts only `UserViewCalibrationOffset` and does not move the model or simulation root.
+This resolves from the model-specific seat reference `(-0.28, 0.72, 0.00)` plus the default eye offset `(0.00, 0.22,-0.10)`. Aircraft local `+Z` is forward, so the explicit `defaultPilotEyeAftMeters = 0.10` correction is applied as local `-Z`. This replaces the headset user's physical backward step while preserving a plausible forward view. Calibration remains a separate additive transform on `UserViewCalibrationOffset`; it does not move the model or simulation root. Reset returns to this corrected default.
 
-Startup alignment is armed as soon as the seat hierarchy exists, before the cockpit's asynchronous model load. It waits for a valid, tracked, user-present HMD pose and ten consecutive stable pose frames, then recenters exactly once by moving only the XR Origin inside the calibrated seat frame. This prevents a slow model load from exposing a stale room-scale origin as the initial cockpit pose. The tracked Main Camera is never written. Runtime instrumentation records the pending/completed state, successful recenter count, and measured position/yaw error after alignment; final headset confirmation of this path is still pending because the latest relaunch was blocked by Quest's controller-required dialog before Unity started.
+Startup alignment is armed as soon as the seat hierarchy exists, before the cockpit's asynchronous model load. It waits for a valid, tracked, user-present HMD pose and ten consecutive stable pose frames, then recenters exactly once by moving only the XR Origin inside the calibrated seat frame. The recenter targets the corrected seat plus the additive saved calibration, so it cannot erase the 0.10 m aircraft default. This prevents a slow model load from exposing a stale room-scale origin as the initial cockpit pose. The tracked Main Camera is never written. Runtime instrumentation records the pending/completed state, successful recenter count, measured position/yaw error, configured aft distance, and eye-to-panel geometry distance.
+
+## Stable cockpit depth
+
+Realtime cockpit shadow-map sampling remains disabled. The source model's six coarse AO/lightmap-like inputs and its cabin-wide coarse normal atlas also remain neutralized because they caused moving low-resolution patches at seated distance.
+
+Blender batch baking is unavailable on the development machine, so the fallback path performs one deterministic static vertex-depth bake on the imported glTF cabin shell, panel base, seats, seat hardware, belts, yokes, and control paddle. It combines aircraft-local height, fixed surface orientation, and a bounded semantic cavity term. The default strength is `0.30`, clamped to `0.00–0.42`. The result multiplies the glTF shader's vertex color once at load time and adds no material, texture sample, render pass, screen-space overlay, camera dependency, reflection-probe update, or per-frame work. Instrument faces, labels, displays, and glass are excluded to preserve readability. Direct lighting, specular response, and static sky reflections remain active.
 
 ## Runtime controls
 

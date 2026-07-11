@@ -170,6 +170,18 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_sim_v1_202607
 
 Committed derivatives are `kbdu_terrain_rings.json` and `kbdu_reference_context.json` under `Assets/Resources/QuestFlightLab/Environment/KBDU`. The exact requests, timestamps, raw and derived hashes, license records, budgets, and toolchain hashes are pinned in `tools/kbdu_environment/kbdu_source_manifest.json`. No Google Maps, Google Earth, Street View, paid, or unclear-license content is used. The result is not for navigation, surveying, FAA approval, or training credit.
 
+## Quest Visual Stability V2 CC0 Ground Materials
+
+Three official Poly Haven 1K diffuse maps are committed as the optimized runtime sources. Poly Haven publishes these assets under [CC0 1.0](https://polyhaven.com/license); attribution is not legally required, but authorship and exact downloads remain recorded here. Files were downloaded directly as individual JPG maps on `2026-07-11T06:55:03Z`–`06:55:04Z`; no ZIP/raw archive is committed.
+
+| Runtime use | Asset / author | Asset page and exact file | Source and committed resolution | Committed SHA256 |
+| --- | --- | --- | --- | --- |
+| dry prairie | Withered Grass / Charlotte Baglioni | [asset](https://polyhaven.com/a/withered_grass), [1K diffuse JPG](https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/withered_grass/withered_grass_diff_1k.jpg) | 1024×1024 → 1024×1024 | `8BEBFB639EF74F651BC445526C46C845BEEE52A86D831848B82EB2BBBF2D98EE` |
+| short/sparse green grass | Sparse Grass / Amal Kumar | [asset](https://polyhaven.com/a/sparse_grass), [1K diffuse JPG](https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sparse_grass/sparse_grass_diff_1k.jpg) | 1024×1024 → 1024×1024 | `AE94F2B34597B9108EEFD88217F55ECCAEC6D6B382E858A478EE92DF90E66617` |
+| dry soil | Dry Ground 01 / Rob Tuytel | [asset](https://polyhaven.com/a/dry_ground_01), [1K diffuse JPG](https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/dry_ground_01/dry_ground_01_diff_1k.jpg) | 1024×1024 → 1024×1024 | `75222FC97A82B635A09CF8F2891DD58BC42E49599B9FDA920B2C50193FE85E9F` |
+
+`EnvironmentGroundTextureImportPolicy` enforces mipmaps, mip streaming, Repeat wrap, trilinear filtering, anisotropic level 4, a 1024 maximum, and Android ASTC 6×6 high-quality compression. `KbduGroundAntiTile` samples each source once (three texture samples total), blends them with stable world-space macro/mid variation, and fades micro detail from 350 m to 2.4 km to control Quest shimmer. Terrain rings keep one global world mapping so their shared boundaries remain continuous. Context/land-cover batches vary only the secondary texture rotations and phases through a deterministic `MaterialPropertyBlock`; they retain shared material instances and do not reset the primary world-space prairie layer. No normal/displacement map or dense 3D grass field is used.
+
 ## Rules For Future Visual Assets
 
 - Prefer self-generated procedural Unity/Blender assets for quick iteration.

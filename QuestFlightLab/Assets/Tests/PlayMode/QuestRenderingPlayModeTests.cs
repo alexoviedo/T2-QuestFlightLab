@@ -188,6 +188,77 @@ namespace QuestFlightLab.Tests.PlayMode
         }
 
         [Test]
+        public void CockpitStaticVertexDepthIsBoundedDeterministicAndAddsNoMaterial()
+        {
+            Shader gltfShader = Shader.Find("glTF/PbrMetallicRoughness");
+            Assert.That(gltfShader, Is.Not.Null, "The imported cockpit's built-in glTF shader must be available.");
+
+            GameObject root = new GameObject("CockpitStaticDepthTestRoot");
+            GameObject seatObject = new GameObject("Cessna_Interior_Seats_MAT_0");
+            seatObject.transform.SetParent(root.transform, false);
+            Mesh mesh = new Mesh { name = "CockpitStaticDepthTestMesh" };
+            mesh.vertices = new[]
+            {
+                new Vector3(-0.5f, 0f, 0f), new Vector3(0.5f, 0f, 0f), new Vector3(0f, 0f, 0.5f),
+                new Vector3(-0.5f, 2f, 0f), new Vector3(0.5f, 2f, 0f), new Vector3(0f, 2f, 0.5f)
+            };
+            mesh.normals = new[]
+            {
+                Vector3.down, Vector3.down, Vector3.down,
+                Vector3.up, Vector3.up, Vector3.up
+            };
+            mesh.triangles = new[] { 0, 1, 2, 3, 5, 4 };
+            mesh.RecalculateBounds();
+            seatObject.AddComponent<MeshFilter>().sharedMesh = mesh;
+            MeshRenderer renderer = seatObject.AddComponent<MeshRenderer>();
+            Material material = new Material(gltfShader) { name = "Seats_MAT" };
+            renderer.sharedMaterial = material;
+
+            try
+            {
+                CockpitLightingReport report = QuestCockpitLightingPolicy.ConfigureImportedAircraft(
+                    root,
+                    QuestCockpitLightingPolicy.DefaultStaticDepthStrength);
+                Color32[] colors = mesh.colors32;
+
+                Assert.That(renderer.sharedMaterial, Is.SameAs(material));
+                Assert.That(colors.Length, Is.EqualTo(mesh.vertexCount));
+                Assert.That(colors[0].r, Is.LessThan(colors[3].r),
+                    "Lower/downward cabin vertices should receive stronger static depth than upper/upward vertices.");
+                Assert.That(report.staticDepthRendererCount, Is.EqualTo(1));
+                Assert.That(report.staticDepthMeshCount, Is.EqualTo(1));
+                Assert.That(report.staticDepthMeshWriteCount, Is.EqualTo(1));
+                Assert.That(report.staticDepthVertexCount, Is.EqualTo(6));
+                Assert.That(report.staticDepthUnreadableMeshCount, Is.Zero);
+                Assert.That(report.staticDepthMinimumVertexFactor,
+                    Is.InRange(1f - QuestCockpitLightingPolicy.MaximumStaticDepthStrength, 1f));
+                Assert.That(report.remainingRealtimeShadowCasterCount, Is.Zero);
+                Assert.That(report.remainingRealtimeShadowReceiverCount, Is.Zero);
+
+                Color32[] firstColors = (Color32[])colors.Clone();
+                CockpitLightingReport second = QuestCockpitLightingPolicy.ConfigureImportedAircraft(
+                    root,
+                    QuestCockpitLightingPolicy.DefaultStaticDepthStrength);
+                Assert.That(second.staticDepthMeshWriteCount, Is.Zero);
+                Assert.That(mesh.colors32, Is.EqualTo(firstColors), "The one-time vertex bake must be idempotent.");
+
+                float lowerFactor = QuestCockpitLightingPolicy.CalculateStaticDepthVertexFactor(
+                    0f, -1f, 1f, QuestCockpitLightingPolicy.DefaultStaticDepthStrength);
+                float upperFactor = QuestCockpitLightingPolicy.CalculateStaticDepthVertexFactor(
+                    1f, 1f, 0f, QuestCockpitLightingPolicy.DefaultStaticDepthStrength);
+                Assert.That(lowerFactor, Is.LessThan(upperFactor));
+                Assert.That(QuestCockpitLightingPolicy.CalculateStaticDepthVertexFactor(0f, -1f, 1f, 0f),
+                    Is.EqualTo(1f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
+        [Test]
         public void RenderProfileUsesStableCascadeSkyReflectionAndFullTerrainFarClip()
         {
             GameObject cameraObject = new GameObject("QuestRenderProfileTestCamera");
