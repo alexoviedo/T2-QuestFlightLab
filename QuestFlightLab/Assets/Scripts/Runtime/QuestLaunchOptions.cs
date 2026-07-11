@@ -15,12 +15,14 @@ namespace QuestFlightLab.Runtime
         public const string SplatDiagnosticKey = "qfl_splat_diagnostic";
         public const string CockpitEyeZKey = "qfl_cockpit_eye_z";
         public const string SeatCalibrationKey = "qfl_seat_calibration";
+        public const string OpenSeatCalibrationKey = "qfl_open_seat_calibration";
         public const string PilotViewOffsetXKey = "qfl_pilot_view_offset_x";
         public const string PilotViewOffsetYKey = "qfl_pilot_view_offset_y";
         public const string PilotViewOffsetZKey = "qfl_pilot_view_offset_z";
         public const string CockpitYawDegKey = "qfl_cockpit_yaw_deg";
         public const string ManualHeadPoseKey = "qfl_manual_head_pose";
         public const string ResetSeatCalibrationKey = "qfl_reset_seat_calibration";
+        public const string FlightBackendKey = "qfl_flight_backend";
 
         private const string LogPrefix = "[QuestFlightLab][LaunchOptions]";
         private static Dictionary<string, string> _fileOptions;
@@ -73,9 +75,19 @@ namespace QuestFlightLab.Runtime
             return ReadBool(SeatCalibrationKey, Application.platform == RuntimePlatform.Android || ShortPlaytestDemoRequested() || VisualFidelityDemoRequested());
         }
 
+        public static bool OpenSeatCalibrationRequested()
+        {
+            return ReadBool(OpenSeatCalibrationKey, false);
+        }
+
         public static bool ResetSeatCalibrationRequested()
         {
             return ReadBool(ResetSeatCalibrationKey, false);
+        }
+
+        public static string FlightBackend()
+        {
+            return Normalize(ReadString(FlightBackendKey, string.Empty));
         }
 
         public static bool ReadBool(string key, bool fallback)

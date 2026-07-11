@@ -43,6 +43,11 @@ QuestFlightLab/Assets/Experimental/Splats/Generated.meta
 # JSBSim local probe scratch output
 JSBout*.csv
 
+# Python toolchain caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

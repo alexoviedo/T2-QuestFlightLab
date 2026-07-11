@@ -19,6 +19,13 @@ New-Item -ItemType Directory -Force -Path $ArtifactDir | Out-Null
 $env:QFL_ARTIFACT_DIR = $ArtifactDir
 
 $log = Join-Path $ArtifactDir 'unity_editor_scenario_tests.log'
+$lock = Join-Path $ProjectPath 'Temp\UnityLockfile'
+if (Test-Path $lock) {
+  if (Get-Process Unity -ErrorAction SilentlyContinue) {
+    throw "Unity is already running; refusing to remove the active project lock: $lock"
+  }
+  Remove-Item -LiteralPath $lock -Force
+}
 $args = @(
   '-batchmode',
   '-quit',

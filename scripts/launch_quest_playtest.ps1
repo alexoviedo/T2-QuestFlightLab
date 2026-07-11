@@ -8,6 +8,8 @@ param(
   [switch]$ResetSeatCalibration,
   [switch]$ManualHeadPose,
   [switch]$CaptureLogcat,
+  [ValidateSet('','unity_prototype','jsbsim_native')]
+  [string]$FlightBackend = '',
   [int]$DurationSeconds = 30,
   [string]$CockpitEyeZ = '',
   [string]$PilotViewOffsetX = '',
@@ -30,6 +32,29 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
 }
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
+
+function Capture-QuestScreenshot {
+  param([string]$Path, [string]$ErrorPath)
+  $capture = New-Object System.Diagnostics.ProcessStartInfo
+  $capture.FileName = $AdbExe
+  $capture.Arguments = 'exec-out screencap -p'
+  $capture.UseShellExecute = $false
+  $capture.RedirectStandardOutput = $true
+  $capture.RedirectStandardError = $true
+  $process = [System.Diagnostics.Process]::Start($capture)
+  $fileStream = [System.IO.File]::Create($Path)
+  try {
+    $process.StandardOutput.BaseStream.CopyTo($fileStream)
+  }
+  finally {
+    $fileStream.Dispose()
+  }
+  $process.WaitForExit()
+  $screencapError = $process.StandardError.ReadToEnd()
+  if ($process.ExitCode -ne 0 -or (Test-Path $Path) -eq $false -or (Get-Item $Path).Length -eq 0) {
+    Set-Content -Path $ErrorPath -Value $screencapError -Encoding UTF8
+  }
+}
 
 & $AdbExe start-server | Out-Null
 $devices = (& $AdbExe devices -l | Out-String)
@@ -67,6 +92,7 @@ if ($SplatDiagnostic) {
 
 if ($SeatCalibration) {
   $launchArgs += @('--es', 'qfl_seat_calibration', 'true')
+  $launchArgs += @('--es', 'qfl_open_seat_calibration', 'true')
 }
 
 if ($ResetSeatCalibration) {
@@ -75,6 +101,10 @@ if ($ResetSeatCalibration) {
 
 if ($ManualHeadPose) {
   $launchArgs += @('--es', 'qfl_manual_head_pose', 'true')
+}
+
+if (![string]::IsNullOrWhiteSpace($FlightBackend)) {
+  $launchArgs += @('--es', 'qfl_flight_backend', $FlightBackend)
 }
 
 if (![string]::IsNullOrWhiteSpace($CockpitEyeZ)) {
@@ -112,6 +142,7 @@ if ($SplatDiagnostic) {
 
 if ($SeatCalibration) {
   $optionEntries += @{ key = 'qfl_seat_calibration'; value = 'true' }
+  $optionEntries += @{ key = 'qfl_open_seat_calibration'; value = 'true' }
 }
 
 if ($ResetSeatCalibration) {
@@ -120,6 +151,10 @@ if ($ResetSeatCalibration) {
 
 if ($ManualHeadPose) {
   $optionEntries += @{ key = 'qfl_manual_head_pose'; value = 'true' }
+}
+
+if (![string]::IsNullOrWhiteSpace($FlightBackend)) {
+  $optionEntries += @{ key = 'qfl_flight_backend'; value = $FlightBackend }
 }
 
 if (![string]::IsNullOrWhiteSpace($CockpitEyeZ)) {
@@ -157,31 +192,17 @@ Set-Content -Path (Join-Path $OutputDir 'app_launch.txt') -Value $launch -Encodi
 $screenshotDelay = [Math]::Max(3, [Math]::Min(12, [Math]::Floor($DurationSeconds / 2)))
 Start-Sleep -Seconds $screenshotDelay
 
-$screenshot = Join-Path $OutputDir 'adb_screenshot.png'
-$capture = New-Object System.Diagnostics.ProcessStartInfo
-$capture.FileName = $AdbExe
-$capture.Arguments = 'exec-out screencap -p'
-$capture.UseShellExecute = $false
-$capture.RedirectStandardOutput = $true
-$capture.RedirectStandardError = $true
-$process = [System.Diagnostics.Process]::Start($capture)
-$fileStream = [System.IO.File]::Create($screenshot)
-try {
-  $process.StandardOutput.BaseStream.CopyTo($fileStream)
-}
-finally {
-  $fileStream.Dispose()
-}
-$process.WaitForExit()
-$screencapError = $process.StandardError.ReadToEnd()
-if ($process.ExitCode -ne 0 -or (Test-Path $screenshot) -eq $false -or (Get-Item $screenshot).Length -eq 0) {
-  Set-Content -Path (Join-Path $OutputDir 'adb_screenshot_error.txt') -Value $screencapError -Encoding UTF8
-}
+$screenshot = Join-Path $OutputDir 'adb_screenshot_startup.png'
+Capture-QuestScreenshot -Path $screenshot -ErrorPath (Join-Path $OutputDir 'adb_screenshot_startup_error.txt')
 
 $remaining = [Math]::Max(0, $DurationSeconds - $screenshotDelay)
 if ($remaining -gt 0) {
   Start-Sleep -Seconds $remaining
 }
+
+Capture-QuestScreenshot `
+  -Path (Join-Path $OutputDir 'adb_screenshot_final.png') `
+  -ErrorPath (Join-Path $OutputDir 'adb_screenshot_final_error.txt')
 
 if ($CaptureLogcat) {
   & $AdbExe logcat -d | Set-Content -Path (Join-Path $OutputDir 'logcat.txt') -Encoding UTF8
@@ -194,7 +215,10 @@ $pullRoots = @(
   'scenery_runtime',
   'first_view_diagnostics',
   'demo_pilot',
-  'seat_calibration'
+  'seat_calibration',
+  'flight_backend',
+  'render_quality',
+  'render_performance'
 )
 
 foreach ($root in $pullRoots) {

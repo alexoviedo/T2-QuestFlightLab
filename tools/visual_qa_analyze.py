@@ -90,6 +90,58 @@ def read_png_rgba(path: pathlib.Path) -> tuple[int, int, bytes]:
     return width, height, rgba
 
 
+def write_png_rgba(path: pathlib.Path, width: int, height: int, rgba: bytes) -> None:
+    if len(rgba) != width * height * 4:
+        raise ValueError("RGBA byte count does not match dimensions")
+    raw = bytearray()
+    stride = width * 4
+    for y in range(height):
+        raw.append(0)
+        raw.extend(rgba[y * stride : (y + 1) * stride])
+
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(payload))
+            + kind
+            + payload
+            + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+        )
+
+    png = bytearray(b"\x89PNG\r\n\x1a\n")
+    png.extend(chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)))
+    png.extend(chunk(b"IDAT", zlib.compress(bytes(raw), level=6)))
+    png.extend(chunk(b"IEND", b""))
+    path.write_bytes(bytes(png))
+
+
+def create_before_after_contact_sheet(baseline: pathlib.Path, current: pathlib.Path, output: pathlib.Path) -> dict:
+    before_width, before_height, before = read_png_rgba(baseline)
+    after_width, after_height, after = read_png_rgba(current)
+    width = before_width + after_width
+    height = max(before_height, after_height)
+    canvas = bytearray(bytes((16, 18, 22, 255)) * (width * height))
+
+    def blit(source: bytes, source_width: int, source_height: int, offset_x: int) -> None:
+        source_stride = source_width * 4
+        target_stride = width * 4
+        for y in range(source_height):
+            src_start = y * source_stride
+            dst_start = y * target_stride + offset_x * 4
+            canvas[dst_start : dst_start + source_stride] = source[src_start : src_start + source_stride]
+
+    blit(before, before_width, before_height, 0)
+    blit(after, after_width, after_height, before_width)
+    write_png_rgba(output, width, height, bytes(canvas))
+    return {
+        "baseline_contact_sheet": str(baseline),
+        "current_contact_sheet": str(current),
+        "before_after_contact_sheet": str(output),
+        "layout": "baseline left; current right",
+        "width": width,
+        "height": height,
+    }
+
+
 def paeth(a: int, b: int, c: int) -> int:
     p = a + b - c
     pa = abs(p - a)
@@ -143,6 +195,7 @@ def analyze_png(path: pathlib.Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Visual QA artifact directory")
+    parser.add_argument("--baseline", help="Baseline Visual QA directory or contact-sheet PNG")
     parser.add_argument("--fail-on-errors", action="store_true")
     args = parser.parse_args()
 
@@ -151,6 +204,7 @@ def main() -> int:
     screenshots = sorted((root / "screenshots").glob("*.png"))
     checks = []
     errors: list[str] = []
+    comparison = None
 
     if report_path.exists():
         report = json.loads(report_path.read_text(encoding="utf-8-sig"))
@@ -183,11 +237,30 @@ def main() -> int:
     if report and not report.get("passed", False):
         errors.append("Unity visual QA report marked overall pass=false")
 
+    if args.baseline:
+        baseline = pathlib.Path(args.baseline)
+        if baseline.is_dir():
+            baseline = baseline / "visual_qa_contact_sheet.png"
+        current = root / "visual_qa_contact_sheet.png"
+        try:
+            if not baseline.exists():
+                raise FileNotFoundError(f"baseline contact sheet not found: {baseline}")
+            if not current.exists():
+                raise FileNotFoundError(f"current contact sheet not found: {current}")
+            comparison = create_before_after_contact_sheet(
+                baseline,
+                current,
+                root / "visual_qa_before_after.png",
+            )
+        except Exception as exc:  # noqa: BLE001 - surfaced as QA evidence
+            errors.append(f"before/after contact sheet: {exc}")
+
     analysis = {
         "input": str(root),
         "screenshot_count": len(screenshots),
         "unity_report_passed": report.get("passed") if report else None,
         "checks": checks,
+        "comparison": comparison,
         "errors": errors,
         "passed": not errors,
     }
@@ -211,6 +284,13 @@ def markdown(analysis: dict) -> str:
         f"- Screenshot count: {analysis['screenshot_count']}",
         f"- Unity report passed: {analysis['unity_report_passed']}",
         f"- Analysis passed: {analysis['passed']}",
+    ]
+    if analysis.get("comparison"):
+        lines += [
+            f"- Before/after contact sheet: `{analysis['comparison']['before_after_contact_sheet']}`",
+            f"- Comparison layout: {analysis['comparison']['layout']}",
+        ]
+    lines += [
         "",
         "| Screenshot | Not Blank | Non-Background | Green Text | Variance |",
         "| --- | --- | ---: | ---: | ---: |",

@@ -10,6 +10,7 @@ namespace QuestFlightLab.UI
     public class PlaytestHud : MonoBehaviour
     {
         private const string HudName = "Quest Playtest HUD";
+        public const float TextRefreshIntervalSeconds = 0.125f;
 
         public static PlaytestHud Instance { get; private set; }
 
@@ -28,6 +29,7 @@ namespace QuestFlightLab.UI
         private int _frames;
         private float _fpsWindowStart;
         private float _currentFps;
+        private float _nextTextRefreshTime;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -53,7 +55,12 @@ namespace QuestFlightLab.UI
 
         private void Update()
         {
+            // Keep the FPS accumulator frame-accurate, but avoid rebuilding a
+            // TextMesh and its backing strings on every rendered frame.
             UpdateFps();
+            if (Time.unscaledTime < _nextTextRefreshTime) return;
+
+            _nextTextRefreshTime = Time.unscaledTime + TextRefreshIntervalSeconds;
             RefreshBindings();
             RenderText();
         }
@@ -74,6 +81,7 @@ namespace QuestFlightLab.UI
             BuildHud();
             RefreshBindings();
             RenderText();
+            _nextTextRefreshTime = Time.unscaledTime + TextRefreshIntervalSeconds;
             Debug.Log($"[QuestFlightLab][PlaytestHUD] Compact HUD active. hiddenVerbosePanels={HiddenVerbosePanelCount}");
         }
 
@@ -185,12 +193,8 @@ namespace QuestFlightLab.UI
             if (repair != null && repair.SeatCalibrationEnabled)
             {
                 Vector3 offset = repair.ImportedC172PilotViewOffsetUsed;
-                float yaw = repair.ImportedC172CockpitYawDegUsed;
-                _buffer.AppendLine($"SEAT X {offset.x:+0.00;-0.00;0.00}  Y {offset.y:+0.00;-0.00;0.00}  Z {offset.z:+0.00;-0.00;0.00}  YAW {yaw:+000;-000;000}");
-                string status = string.IsNullOrWhiteSpace(repair.SeatCalibrationStatus) ? "adjusting" : repair.SeatCalibrationStatus;
-                string active = repair.SeatCalibrationModeActive ? "SEAT ON" : repair.SeatCalibrationAdjustmentActive ? "QUICK ADJUST" : "seat ready";
-                _buffer.AppendLine($"A seat/save  X forward  B reset  {active}");
-                _buffer.Append($"ON or grip+sticks adjust  both grips=fine  {status}");
+                string active = repair.SeatCalibrationModeActive ? "CALIBRATION OPEN" : "Left Menu / C: seat view";
+                _buffer.Append($"SEAT {offset.x:+0.00;-0.00;0.00}/{offset.y:+0.00;-0.00;0.00}/{offset.z:+0.00;-0.00;0.00}  {active}");
             }
             else
             {

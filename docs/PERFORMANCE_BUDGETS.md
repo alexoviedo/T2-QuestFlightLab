@@ -1,42 +1,72 @@
 # Performance Budgets
 
-## Quest Default Direction
+## Quest 3 production target
 
-The playable Quest demo should prefer deterministic, local, bounded scenery over streaming or heavy renderer experiments.
+`visual_fidelity_demo` targets 72 Hz on Quest 3, a 13.89 ms frame budget, no more than roughly 300 busy-scene draw calls, and no more than roughly 1.3 million visible triangles. These are acceptance targets, not guarantees.
 
-Current `visual_fidelity_demo` budget:
+The Android render policy currently uses:
 
-| Area | Current Budget |
+| Setting | Android value |
 | --- | --- |
-| Environment footprint | 14.56 km x 14.56 km KBDU-inspired visual area |
-| Terrain chunks | 169 mesh chunks with near/mid/far detail rings |
-| Far scenery | Low-cost ridge impostor meshes |
-| Airport clutter | Procedural hangars, lights, cones, taxi-lanes, field/road/perimeter cues |
-| Visual QA LOD groups | 462 in the quality-gate 2026-07-08 run |
-| Approx world triangles | 34,108 in quality-gate visual QA budget evidence |
-| Render quality | 4x MSAA in visual QA/runtime visual profile; Android project default Medium uses MSAA |
-| Texture source | Runtime procedural material/noise textures; no large downloaded textures committed |
-| Gaussian splats | Diagnostic/fallback only until Quest XR stereo/world-lock issue is fixed |
+| Graphics / XR | Vulkan, OpenXR, single-pass multiview |
+| Anti-aliasing | 4x MSAA |
+| Eye texture scale | 1.00 |
+| Fixed foveation | 0.45 when supported |
+| LOD bias | 1.25 |
+| Texture policy | ASTC build compression, mipmaps, forced anisotropic filtering |
+| Far clip / haze | 18,000 m / exponential fog |
+| Directional shadows | 40 m, two cascades, low-resolution mobile profile |
+| First-person cockpit shadows | Realtime casting and receiving disabled; stable direct/specular light and static sky reflections retained |
+| Reflections | 128 px static sky reflection, no realtime probes |
 
-## Instrumentation
+Disabling cockpit shadow-map sampling is a stability workaround for the imported model's visible low-resolution moving patches. It is not equivalent to physically complete cockpit self-shadowing and still needs a temporal headset confirmation.
 
-`WorldPerformanceBudget` records the world profile, footprint, terrain chunk count, LOD group count, renderer count, mesh count, approximate triangle count, material count, texture count, near/mid/far radii, and notes. `VisualQaBatchRunner` includes this status and the active render-quality profile in its Markdown/JSON output.
+## Current world and static budget
 
-Latest deterministic visual QA budget evidence:
+The real-data KBDU world uses four terrain layers over 4 km, 12 km, and 24 km coverage, stitched deterministic transition bands, 5,522 source OSM features, and FAA runway geometry. The integrated builder reports 164 world renderers and approximately 121,787 world triangles before the rest of the scene is included.
+
+Latest deterministic Editor Visual QA (`final_visual_qa_preload_alignment`):
 
 ```text
-profile=visual_fidelity_demo_medium size=14560x14560m chunks=169 lodGroups=462 renderers=686 meshes=686 tris~34108 materials=18 textures=16 draw=9200m
+scene renderers                 781
+estimated frustum renderers     104
+estimated instanced draw calls   73 / 300
+estimated visible triangles  97,079 / 1,300,000
+unique materials / shaders       49 / 3
+LOD coverage after optimization 381 / 781
 ```
 
-Quality-gate render profile evidence records MSAA 4, anisotropic filtering forced on, LOD bias 1.90 in editor visual QA, shadow distance 135 m, far clip 12000 m, mip limit 0, and procedural sky/fog for distance readability.
+The estimates pass the static draw-call and triangle guardrails. Editor per-shot hardware counters were unavailable, so these values are scene-audit/frustum estimates rather than Quest GPU counters.
+
+## On-device result
+
+The most recent valid Quest 3 timing sample was captured before the final startup-alignment, diagnostic-throttling, LOD-filtering, and cockpit-shadow changes:
+
+```text
+sample time                     2026-07-10 23:18 UTC
+average frame time              14.53 ms (68.84 estimated FPS)
+p95 / p99 frame time            15.15 / 23.70 ms
+CPU p95                         15.46 ms
+GPU timing                      unavailable (reported 0.00 ms)
+frames over 13.89 ms            87 / 180 (48.3%)
+instanced draw-call estimate      139 / 300
+visible triangle estimate     434,431 / 1,300,000
+materials / variant signatures    71 / 10
+72 Hz plausibility              FAIL
+```
+
+Evidence: `C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\production_sim_v1_20260710_151201\quest_visual_refinement_smoke\pulled_render_performance\render_performance\render_performance_20260710_231814.md`.
+
+The final APK relaunch at 23:26 UTC was intercepted by Horizon OS because the Touch controllers were unavailable/asleep, and the headset then slept. Unity never started, so the old files pulled during that attempt are not final performance evidence. The optimized build's 72 Hz result therefore remains unproven.
 
 ## Guardrails
 
-- Do not commit large raw terrain, APK, screenshot, video, or splat files.
-- Do not add full geospatial streaming to `main` until a research branch proves build stability and memory/performance feasibility.
-- Keep `visual_fidelity_demo` green in visual QA, editor scenarios, PlayMode, and APK build after scenery changes.
-- Prefer LOD/impostors and small optimized CC0/procedural assets over large photogrammetry drops.
+- Do not commit Unity `Library`, `Temp`, `Obj`, `Logs`, `Builds`, APKs, raw captures, package caches, or raw geospatial downloads.
+- Keep the mesh/terrain fallback available; experimental splats are not the production default.
+- Add scenery only when it preserves the draw-call, triangle, memory, and temporal-stability budgets.
+- Use instancing, shared materials, deterministic LOD/culling, mipmaps, and atmospheric distance treatment.
+- Treat Quest frame timing, OVR/Meta GPU counters, thermals, stereo comfort, shimmer, and shadow stability as headset-only evidence.
 
-## Current Limitations
+## Next performance gate
 
-These budgets are editor/build guardrails, not final Quest runtime performance proof. A future Quest smoke must capture headset/logcat/frame timing for the visual-fidelity mode before claiming headset performance.
+With the headset worn and both Touch controllers awake, run three 60-second representative pattern segments after a 90-second warmup. Each run must show p95 frame time at or below 13.89 ms, no startup-alignment failure, stable mountains through head pans, and no cockpit shadow crawl. Capture Meta/OVR GPU counters if available; Unity's zero GPU timing is not sufficient.

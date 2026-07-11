@@ -22,6 +22,32 @@ namespace QuestFlightLab.Runtime
         public string activeCameraName;
         public string activeCameraPath;
         public string xrOriginName;
+        public string aircraftSimulationRootPath;
+        public string aircraftVisualRootPath;
+        public string pilotSeatAnchorPath;
+        public string userViewCalibrationOffsetPath;
+        public string aircraftRotationPivotPath;
+        public string centerOfGravityReferencePath;
+        public Vector3 centerOfGravityLocalOffset;
+        public string cameraPoseOwner;
+        public string trackedPosePositionBinding;
+        public string trackedPoseRotationBinding;
+        public bool referenceFrameHierarchyValid;
+        public bool trackedCameraUnderXrOrigin;
+        public bool trackedPoseDriverConfigured;
+        public int trackedPoseResolvedControlCount;
+        public int enabledXrOriginCount;
+        public string leftControllerPath;
+        public string rightControllerPath;
+        public bool controllerPoseDriversConfigured;
+        public int leftControllerResolvedControlCount;
+        public int rightControllerResolvedControlCount;
+        public Vector3 xrOriginLocalPosition;
+        public Vector3 xrOriginLocalEuler;
+        public Vector3 trackedCameraLocalPosition;
+        public Vector3 trackedCameraLocalEuler;
+        public Vector3 cameraSeatRelativeEuler;
+        public float cameraToAircraftForwardAngleDeg;
         public bool xrSettingsEnabled;
         public bool xrDeviceActive;
         public bool xrLoaderActive;
@@ -38,8 +64,17 @@ namespace QuestFlightLab.Runtime
         public int manualHeadBaselineRecaptureCount;
         public string manualHeadBaselineStatus;
         public string headPoseMode;
+        public bool startupSeatAlignmentPending;
+        public bool startupSeatAlignmentCompleted;
+        public int startupSeatStableFrameCount;
+        public int startupSeatStableFramesRequired;
+        public int startupSeatRecenterCount;
+        public string startupSeatAlignmentStatus;
+        public float startupSeatPositionErrorMeters;
+        public float startupSeatYawErrorDegrees;
         public bool importedC172Loaded;
         public int importedExteriorRendererHiddenCount;
+        public CockpitLightingReport importedC172Lighting;
         public Vector3 importedC172BoundsSize;
         public Vector3 importedC172CockpitModelEye;
         public Vector3 importedC172PilotViewOffset;
@@ -69,12 +104,14 @@ namespace QuestFlightLab.Runtime
     public class FirstViewPlaytestDiagnostics : MonoBehaviour
     {
         private const string LogPrefix = "[QuestFlightLab][FirstViewDiagnostics]";
+        public const float HeavyRefreshIntervalSeconds = 0.25f;
 
         public static FirstViewPlaytestDiagnostics Instance { get; private set; }
 
         public float maxSampleSeconds = 180f;
         public float writeIntervalSeconds = 5f;
         public string EvidencePath => _evidence != null ? _evidence.evidencePath : string.Empty;
+        public bool InitialDiagnosticScreenshotsComplete { get; private set; }
 
         private Camera _camera;
         private Transform _xrOrigin;
@@ -84,6 +121,7 @@ namespace QuestFlightLab.Runtime
         private float _maxPitchAbs;
         private float _maxPositionDelta;
         private float _startTime;
+        private float _nextHeavyRefreshTime;
         private float _nextWriteTime;
         private FirstViewPlaytestEvidence _evidence;
 
@@ -104,6 +142,7 @@ namespace QuestFlightLab.Runtime
             yield return null;
             ResolveCamera();
             _startTime = Time.unscaledTime;
+            _nextHeavyRefreshTime = Time.unscaledTime + HeavyRefreshIntervalSeconds;
             _nextWriteTime = Time.unscaledTime + writeIntervalSeconds;
 
             if (_camera != null)
@@ -127,13 +166,19 @@ namespace QuestFlightLab.Runtime
             float elapsed = Time.unscaledTime - _startTime;
             if (elapsed <= maxSampleSeconds)
             {
+                // Pose maxima remain frame-accurate. Scene-wide hierarchy/input
+                // inspection is evidence work and only needs a human-readable 4 Hz cadence.
                 SamplePose(elapsed);
+                if (Time.unscaledTime >= _nextHeavyRefreshTime)
+                {
+                    RefreshEvidence(_evidence, elapsed);
+                    _nextHeavyRefreshTime = Time.unscaledTime + HeavyRefreshIntervalSeconds;
+                }
             }
 
             if (Time.unscaledTime >= _nextWriteTime)
             {
                 WriteEvidence();
-                _nextWriteTime = Time.unscaledTime + writeIntervalSeconds;
             }
         }
 
@@ -185,7 +230,21 @@ namespace QuestFlightLab.Runtime
             _maxPositionDelta = Mathf.Max(_maxPositionDelta, position);
 
             _evidence.sampleCount++;
-            RefreshEvidence(_evidence, elapsed);
+            UpdatePoseSummary(_evidence, elapsed);
+        }
+
+        private void UpdatePoseSummary(FirstViewPlaytestEvidence evidence, float elapsed)
+        {
+            evidence.sampleSeconds = elapsed;
+            evidence.localYawDeltaDeg = _maxYawAbs;
+            evidence.localPitchDeltaDeg = _maxPitchAbs;
+            evidence.localPositionDeltaMeters = _maxPositionDelta;
+            evidence.headPoseChanged = _maxYawAbs > 1.5f ||
+                                       _maxPitchAbs > 1.5f ||
+                                       _maxPositionDelta > 0.025f ||
+                                       evidence.manualHeadYawDeltaDeg > 1.5f ||
+                                       evidence.manualHeadPitchDeltaDeg > 1.5f ||
+                                       evidence.manualHeadPositionDeltaMeters > 0.025f;
         }
 
         private void RefreshEvidence(FirstViewPlaytestEvidence evidence, float elapsed)
@@ -218,8 +277,58 @@ namespace QuestFlightLab.Runtime
                 evidence.manualHeadBaselineRecaptureCount = repair.HeadBaselineRecaptureCount;
                 evidence.manualHeadBaselineStatus = repair.HeadBaselineStatus;
                 evidence.headPoseMode = repair.HeadPoseMode;
+                evidence.startupSeatAlignmentPending = repair.StartupSeatAlignmentPending;
+                evidence.startupSeatAlignmentCompleted = repair.StartupSeatAlignmentCompleted;
+                evidence.startupSeatStableFrameCount = repair.StartupSeatStableFrameCount;
+                evidence.startupSeatStableFramesRequired = Mathf.Max(2, repair.startupSeatStableFramesRequired);
+                evidence.startupSeatRecenterCount = repair.StartupSeatRecenterCount;
+                evidence.startupSeatAlignmentStatus = repair.StartupSeatAlignmentStatus;
+                evidence.startupSeatPositionErrorMeters = repair.StartupSeatPositionErrorMeters;
+                evidence.startupSeatYawErrorDegrees = repair.StartupSeatYawErrorDegrees;
+                AircraftReferenceFrameRig rig = repair.ReferenceFrameRig;
+                evidence.aircraftSimulationRootPath = rig != null && rig.AircraftSimulationRoot != null ? PathFor(rig.AircraftSimulationRoot) : string.Empty;
+                evidence.aircraftVisualRootPath = rig != null && rig.AircraftVisualRoot != null ? PathFor(rig.AircraftVisualRoot) : string.Empty;
+                evidence.pilotSeatAnchorPath = rig != null && rig.PilotSeatAnchor != null ? PathFor(rig.PilotSeatAnchor) : string.Empty;
+                evidence.userViewCalibrationOffsetPath = rig != null && rig.UserViewCalibrationOffset != null ? PathFor(rig.UserViewCalibrationOffset) : string.Empty;
+                // Rotation is applied to AircraftSimulationRoot; the CG child is
+                // a zero-offset reference marker, not a substitute pivot owner.
+                evidence.aircraftRotationPivotPath = rig != null && rig.AircraftSimulationRoot != null ? PathFor(rig.AircraftSimulationRoot) : string.Empty;
+                evidence.centerOfGravityReferencePath = rig != null && rig.CenterOfGravityReference != null ? PathFor(rig.CenterOfGravityReference) : string.Empty;
+                evidence.centerOfGravityLocalOffset = rig != null && rig.CenterOfGravityReference != null ? rig.CenterOfGravityReference.localPosition : Vector3.zero;
+                evidence.trackedPoseDriverConfigured = TrackedXrCameraPoseDriver.HasRequiredBindings(_camera);
+                evidence.trackedPosePositionBinding = TrackedXrCameraPoseDriver.PositionBindingPath(_camera);
+                evidence.trackedPoseRotationBinding = TrackedXrCameraPoseDriver.RotationBindingPath(_camera);
+                evidence.trackedPoseResolvedControlCount = TrackedXrCameraPoseDriver.ResolvedControlCount(_camera);
+                evidence.enabledXrOriginCount = CountEnabledXrOrigins();
+                evidence.leftControllerPath = rig != null && rig.LeftController != null ? PathFor(rig.LeftController) : string.Empty;
+                evidence.rightControllerPath = rig != null && rig.RightController != null ? PathFor(rig.RightController) : string.Empty;
+                evidence.controllerPoseDriversConfigured = rig != null && TrackedXrControllerPoseDrivers.HasRequiredHierarchy(rig.XrOrigin);
+                evidence.leftControllerResolvedControlCount = rig != null ? TrackedXrControllerPoseDrivers.ResolvedControlCount(rig.LeftController) : 0;
+                evidence.rightControllerResolvedControlCount = rig != null ? TrackedXrControllerPoseDrivers.ResolvedControlCount(rig.RightController) : 0;
+                evidence.xrOriginLocalPosition = rig != null && rig.XrOrigin != null ? rig.XrOrigin.localPosition : Vector3.zero;
+                evidence.xrOriginLocalEuler = rig != null && rig.XrOrigin != null ? SignedEuler(rig.XrOrigin.localRotation) : Vector3.zero;
+                evidence.trackedCameraLocalPosition = _camera != null ? _camera.transform.localPosition : Vector3.zero;
+                evidence.trackedCameraLocalEuler = _camera != null ? SignedEuler(_camera.transform.localRotation) : Vector3.zero;
+                if (rig != null && rig.PilotSeatAnchor != null && _camera != null)
+                {
+                    Quaternion cameraInSeat = Quaternion.Inverse(rig.PilotSeatAnchor.rotation) * _camera.transform.rotation;
+                    evidence.cameraSeatRelativeEuler = SignedEuler(cameraInSeat);
+                    evidence.cameraToAircraftForwardAngleDeg = Vector3.Angle(
+                        _camera.transform.forward,
+                        rig.AircraftVisualRoot.forward);
+                }
+                bool trackedPoseResolved = Application.platform != RuntimePlatform.Android || evidence.trackedPoseResolvedControlCount >= 2;
+                evidence.cameraPoseOwner = evidence.trackedPoseDriverConfigured && trackedPoseResolved
+                    ? "OpenXR TrackedPoseDriver"
+                    : "INVALID: tracked pose bindings or resolved HMD controls missing";
+                evidence.referenceFrameHierarchyValid = rig != null &&
+                                                        rig.ValidateHierarchy() &&
+                                                        evidence.enabledXrOriginCount == 1 &&
+                                                        evidence.controllerPoseDriversConfigured;
+                evidence.trackedCameraUnderXrOrigin = rig != null && _camera != null && _camera.transform.IsChildOf(rig.XrOrigin);
                 evidence.importedC172Loaded = repair.ImportedC172Loaded;
                 evidence.importedExteriorRendererHiddenCount = repair.ImportedExteriorRendererHiddenCount;
+                evidence.importedC172Lighting = repair.ImportedC172Lighting;
                 evidence.importedC172BoundsSize = repair.ImportedC172BoundsSize;
                 evidence.importedC172CockpitModelEye = repair.ImportedC172CockpitModelEyeUsed;
                 evidence.importedC172PilotViewOffset = repair.ImportedC172PilotViewOffsetUsed;
@@ -236,22 +345,17 @@ namespace QuestFlightLab.Runtime
             evidence.playtestHudActive = PlaytestHud.Instance != null && PlaytestHud.Instance.Root != null;
             evidence.hiddenVerbosePanelCount = PlaytestHud.Instance != null ? PlaytestHud.Instance.HiddenVerbosePanelCount : 0;
             evidence.hudLineCount = PlaytestHud.Instance != null ? PlaytestHud.Instance.VisibleLineCount : 0;
-            evidence.sampleSeconds = elapsed;
-            evidence.localYawDeltaDeg = _maxYawAbs;
-            evidence.localPitchDeltaDeg = _maxPitchAbs;
-            evidence.localPositionDeltaMeters = _maxPositionDelta;
-            evidence.headPoseChanged = _maxYawAbs > 1.5f ||
-                                       _maxPitchAbs > 1.5f ||
-                                       _maxPositionDelta > 0.025f ||
-                                       evidence.manualHeadYawDeltaDeg > 1.5f ||
-                                       evidence.manualHeadPitchDeltaDeg > 1.5f ||
-                                       evidence.manualHeadPositionDeltaMeters > 0.025f;
+            UpdatePoseSummary(evidence, elapsed);
         }
 
         private void WriteEvidence()
         {
             if (_evidence == null) return;
-            RefreshEvidence(_evidence, Mathf.Max(0f, Time.unscaledTime - _startTime));
+            float now = Time.unscaledTime;
+            RefreshEvidence(_evidence, Mathf.Max(0f, now - _startTime));
+            // Screenshot-triggered writes also restart the periodic interval so
+            // evidence I/O cannot cluster immediately after a diagnostic capture.
+            _nextWriteTime = now + writeIntervalSeconds;
 
             try
             {
@@ -262,6 +366,23 @@ namespace QuestFlightLab.Runtime
             {
                 Debug.LogWarning($"{LogPrefix} Evidence write failed: {ex.Message}");
             }
+        }
+
+        private static int CountEnabledXrOrigins()
+        {
+            Type xrOriginType = Type.GetType("Unity.XR.CoreUtils.XROrigin, Unity.XR.CoreUtils");
+            if (xrOriginType == null) return 0;
+
+            int count = 0;
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (behaviour != null && behaviour.enabled && behaviour.gameObject.activeInHierarchy && xrOriginType.IsInstanceOfType(behaviour))
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private IEnumerator CaptureFirstViewScreenshots()
@@ -286,11 +407,14 @@ namespace QuestFlightLab.Runtime
             yield return new WaitForEndOfFrame();
             CaptureFirstViewScreenshot("imported_c172");
             WriteEvidence();
+            InitialDiagnosticScreenshotsComplete = true;
+            Debug.Log($"{LogPrefix} Initial diagnostic screenshot sequence complete.");
         }
 
         private void CaptureFirstViewScreenshot(string label)
         {
             if (_evidence == null) return;
+            RefreshEvidence(_evidence, Mathf.Max(0f, Time.unscaledTime - _startTime));
 
             try
             {
@@ -434,6 +558,15 @@ namespace QuestFlightLab.Runtime
         private static float NormalizeAngle(float angle)
         {
             return Mathf.Repeat(angle + 180f, 360f) - 180f;
+        }
+
+        private static Vector3 SignedEuler(Quaternion rotation)
+        {
+            Vector3 euler = rotation.eulerAngles;
+            return new Vector3(
+                NormalizeAngle(euler.x),
+                NormalizeAngle(euler.y),
+                NormalizeAngle(euler.z));
         }
     }
 }

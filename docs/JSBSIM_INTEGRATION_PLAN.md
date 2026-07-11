@@ -165,6 +165,22 @@ C:\Users\ovied\Dev\T2\T2-QuestFlightLab-setup-artifacts\jsbsim_live_driver_20260
 
 The accepted run proves interactive process/data/pose plumbing: Unity sends each frame's controls and timestep, JSBSim advances, and Unity applies the returned aircraft state before capturing evidence. It does not prove a stable final control law. The conservative takeoff/climb schedule reached 1,801 applied samples, 879.4 m ground track, 9.9 m max AGL, and 89.7 kt max airspeed. The JSBSim `c172x` / `reset00` / simple open-loop control setup still shows heading and bank transients, so controlled turns and runtime replacement need a proper initialization and control-law pass.
 
+## Production Simulator V1 native gate
+
+The production V1 pass implements the bounded native path instead of replacing the validated Editor sidecar:
+
+- pinned JSBSim `1.3.1`, revision `3b25f25e49b42d0489c04ac805674fc1450ca579`, under GNU LGPL-2.1-or-later;
+- compact project-owned C ABI for instance lifetime, aircraft load, initial conditions, controls, steady wind, 120 Hz fixed-step advance, and blittable state reads;
+- Windows x64 `JSBSim.dll` plus `qfl_jsbsim_native.dll`;
+- Android ARM64 `libJSBSim.so` plus `libqfl_jsbsim_native.so`, built with Unity's NDK r27c toolchain;
+- `IFlightDynamicsBackend` implementations for Unity fallback, Editor sidecar, and native JSBSim, with one coordinator owning authority;
+- explicit ENU/NED, unit, angle, and local-KBDU frame conversion helpers and tests;
+- runtime JSBSim data packaged as replaceable StreamingAssets with the source revision and LGPL text.
+
+The Windows smoke advanced 7,200 steps at 0.008371 ms average and 0.0099 ms p95. The Android libraries and all required runtime XML files are present in the ARM64 APK with matching hashes. This proves the build/package path, not an on-headset native run.
+
+The physical scenario gate is intentionally red: only ground idle/brake passed, for 1/10 scenarios. Open-loop takeoff, rotation, trim, climb, turns, slow flight, stall, approach, and go-around violate the required envelopes. `JSBSimNativeFlightBackend` therefore remains explicit opt-in and is not the `visual_fidelity_demo` default. The validated Unity prototype remains the standalone fallback until initialization and control/trim mapping reach the scenario gate.
+
 ## Integration Path
 
 ### Short Term: Offline Reference Oracle
@@ -179,16 +195,15 @@ Use JSBSim outputs to compare Unity scenario trends:
 
 This can be added to editor scenario reports without changing the Quest runtime.
 
-### Medium Term: Bridge / Native Plugin Feasibility
+### Medium Term: Native calibration and failure hardening
 
-Evaluate:
+Next:
 
-- JSBSim native library build on Windows for editor tooling,
-- server/process bridge for editor-only comparisons,
-- Android ARM64 native plugin feasibility,
-- property mapping between Unity controls and JSBSim controls,
-- transform/unit/coordinate conversion,
-- runtime determinism and frame-step ownership.
+- calibrate initial conditions, engine start, trim, brakes, and flight-control signs against the selected `c172x` state;
+- make reset/advance/runtime-data failures release native authority and restore the Unity fallback safely;
+- reject every non-finite native state channel and attest the native build revision through the ABI;
+- rerun all ten matched physical scenarios before any default promotion;
+- only then run native JSBSim on Quest and capture step timing/allocation evidence.
 
 ### Long Term: Runtime Backend Candidate
 
@@ -204,8 +219,9 @@ Only consider JSBSim as the actual flight-dynamics backend after:
 
 - Open-loop probe is not a stable autopilot.
 - Matched-control profiles still diverge strongly in airborne cases because initialization, aircraft definitions, and control mappings are not equivalent yet.
-- Quality Gate v1 bridge is sidecar/import/apply only, not an interactive flight backend.
-- Current Unity physics remains a prototype approximation.
+- The Editor sidecar remains a separate validated comparison path; the new native backend is opt-in because its physical gate is 1/10.
+- Windows and Android native builds pass, but native JSBSim has not been run on Quest and is not the default backend.
+- Current default Quest physics remains a prototype approximation.
 - The probe is not calibrated to current Unity aircraft mass/aero/engine values.
-- No Android/Quest JSBSim runtime work was attempted in this chunk.
+- Android ARM64 build and APK inclusion are proven; Quest-native execution and performance are still unproven.
 - No FAA/training suitability is claimed.

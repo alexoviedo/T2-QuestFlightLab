@@ -18,6 +18,14 @@ namespace QuestFlightLab.Environment
         public static GameObject AddWorld(Transform airportRoot)
         {
             if (airportRoot == null) return null;
+            if (RealKbduEnvironmentBuilder.TryBuild(airportRoot, out GameObject realWorld, out string realDataError))
+            {
+                return realWorld;
+            }
+            if (!string.IsNullOrWhiteSpace(realDataError))
+            {
+                Debug.LogWarning($"[QuestFlightLab][KBDU] Real-data path unavailable ({realDataError}); using preserved procedural fallback.");
+            }
             Transform existing = airportRoot.Find(RootName);
             if (existing != null) return existing.gameObject;
 

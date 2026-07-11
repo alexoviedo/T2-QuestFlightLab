@@ -21,6 +21,13 @@ New-Item -ItemType Directory -Force -Path $ArtifactDir | Out-Null
 $unityTestPlatform = $TestPlatform.ToLowerInvariant()
 $log = Join-Path $ArtifactDir "unity_${TestPlatform}_tests.log"
 $results = Join-Path $ArtifactDir "unity_${TestPlatform}_test_results.xml"
+$lock = Join-Path $ProjectPath 'Temp\UnityLockfile'
+if (Test-Path $lock) {
+  if (Get-Process Unity -ErrorAction SilentlyContinue) {
+    throw "Unity is already running; refusing to remove the active project lock: $lock"
+  }
+  Remove-Item -LiteralPath $lock -Force
+}
 $args = @(
   '-batchmode',
   '-projectPath', $ProjectPath,

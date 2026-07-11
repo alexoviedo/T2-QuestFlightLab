@@ -151,7 +151,7 @@ namespace QuestFlightLab.Editor
                 screenshotPaths = screenshotPaths.ToArray(),
                 limitations = new[]
                 {
-                    "Editor-only live sidecar bridge; Quest/Android runtime JSBSim integration is not attempted.",
+                    "This runner exercises only the Editor sidecar; the separate native gate covers Windows/Android plugin packaging and currently fails physical acceptance.",
                     "Unity sends per-frame controls and timesteps, then immediately applies returned JSBSim pose to an Editor aircraft root.",
                     "This proves interactive process/data/pose plumbing, not final C172 fidelity, FAA/training suitability, or Quest runtime performance.",
                     "Position is integrated from JSBSim heading and ground-speed output in the sidecar for Unity visualization."

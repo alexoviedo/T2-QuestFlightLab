@@ -214,15 +214,18 @@ namespace QuestFlightLab.Editor
             GameObject cameraGo = new GameObject("Main Camera");
             cameraGo.tag = "MainCamera";
             cameraGo.transform.SetParent(cameraParent, false);
-            cameraGo.transform.localPosition = new Vector3(0f, 1.65f, -4.2f);
-            cameraGo.transform.localRotation = Quaternion.Euler(8f, 0f, 0f);
+            // OpenXR/TrackedPoseDriver owns the camera pose. The aircraft seat frame is built
+            // separately at runtime; no authored camera offset may masquerade as seat motion.
+            cameraGo.transform.localPosition = Vector3.zero;
+            cameraGo.transform.localRotation = Quaternion.identity;
             Camera camera = cameraGo.AddComponent<Camera>();
             camera.nearClipPlane = 0.03f;
             camera.farClipPlane = 4000f;
             cameraGo.AddComponent<AudioListener>();
 
-            Type trackedPoseType = Type.GetType("UnityEngine.InputSystem.XR.TrackedPoseDriver, Unity.InputSystem");
-            if (trackedPoseType != null) cameraGo.AddComponent(trackedPoseType);
+            TrackedXrCameraPoseDriver.Ensure(camera);
+            TrackedXrControllerPoseDrivers.EnsureLeft(origin.transform);
+            TrackedXrControllerPoseDrivers.EnsureRight(origin.transform);
 
             if (xrOrigin != null)
             {

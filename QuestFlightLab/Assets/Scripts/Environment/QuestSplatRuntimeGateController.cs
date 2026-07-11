@@ -44,10 +44,16 @@ namespace QuestFlightLab.Environment
         public float loadMs;
         public string loadError;
         public int frameCount;
+        public int warmupFrameCount;
         public float averageFrameMs;
         public float minFrameMs;
         public float maxFrameMs;
+        public float p95FrameMs;
+        public float p99FrameMs;
+        public float rawMaxFrameMs;
         public float estimatedFps;
+        public int framesOver72HzBudget;
+        public float framesOver72HzBudgetRatio;
         public string evidencePath;
         public string screenshotPath;
         public List<string> warnings = new List<string>();
@@ -122,7 +128,7 @@ namespace QuestFlightLab.Environment
             CaptureScreenshot(launchMode);
 
             float start = Time.unscaledTime;
-            while (performanceProbe.Capture().sampleCount < maxFrameSamples && Time.unscaledTime - start < maxCaptureSeconds)
+            while (performanceProbe.SampleCount < maxFrameSamples && Time.unscaledTime - start < maxCaptureSeconds)
             {
                 yield return null;
             }
@@ -216,10 +222,16 @@ namespace QuestFlightLab.Environment
 
             SceneryPerformanceSnapshot snapshot = performanceProbe != null ? performanceProbe.Capture() : new SceneryPerformanceSnapshot();
             evidence.frameCount = snapshot.sampleCount;
+            evidence.warmupFrameCount = snapshot.warmupSamplesDiscarded;
             evidence.averageFrameMs = snapshot.averageFrameMs;
             evidence.minFrameMs = snapshot.minFrameMs;
             evidence.maxFrameMs = snapshot.maxFrameMs;
+            evidence.p95FrameMs = snapshot.p95FrameMs;
+            evidence.p99FrameMs = snapshot.p99FrameMs;
+            evidence.rawMaxFrameMs = snapshot.rawMaxFrameMs;
             evidence.estimatedFps = snapshot.estimatedFps;
+            evidence.framesOver72HzBudget = snapshot.framesOver72HzBudget;
+            evidence.framesOver72HzBudgetRatio = snapshot.framesOver72HzBudgetRatio;
             evidence.generatedUtc = DateTime.UtcNow.ToString("O");
 
             EnsureEvidenceDirectory();

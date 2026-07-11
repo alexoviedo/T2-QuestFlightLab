@@ -220,7 +220,8 @@ namespace QuestFlightLab.Tests.PlayMode
         public void ImportedC172PilotEyeStartsInLeftSeatCabinEnvelope()
         {
             Vector3 pilotEye = QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal;
-            Assert.That(Mathf.Abs(pilotEye.x), Is.LessThan(0.2f));
+            Assert.That(pilotEye.x, Is.LessThan(-0.15f));
+            Assert.That(pilotEye.x, Is.GreaterThan(-0.45f));
             Assert.That(pilotEye.y, Is.GreaterThan(0.45f));
             Assert.That(pilotEye.y, Is.LessThan(1.1f));
             Assert.That(Mathf.Abs(pilotEye.z), Is.LessThan(0.3f));
@@ -241,6 +242,9 @@ namespace QuestFlightLab.Tests.PlayMode
             Assert.That(QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEyeEuler.z, Is.EqualTo(0f).Within(0.01f));
 
             Quaternion modelInCamera = Quaternion.Euler(QuestFirstViewRuntimeRepair.ImportedC172LocalEuler);
+            Vector3 modelRoot = QuestFirstViewRuntimeRepair.ImportedC172SeatReferenceLocal - modelInCamera * importedEye;
+            Assert.That(Mathf.Abs(modelRoot.x), Is.LessThan(0.001f),
+                "The model centerline must remain on simulation-root x=0; the left seat carries the lateral offset.");
             Assert.That(Vector3.Dot(modelInCamera * Vector3.forward, Vector3.up), Is.GreaterThan(0.95f));
             Assert.That(Vector3.Dot(modelInCamera * Vector3.up, Vector3.back), Is.GreaterThan(0.95f));
         }
@@ -260,6 +264,8 @@ namespace QuestFlightLab.Tests.PlayMode
                 importedC172CockpitModelEye = QuestFirstViewRuntimeRepair.ImportedC172CockpitModelEye,
                 importedC172PilotViewOffset = new Vector3(-0.21f, 0.17f, 0.05f),
                 importedC172CockpitYawDeg = 3.5f,
+                calibrationOffset = new Vector3(-0.21f, 0.17f, 0.05f),
+                calibrationYawDeg = 3.5f,
                 pilotEyeLocal = QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal + new Vector3(-0.21f, 0.17f, 0.05f),
                 importedC172LocalPosition = Vector3.zero,
                 instructions = "Test calibration."
@@ -279,12 +285,345 @@ namespace QuestFlightLab.Tests.PlayMode
             Assert.That(restored.importedC172PilotViewOffset.y, Is.EqualTo(state.importedC172PilotViewOffset.y).Within(0.0001f));
             Assert.That(restored.importedC172PilotViewOffset.z, Is.EqualTo(state.importedC172PilotViewOffset.z).Within(0.0001f));
             Assert.That(restored.importedC172CockpitYawDeg, Is.EqualTo(3.5f).Within(0.0001f));
+            string canonicalJson = File.ReadAllText(savedPath);
+            Assert.That(canonicalJson, Does.Not.Contain("trackedCamera"));
+            Assert.That(canonicalJson, Does.Not.Contain("pilotEyeLocal"));
+            Assert.That(canonicalJson, Does.Not.Contain("importedC172CockpitModelEye"));
 
             bool deleted = CockpitViewpointPersistence.DeleteCurrent(out string deletedPath, out string deleteError, root);
             Assert.That(deleted, Is.True, deleteError);
             Assert.That(deletedPath, Is.EqualTo(savedPath));
             Assert.That(File.Exists(savedPath), Is.False);
             Directory.Delete(root, true);
+        }
+
+        [Test]
+        public void SeatFrameRemainsInvariantAcrossAircraftHeadingAndBank()
+        {
+            CreateReferenceFrameProbe(out GameObject simulation, out Camera camera, out AircraftReferenceFrameRig rig);
+            try
+            {
+                Vector3 expectedSeatLocal = rig.PilotSeatAnchor.localPosition;
+                Vector3 cgWorld = simulation.transform.position;
+                foreach (float heading in new[] { 0f, 90f, 180f, 270f })
+                {
+                    foreach (float bank in new[] { 0f, 30f, -30f })
+                    {
+                        simulation.transform.rotation = Quaternion.Euler(0f, heading, bank);
+                        rig.ApplyPresentationPoseForTest(simulation.transform.position, simulation.transform.rotation);
+
+                        Assert.That(Vector3.Distance(rig.PilotSeatAnchor.localPosition, expectedSeatLocal), Is.LessThan(0.0001f));
+                        Assert.That(Vector3.Distance(rig.CenterOfGravityReference.position, cgWorld), Is.LessThan(0.0001f));
+                        Assert.That(camera.transform.IsChildOf(rig.XrOrigin), Is.True);
+                        Assert.That(ReferenceEquals(camera.transform, rig.CenterOfGravityReference), Is.False);
+                        Assert.That(Vector3.Distance(simulation.transform.position, cgWorld), Is.LessThan(0.0001f));
+                        Assert.That(Vector3.Distance(rig.PilotSeatAnchor.position, cgWorld),
+                            Is.EqualTo(expectedSeatLocal.magnitude).Within(0.001f),
+                            "The left seat must orbit the fixed aircraft CG, not become the pivot.");
+                    }
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(simulation);
+            }
+        }
+
+        [Test]
+        public void SyntheticHeadMotionChangesOnlyCameraPoseRelativeToSeat()
+        {
+            CreateReferenceFrameProbe(out GameObject simulation, out Camera camera, out AircraftReferenceFrameRig rig);
+            try
+            {
+                Vector3 aircraftPosition = simulation.transform.position;
+                Quaternion aircraftRotation = simulation.transform.rotation;
+                Vector3 seatLocal = rig.PilotSeatAnchor.localPosition;
+
+                camera.transform.localPosition = new Vector3(0.12f, 0.05f, -0.08f);
+                camera.transform.localRotation = Quaternion.Euler(4f, 18f, 0f);
+
+                Assert.That(Vector3.Distance(simulation.transform.position, aircraftPosition), Is.LessThan(0.0001f));
+                Assert.That(Quaternion.Angle(simulation.transform.rotation, aircraftRotation), Is.LessThan(0.001f));
+                Assert.That(Vector3.Distance(rig.PilotSeatAnchor.localPosition, seatLocal), Is.LessThan(0.0001f));
+                Assert.That(Vector3.Distance(camera.transform.localPosition, new Vector3(0.12f, 0.05f, -0.08f)), Is.LessThan(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(simulation);
+            }
+        }
+
+        [Test]
+        public void TrackingSpaceRecenterAlignsHeadToSeatWithoutWritingTrackedCamera()
+        {
+            CreateReferenceFrameProbe(out GameObject simulation, out Camera camera, out AircraftReferenceFrameRig rig);
+            try
+            {
+                Transform cameraOffset = camera.transform.parent;
+                cameraOffset.localPosition = new Vector3(0.04f, 0.02f, -0.03f);
+                cameraOffset.localRotation = Quaternion.Euler(0f, 3f, 0f);
+                camera.transform.localPosition = new Vector3(0.31f, 1.58f, -0.46f);
+                camera.transform.localRotation = Quaternion.Euler(-7f, 28f, 4f);
+
+                Vector3 trackedCameraLocalPosition = camera.transform.localPosition;
+                Quaternion trackedCameraLocalRotation = camera.transform.localRotation;
+                Vector3 aircraftPosition = simulation.transform.position;
+                Quaternion aircraftRotation = simulation.transform.rotation;
+
+                Assert.That(rig.RecenterTrackingSpaceToSeat(), Is.True);
+
+                Assert.That(
+                    rig.UserViewCalibrationOffset.InverseTransformPoint(camera.transform.position).magnitude,
+                    Is.LessThan(0.0001f),
+                    "The physical head position should land on the calibrated pilot eye.");
+                Quaternion cameraInSeat = Quaternion.Inverse(rig.UserViewCalibrationOffset.rotation) * camera.transform.rotation;
+                Assert.That(Mathf.Abs(Mathf.DeltaAngle(0f, cameraInSeat.eulerAngles.y)), Is.LessThan(0.01f));
+                Assert.That(Vector3.Distance(camera.transform.localPosition, trackedCameraLocalPosition), Is.LessThan(0.0001f));
+                Assert.That(Quaternion.Angle(camera.transform.localRotation, trackedCameraLocalRotation), Is.LessThan(0.001f));
+                Assert.That(Vector3.Distance(simulation.transform.position, aircraftPosition), Is.LessThan(0.0001f));
+                Assert.That(Quaternion.Angle(simulation.transform.rotation, aircraftRotation), Is.LessThan(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(simulation);
+            }
+        }
+
+        [Test]
+        public void StartupSeatAlignmentRequiresConsecutiveStablePoseFrames()
+        {
+            Vector3 previousPosition = Vector3.zero;
+            Quaternion previousRotation = Quaternion.identity;
+            int stableFrames = QuestFirstViewRuntimeRepair.AdvanceStablePoseFrameCount(
+                true,
+                false,
+                previousPosition,
+                previousRotation,
+                previousPosition,
+                previousRotation,
+                0,
+                0.02f,
+                2f);
+            Assert.That(stableFrames, Is.EqualTo(1));
+
+            Vector3 gentlyMoved = new Vector3(0.004f, -0.002f, 0.003f);
+            Quaternion gentlyRotated = Quaternion.Euler(0.4f, 0.8f, 0f);
+            stableFrames = QuestFirstViewRuntimeRepair.AdvanceStablePoseFrameCount(
+                true,
+                true,
+                previousPosition,
+                previousRotation,
+                gentlyMoved,
+                gentlyRotated,
+                stableFrames,
+                0.02f,
+                2f);
+            Assert.That(stableFrames, Is.EqualTo(2));
+
+            Vector3 largeMove = gentlyMoved + new Vector3(0.08f, 0f, 0f);
+            stableFrames = QuestFirstViewRuntimeRepair.AdvanceStablePoseFrameCount(
+                true,
+                true,
+                gentlyMoved,
+                gentlyRotated,
+                largeMove,
+                gentlyRotated,
+                stableFrames,
+                0.02f,
+                2f);
+            Assert.That(stableFrames, Is.EqualTo(1), "Movement outside the stability window starts a new sequence.");
+
+            stableFrames = QuestFirstViewRuntimeRepair.AdvanceStablePoseFrameCount(
+                false,
+                true,
+                largeMove,
+                gentlyRotated,
+                largeMove,
+                gentlyRotated,
+                stableFrames,
+                0.02f,
+                2f);
+            Assert.That(stableFrames, Is.Zero, "Tracking/presence loss must invalidate accumulated stable frames.");
+        }
+
+        [Test]
+        public void PresentationHierarchyNeverMovesAuthoritativeCollisionProxy()
+        {
+            GameObject simulation = new GameObject("CollisionOwnershipSimulationRoot");
+            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            visual.name = "Prototype Visual With Generated Collider";
+            visual.transform.SetParent(simulation.transform, false);
+            GameObject collisionProxy = new GameObject("Authoritative Collision Proxy");
+            collisionProxy.transform.SetParent(simulation.transform, false);
+            BoxCollider authoritativeCollider = collisionProxy.AddComponent<BoxCollider>();
+
+            GameObject origin = new GameObject("XR Origin");
+            GameObject offset = new GameObject("Camera Offset");
+            offset.transform.SetParent(origin.transform, false);
+            GameObject cameraObject = new GameObject("Main Camera");
+            cameraObject.transform.SetParent(offset.transform, false);
+            Camera camera = cameraObject.AddComponent<Camera>();
+
+            try
+            {
+                AircraftReferenceFrameRig rig = AircraftReferenceFrameRig.Ensure(
+                    simulation.transform,
+                    origin.transform,
+                    camera,
+                    QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal);
+
+                Assert.That(visual.transform.parent, Is.EqualTo(rig.AircraftVisualRoot));
+                Assert.That(visual.GetComponent<Collider>().enabled, Is.False);
+                Assert.That(collisionProxy.transform.parent, Is.EqualTo(simulation.transform));
+                Assert.That(authoritativeCollider.enabled, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(simulation);
+            }
+        }
+
+        [Test]
+        public void TrackedMainCameraHasExplicitCenterEyeBindings()
+        {
+            GameObject cameraObject = new GameObject("TrackedCameraBindingProbe");
+            Camera camera = cameraObject.AddComponent<Camera>();
+            try
+            {
+                Assert.That(TrackedXrCameraPoseDriver.HasRequiredBindings(camera), Is.False);
+                UnityEngine.InputSystem.XR.TrackedPoseDriver driver = TrackedXrCameraPoseDriver.Ensure(camera);
+
+                Assert.That(driver, Is.Not.Null);
+                Assert.That(TrackedXrCameraPoseDriver.HasRequiredBindings(camera), Is.True);
+                Assert.That(TrackedXrCameraPoseDriver.PositionBindingPath(camera),
+                    Is.EqualTo(TrackedXrCameraPoseDriver.PositionBinding).IgnoreCase);
+                Assert.That(TrackedXrCameraPoseDriver.RotationBindingPath(camera),
+                    Is.EqualTo(TrackedXrCameraPoseDriver.RotationBinding).IgnoreCase);
+                Assert.That(driver.positionInput.action.enabled, Is.True);
+                Assert.That(driver.rotationInput.action.enabled, Is.True);
+                Assert.That(driver.trackingStateInput.action.enabled, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraObject);
+            }
+        }
+
+        [Test]
+        public void AircraftMotionCarriesSeatAndTrackedRigWithoutChangingHeadOffset()
+        {
+            CreateReferenceFrameProbe(out GameObject simulation, out Camera camera, out AircraftReferenceFrameRig rig);
+            try
+            {
+                camera.transform.localPosition = new Vector3(-0.07f, 0.03f, 0.11f);
+                camera.transform.localRotation = Quaternion.Euler(-3f, 12f, 0f);
+                Vector3 headLocal = camera.transform.localPosition;
+                Quaternion headLocalRotation = camera.transform.localRotation;
+
+                simulation.transform.SetPositionAndRotation(new Vector3(125f, 42f, -310f), Quaternion.Euler(-8f, 135f, 24f));
+                rig.ApplyPresentationPoseForTest(simulation.transform.position, simulation.transform.rotation);
+
+                Vector3 expectedSeatWorld = simulation.transform.TransformPoint(QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal);
+                Assert.That(Vector3.Distance(rig.PilotSeatAnchor.position, expectedSeatWorld), Is.LessThan(0.001f));
+                Assert.That(Vector3.Distance(camera.transform.localPosition, headLocal), Is.LessThan(0.0001f));
+                Assert.That(Quaternion.Angle(camera.transform.localRotation, headLocalRotation), Is.LessThan(0.001f));
+                Assert.That(rig.ValidateHierarchy(), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(simulation);
+            }
+        }
+
+        [Test]
+        public void CalibrationPanelRemainsInTrackingSpaceAtAllowedExtremes()
+        {
+            CreateReferenceFrameProbe(out GameObject simulation, out Camera camera, out AircraftReferenceFrameRig rig);
+            GameObject panel = null;
+            try
+            {
+                panel = QuestFirstViewRuntimeRepair.BuildSeatCalibrationPanelVisual(
+                    rig.UserViewCalibrationOffset,
+                    out TextMesh text);
+                panel.transform.localPosition = new Vector3(0.48f, -0.08f, 1.05f);
+                Vector3 initialRelative = rig.XrOrigin.InverseTransformPoint(panel.transform.position);
+
+                rig.ApplyCalibration(
+                    new Vector3(
+                        PilotViewpointConfig.MaximumCalibrationLateralMeters,
+                        PilotViewpointConfig.MaximumCalibrationVerticalMeters,
+                        PilotViewpointConfig.MaximumCalibrationLongitudinalMeters),
+                    PilotViewpointConfig.MaximumCalibrationYawDegrees);
+
+                Vector3 extremeRelative = rig.XrOrigin.InverseTransformPoint(panel.transform.position);
+                Assert.That(Vector3.Distance(initialRelative, extremeRelative), Is.LessThan(0.0001f));
+                Assert.That(Vector3.Dot(extremeRelative.normalized, Vector3.forward), Is.GreaterThan(0.75f));
+                Assert.That(text.text, Does.Contain("A save      B cancel"));
+                Assert.That(text.text, Does.Contain("X recenter   Y default"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(simulation);
+            }
+        }
+
+        [Test]
+        public void CalibrationRecordRoundTripResetRestoresAircraftDefault()
+        {
+            string root = Path.Combine(Application.temporaryCachePath, "qfl_viewpoint_v4_roundtrip");
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+
+            Vector3 adjusted = new Vector3(0.08f, 0.12f, -0.16f);
+            CockpitViewpointCalibrationState state = new CockpitViewpointCalibrationState
+            {
+                aircraftId = CockpitViewpointPersistence.DefaultAircraftId,
+                importedC172PilotViewOffset = adjusted,
+                importedC172CockpitYawDeg = 2.5f,
+                calibrationOffset = adjusted,
+                calibrationYawDeg = 2.5f
+            };
+
+            string path = CockpitViewpointPersistence.SaveCurrent(state, root);
+            Assert.That(CockpitViewpointPersistence.TryLoadCurrent(out CockpitViewpointCalibrationState loaded, out _, out string error, root), Is.True, error);
+            Assert.That(Vector3.Distance(loaded.calibrationOffset, adjusted), Is.LessThan(0.0001f));
+            Assert.That(loaded.calibrationYawDeg, Is.EqualTo(2.5f).Within(0.0001f));
+            Assert.That(File.Exists(path), Is.True);
+
+            Assert.That(CockpitViewpointPersistence.DeleteCurrent(out _, out string deleteError, root), Is.True, deleteError);
+            Assert.That(CockpitViewpointPersistence.TryLoadCurrent(out _, out _, out _, root), Is.False);
+            Assert.That(QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal,
+                Is.EqualTo(PilotViewpointConfig.ImportedC172DefaultPilotEyeLocal));
+            Directory.Delete(root, true);
+        }
+
+        private static void CreateReferenceFrameProbe(
+            out GameObject simulation,
+            out Camera camera,
+            out AircraftReferenceFrameRig rig)
+        {
+            simulation = new GameObject("AircraftSimulationRootTest");
+            simulation.transform.SetPositionAndRotation(new Vector3(12f, 5f, -8f), Quaternion.identity);
+            GameObject visual = new GameObject("ExistingAircraftModelTest");
+            visual.transform.SetParent(simulation.transform, false);
+
+            GameObject origin = new GameObject("XR Origin Test");
+            GameObject cameraOffset = new GameObject("Camera Offset Test");
+            cameraOffset.transform.SetParent(origin.transform, false);
+            GameObject cameraObject = new GameObject("Tracked Main Camera Test");
+            cameraObject.transform.SetParent(cameraOffset.transform, false);
+            camera = cameraObject.AddComponent<Camera>();
+
+            rig = AircraftReferenceFrameRig.Ensure(
+                simulation.transform,
+                origin.transform,
+                camera,
+                QuestFirstViewRuntimeRepair.ImportedC172PilotEyeLocal);
+            rig.SetPresentationInterpolationForTest(false);
+            Assert.That(rig.HierarchyReady, Is.True);
+            Assert.That(visual.transform.parent, Is.EqualTo(rig.AircraftVisualRoot));
+            Assert.That(rig.LeftController.parent, Is.EqualTo(rig.XrOrigin));
+            Assert.That(rig.RightController.parent, Is.EqualTo(rig.XrOrigin));
+            Assert.That(TrackedXrControllerPoseDrivers.HasRequiredHierarchy(rig.XrOrigin), Is.True);
         }
 
         private static Bounds BoundsForTest(Renderer[] renderers)

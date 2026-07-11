@@ -5,6 +5,7 @@ param(
   [int]$TimeoutSeconds = 360,
   [int]$Width = 1280,
   [int]$Height = 720,
+  [string]$BaselineDir = '',
   [switch]$SkipPythonAnalysis
 )
 
@@ -24,6 +25,13 @@ $env:QFL_VISUAL_QA_WIDTH = "$Width"
 $env:QFL_VISUAL_QA_HEIGHT = "$Height"
 
 $log = Join-Path $ArtifactDir 'unity_visual_qa.log'
+$lock = Join-Path $ProjectPath 'Temp\UnityLockfile'
+if (Test-Path $lock) {
+  if (Get-Process Unity -ErrorAction SilentlyContinue) {
+    throw "Unity is already running; refusing to remove the active project lock: $lock"
+  }
+  Remove-Item -LiteralPath $lock -Force
+}
 $args = @(
   '-batchmode',
   '-quit',
@@ -59,7 +67,11 @@ if (!(Test-Path $report)) {
 if (-not $SkipPythonAnalysis) {
   $analyzer = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools\visual_qa_analyze.py'
   if (Test-Path $analyzer) {
-    python $analyzer --input $ArtifactDir --fail-on-errors
+    $analyzerArgs = @($analyzer, '--input', $ArtifactDir, '--fail-on-errors')
+    if (![string]::IsNullOrWhiteSpace($BaselineDir)) {
+      $analyzerArgs += @('--baseline', $BaselineDir)
+    }
+    python @analyzerArgs
     if ($LASTEXITCODE -ne 0) {
       throw "Python visual QA analysis failed with exit code $LASTEXITCODE. ArtifactDir: $ArtifactDir"
     }

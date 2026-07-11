@@ -1,7 +1,8 @@
 using QuestFlightLab.Flight;
+using QuestFlightLab.Flight.Backends;
 using QuestFlightLab.Input;
+using QuestFlightLab.Runtime;
 using UnityEngine;
-using UnityEngine.XR;
 
 namespace QuestFlightLab.UI
 {
@@ -25,13 +26,17 @@ namespace QuestFlightLab.UI
 
         public void Recenter()
         {
-            InputTracking.Recenter();
+            QuestFirstViewRuntimeRepair.Instance?.RecenterSeatView();
             RefreshText();
         }
 
         public void ResetAircraft()
         {
-            if (aircraftPhysics != null) aircraftPhysics.ResetToRunway();
+            // Never overwrite a coordinator-owned native or fallback backend.
+            if (aircraftPhysics != null && aircraftPhysics.GetComponent<FlightDynamicsCoordinator>() == null)
+            {
+                aircraftPhysics.ResetToRunway();
+            }
             RefreshText();
         }
 
@@ -39,14 +44,12 @@ namespace QuestFlightLab.UI
         {
             if (text == null) return;
             text.text =
-                "TOUCH MENU PLACEHOLDER\n" +
-                "Recenter\n" +
-                "Reset aircraft\n" +
+                "TOUCH MENU\n" +
+                "Seat/view calibration (Left Menu)\n" +
+                "Recenter inside calibration (X)\n" +
                 "Pause / resume\n" +
                 "Toggle telemetry\n\n" +
-                "Touch controller interaction shell only.\n" +
-                "Primary flight control is the BLE gamepad.";
+                "Touch controls never consume flight axes.";
         }
     }
 }
-

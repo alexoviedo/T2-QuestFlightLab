@@ -1,65 +1,61 @@
-# Cockpit Viewpoint Calibration
+# Cockpit viewpoint calibration
 
-The playtest cockpit view supports a small persisted seat/viewpoint adjustment so a player can align their VR eye point with the C172 placeholder cockpit.
-
-## Default Pilot Eye Reference
-
-The default view should be usable before any player calibration. For the imported C172 placeholder, the v2.1 default reference is:
+The imported C172 uses an explicit aircraft-relative XR hierarchy:
 
 ```text
-Seat reference local: (0.00, 0.72, 0.00) m
-Default pilot-eye offset: (0.00, 0.22, 0.00) m
-Resolved default pilot eye: (0.00, 0.94, 0.00) m
+AircraftSimulationRoot / center of gravity
+  AircraftVisualRoot
+    PilotSeatAnchor
+      UserViewCalibrationOffset
+        XR Origin
+          Camera Offset
+            Main Camera (OpenXR tracked pose only)
+          LeftHand Controller
+          RightHand Controller
 ```
 
-Calibration offsets are additive to this reference. They should not be used to compensate for a bad default seated view.
+Aircraft motion owns the simulation root. The fixed pilot seat and the saved calibration are children of the visual aircraft. OpenXR alone owns the Main Camera local pose; calibration code never writes that tracked transform and the headset is never an aircraft pivot.
 
-## Runtime Controls
+## Default pilot eye
 
-In Quest playtest mode:
-
-- `A`: open seat adjustment mode; press again to save and exit.
-- left stick: move left/right and forward/back.
-- right stick up/down: move the pilot eye higher/lower.
-- right stick left/right: adjust cockpit yaw.
-- `X`: recenter forward.
-- `B`: reset offset/yaw while adjustment is active.
-- grip + sticks: quick adjust without staying in seat mode.
-- both grips: fine adjustment scale.
-
-The playtest HUD shows the current seat offset as:
+The imported placeholder's left-seat reference is:
 
 ```text
-SEAT X ... Y ... Z ... YAW ...
+PilotSeatAnchor local position: (-0.28, 0.94, 0.00) m
+Default calibration offset:     ( 0.00, 0.00, 0.00) m
 ```
+
+This resolves from the model-specific seat reference `(-0.28, 0.72, 0.00)` plus the default eye-height offset `(0.00, 0.22, 0.00)`. Calibration adjusts only `UserViewCalibrationOffset` and does not move the model or simulation root.
+
+Startup alignment is armed as soon as the seat hierarchy exists, before the cockpit's asynchronous model load. It waits for a valid, tracked, user-present HMD pose and ten consecutive stable pose frames, then recenters exactly once by moving only the XR Origin inside the calibrated seat frame. This prevents a slow model load from exposing a stale room-scale origin as the initial cockpit pose. The tracked Main Camera is never written. Runtime instrumentation records the pending/completed state, successful recenter count, and measured position/yaw error after alignment; final headset confirmation of this path is still pending because the latest relaunch was blocked by Quest's controller-required dialog before Unity started.
+
+## Runtime controls
+
+Open the in-cockpit panel with the left Touch Menu button. Opening it does not pause the simulation and does not consume Xbox, HOTAS, rudder, throttle, or other flight axes.
+
+- Left stick: left/right and forward/back.
+- Right stick: up/down and calibration yaw.
+- Either grip: small-step mode; released is large-step mode.
+- X: recenter the tracking-space baseline inside the current seat frame.
+- Y: restore the aircraft default as the current draft.
+- A: save and close.
+- B or Left Menu: cancel and restore the complete pre-edit draft, including XR-origin local pose.
+- Editor fallback: C opens/cancels; Enter saves; Escape cancels; Home recenters; Backspace restores default.
+
+Offsets are clamped to a realistic adjustment envelope and yaw is limited to a small correction. A failed save leaves the panel open and preserves the draft for retry.
 
 ## Persistence
 
-Calibration is stored as JSON through `CockpitViewpointPersistence` at:
+Schema 5 stores only the versioned, per-aircraft calibration translation and yaw:
 
 ```text
-Application.persistentDataPath\QuestFlightLab\seat_calibration\seat_calibration_current.json
+Application.persistentDataPath/QuestFlightLab/seat_calibration/imported_c172/seat_calibration_current.json
 ```
 
-The JSON includes:
+Tracked head pose, XR-origin pose, model alignment, scenery, and diagnostic fields are not persisted. Legacy records migrate translation but reset the old cockpit-model yaw convention rather than mirroring it into the new user-relative frame. Reset removes the current record and restores the known aircraft default.
 
-- schema version,
-- generated timestamp,
-- scenery/demo mode,
-- imported C172 cockpit model eye,
-- imported C172 seat reference,
-- imported C172 default pilot-eye offset,
-- pilot view offset,
-- cockpit yaw,
-- resolved pilot eye local position,
-- instructions.
+## Verification and limits
 
-## Automated Verification
+PlayMode coverage includes seat-frame invariance, synthetic head motion, origin-only seat recentering, stable-pose gating, aircraft inheritance, single-backend authority, Touch bindings, controller pose drivers, save/reload/reset, cancel rollback, and save-failure behavior. Visual QA captures both the default and calibrated view and the open panel.
 
-`QuestFlightLabPlayModeTests.CockpitViewpointPersistenceSavesLoadsAndResetsCurrentCalibration` verifies save, load, value round-trip, and reset/delete behavior.
-
-`scripts\run_visual_qa.ps1` also performs a persistence probe and records the result in `visual_qa_report.json` and `visual_qa_summary.md`.
-
-## Limits
-
-This calibration aligns the current placeholder cockpit. It is not a final C172 seating model, not proof of real Quest comfort, and not a substitute for future project-owned cockpit geometry.
+The calibration is specific to the current imported placeholder. It is not a certified C172 eye-point model, a comfort guarantee, or evidence of training suitability. Controller bindings still require a manual Touch-controller check on the target headset.

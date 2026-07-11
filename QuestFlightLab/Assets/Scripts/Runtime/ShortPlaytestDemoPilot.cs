@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using QuestFlightLab.Flight;
+using QuestFlightLab.Flight.Backends;
+using QuestFlightLab.Environment;
 using QuestFlightLab.Input;
 using UnityEngine;
 
@@ -62,6 +64,7 @@ namespace QuestFlightLab.Runtime
         private FlightTelemetry _flightTelemetry;
         private SimpleAircraftPhysics _aircraftPhysics;
         private AircraftState _aircraftState;
+        private FlightDynamicsCoordinator _flightDynamicsCoordinator;
         private DemoPilotEvidence _evidence;
         private Vector3 _startPosition;
         private Quaternion _startRotation = Quaternion.identity;
@@ -71,6 +74,8 @@ namespace QuestFlightLab.Runtime
         private float _nextSampleTime;
         private float _nextWriteTime;
         private bool _resetIssued;
+        private Vector3 _runwayStartPosition = PlaytestRunwayStartPosition;
+        private Quaternion _runwayStartRotation = Quaternion.Euler(PlaytestRunwayStartEuler);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -89,10 +94,19 @@ namespace QuestFlightLab.Runtime
             ResolveReferences();
             EnableDeterministicInput();
 
-            if (_aircraftPhysics != null)
+            if (RealKbduEnvironmentBuilder.TryGetRecommendedPavedRunwayStart(out Vector3 realStart, out Quaternion realRotation))
             {
-                _aircraftPhysics.runwayResetPosition = PlaytestRunwayStartPosition;
-                _aircraftPhysics.runwayResetEuler = PlaytestRunwayStartEuler;
+                _runwayStartPosition = realStart;
+                _runwayStartRotation = realRotation;
+            }
+
+            // A coordinator owns reset as soon as it exists, including while its
+            // native data is still being prepared. Otherwise the established
+            // Unity prototype is the sole authority and may perform the reset.
+            if (_aircraftPhysics != null && _flightDynamicsCoordinator == null)
+            {
+                _aircraftPhysics.runwayResetPosition = _runwayStartPosition;
+                _aircraftPhysics.runwayResetEuler = _runwayStartRotation.eulerAngles;
                 _playtestRunwayAlignmentApplied = true;
                 _aircraftPhysics.ResetToRunway();
             }
@@ -116,13 +130,11 @@ namespace QuestFlightLab.Runtime
             AircraftControlState controls = ControlsForElapsedSeconds(_elapsed, out string phase);
             PhaseName = phase;
             _deterministicInput?.SetControls(controls);
-            ApplyVisualFlightEnvelope();
 
             if (_elapsed > 150f && !_resetIssued)
             {
-                _aircraftPhysics?.ResetToRunway();
                 _resetIssued = true;
-                PhaseName = "reset/hold";
+                PhaseName = "hold";
             }
 
             if (Time.unscaledTime >= _nextSampleTime)
@@ -223,7 +235,7 @@ namespace QuestFlightLab.Runtime
                 return c;
             }
 
-            phase = "reset/hold";
+            phase = "hold";
             c.throttle = 0.2f;
             return c;
         }
@@ -334,6 +346,7 @@ namespace QuestFlightLab.Runtime
             if (_flightTelemetry == null) _flightTelemetry = FindFirstObjectByType<FlightTelemetry>();
             if (_aircraftPhysics == null) _aircraftPhysics = FindFirstObjectByType<SimpleAircraftPhysics>();
             if (_aircraftState == null) _aircraftState = FindFirstObjectByType<AircraftState>();
+            if (_flightDynamicsCoordinator == null) _flightDynamicsCoordinator = FindFirstObjectByType<FlightDynamicsCoordinator>();
 
             if (_deterministicInput == null)
             {
@@ -354,18 +367,6 @@ namespace QuestFlightLab.Runtime
                 _mapper.deterministicInput = _deterministicInput;
                 _mapper.preferDeterministicInput = true;
             }
-        }
-
-        private void ApplyVisualFlightEnvelope()
-        {
-            if (_aircraftPhysics == null) return;
-            if (!TryGetVisualFlightPoseForElapsedSeconds(_elapsed, _startPosition, _startRotation, out Vector3 position, out Vector3 euler, out Vector3 velocityWorld))
-            {
-                return;
-            }
-
-            _aircraftPhysics.SetStateForTest(position, euler, velocityWorld);
-            _visualFlightEnvelopeApplied = true;
         }
 
         private DemoPilotEvidence CreateEvidence()

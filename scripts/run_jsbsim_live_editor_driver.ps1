@@ -19,7 +19,12 @@ $env:QFL_JSBSIM_LIVE_DRIVER_DIR = $ArtifactDir
 
 $log = Join-Path $ArtifactDir 'unity_jsbsim_live_driver.log'
 $lock = Join-Path $ProjectPath 'Temp\UnityLockfile'
-if (Test-Path $lock) { Remove-Item -LiteralPath $lock -Force -ErrorAction SilentlyContinue }
+if (Test-Path $lock) {
+  if (Get-Process Unity -ErrorAction SilentlyContinue) {
+    throw "Unity is already running; refusing to remove the active project lock: $lock"
+  }
+  Remove-Item -LiteralPath $lock -Force
+}
 
 $args = @(
   '-batchmode',
