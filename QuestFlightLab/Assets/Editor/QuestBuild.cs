@@ -12,21 +12,35 @@ namespace QuestFlightLab.Editor
 {
     public static class QuestBuild
     {
+        public const string LegacyScenePath = "Assets/Scenes/InputLab.unity";
+        public const string ProductionScenePath = "Assets/Scenes/ProductionVerticalSlice.unity";
+        public const string LegacyApkName = "QuestFlightLab-v0.1-dev.apk";
+        public const string ProductionApkName = "QuestFlightLab-production-v2.apk";
+
         public static void PerformAndroidBuild()
+        {
+            PerformAndroidBuildForScene(LegacyScenePath, LegacyApkName, "legacy_input_lab");
+        }
+
+        public static void PerformProductionAndroidBuild()
+        {
+            PerformAndroidBuildForScene(ProductionScenePath, ProductionApkName, "production_vertical_slice_v2");
+        }
+
+        private static void PerformAndroidBuildForScene(string scenePath, string apkName, string buildProfile)
         {
             EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
             ConfigureQuestRenderBuildSettings();
 
-            string scenePath = "Assets/Scenes/InputLab.unity";
             if (!File.Exists(scenePath))
             {
-                throw new FileNotFoundException($"Scene not found: {scenePath}. Run QuestProjectBootstrap.CreateInputLabScene first.");
+                throw new FileNotFoundException($"Scene not found: {scenePath}.");
             }
 
             string outDir = Path.GetFullPath("Builds/Android");
             Directory.CreateDirectory(outDir);
-            string apkPath = Path.Combine(outDir, "QuestFlightLab-v0.1-dev.apk");
-            WriteRenderSettingsEvidence(outDir);
+            string apkPath = Path.Combine(outDir, apkName);
+            WriteRenderSettingsEvidence(outDir, buildProfile, scenePath, apkPath);
 
             BuildPlayerOptions options = new BuildPlayerOptions
             {
@@ -42,7 +56,7 @@ namespace QuestFlightLab.Editor
                 throw new Exception($"Android build failed: {report.summary.result}");
             }
 
-            Debug.Log($"[QuestFlightLab] Build succeeded: {apkPath}");
+            Debug.Log($"[QuestFlightLab] Build succeeded: {apkPath}; scene={scenePath}; profile={buildProfile}");
         }
 
         public static void ConfigureQuestRenderBuildSettings()
@@ -72,7 +86,11 @@ namespace QuestFlightLab.Editor
                 "stereo=OpenXR single-pass-instanced frameTimingStats=true multithreadedRendering=true");
         }
 
-        private static void WriteRenderSettingsEvidence(string outDir)
+        private static void WriteRenderSettingsEvidence(
+            string outDir,
+            string buildProfile,
+            string scenePath,
+            string apkPath)
         {
             GraphicsDeviceType[] graphicsApis = PlayerSettings.GetGraphicsAPIs(BuildTarget.Android);
             OpenXRSettings openXrSettings = OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Android);
@@ -82,6 +100,9 @@ namespace QuestFlightLab.Editor
             string json = JsonUtility.ToJson(new QuestBuildRenderSettingsEvidence
             {
                 generatedUtc = DateTime.UtcNow.ToString("O"),
+                buildProfile = buildProfile,
+                scenePath = scenePath,
+                apkPath = apkPath,
                 graphicsApis = Array.ConvertAll(graphicsApis, api => api.ToString()),
                 textureCompression = EditorUserBuildSettings.androidBuildSubtarget.ToString(),
                 colorSpace = PlayerSettings.colorSpace.ToString(),
@@ -92,13 +113,19 @@ namespace QuestFlightLab.Editor
                 latencyOptimization = openXrSettings != null ? openXrSettings.latencyOptimization.ToString() : "missing",
                 foveatedRenderingFeatureEnabled = foveation != null && foveation.enabled
             }, true);
-            File.WriteAllText(Path.Combine(outDir, "quest_build_render_settings.json"), json);
+            string suffix = string.Equals(buildProfile, "legacy_input_lab", StringComparison.Ordinal)
+                ? string.Empty
+                : "_production";
+            File.WriteAllText(Path.Combine(outDir, "quest_build_render_settings" + suffix + ".json"), json);
         }
 
         [Serializable]
         private class QuestBuildRenderSettingsEvidence
         {
             public string generatedUtc;
+            public string buildProfile;
+            public string scenePath;
+            public string apkPath;
             public string[] graphicsApis;
             public string textureCompression;
             public string colorSpace;

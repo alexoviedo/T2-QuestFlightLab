@@ -10,6 +10,7 @@ namespace QuestFlightLab.Environment
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
+            if (ProductionEnvironmentActivation.IsProductionVerticalSliceActive()) return;
             GameObject airport = GameObject.Find("KBDU_Approx_Airport_NotForNavigation");
             if (airport == null) return;
             AddWorld(airport.transform);
@@ -18,6 +19,11 @@ namespace QuestFlightLab.Environment
         public static GameObject AddWorld(Transform airportRoot)
         {
             if (airportRoot == null) return null;
+            if (ProductionEnvironmentActivation.IsProductionVerticalSliceActive())
+            {
+                ProductionEnvironmentRoot production = UnityEngine.Object.FindFirstObjectByType<ProductionEnvironmentRoot>();
+                return production != null ? production.gameObject : null;
+            }
             if (RealKbduEnvironmentBuilder.TryBuild(airportRoot, out GameObject realWorld, out string realDataError))
             {
                 return realWorld;

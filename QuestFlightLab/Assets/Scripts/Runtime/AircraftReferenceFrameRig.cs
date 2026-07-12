@@ -12,14 +12,14 @@ namespace QuestFlightLab.Runtime
         public const string CalibrationOffsetName = "UserViewCalibrationOffset";
 
         public Transform AircraftSimulationRoot => transform;
-        public Transform CenterOfGravityReference { get; private set; }
-        public Transform AircraftVisualRoot { get; private set; }
-        public Transform PilotSeatAnchor { get; private set; }
-        public Transform UserViewCalibrationOffset { get; private set; }
-        public Transform XrOrigin { get; private set; }
-        public Transform LeftController { get; private set; }
-        public Transform RightController { get; private set; }
-        public Camera TrackedCamera { get; private set; }
+        [field: SerializeField] public Transform CenterOfGravityReference { get; private set; }
+        [field: SerializeField] public Transform AircraftVisualRoot { get; private set; }
+        [field: SerializeField] public Transform PilotSeatAnchor { get; private set; }
+        [field: SerializeField] public Transform UserViewCalibrationOffset { get; private set; }
+        [field: SerializeField] public Transform XrOrigin { get; private set; }
+        [field: SerializeField] public Transform LeftController { get; private set; }
+        [field: SerializeField] public Transform RightController { get; private set; }
+        [field: SerializeField] public Camera TrackedCamera { get; private set; }
         public Vector3 CalibrationOffset { get; private set; }
         public float CalibrationYawDegrees { get; private set; }
         public bool HierarchyReady { get; private set; }
@@ -33,6 +33,39 @@ namespace QuestFlightLab.Runtime
         private Vector3 _currentSimulationPosition;
         private Quaternion _currentSimulationRotation;
         private bool _hasSimulationSamples;
+
+        private void Awake()
+        {
+            if (!HasAuthoredReferences()) return;
+
+            Rigidbody body = GetComponent<Rigidbody>();
+            if (body != null) body.interpolation = RigidbodyInterpolation.Interpolate;
+            HierarchyReady = ValidateHierarchy();
+            if (HierarchyReady) ResetPresentationHistory();
+            else Debug.LogError("[QuestFlightLab][ProductionRig] Authored reference-frame hierarchy is invalid.", this);
+        }
+
+        public void ConfigureAuthoredHierarchy(
+            Transform centerOfGravity,
+            Transform visualRoot,
+            Transform pilotSeat,
+            Transform calibrationOffset,
+            Transform xrOrigin,
+            Transform leftController,
+            Transform rightController,
+            Camera trackedCamera)
+        {
+            CenterOfGravityReference = centerOfGravity;
+            AircraftVisualRoot = visualRoot;
+            PilotSeatAnchor = pilotSeat;
+            UserViewCalibrationOffset = calibrationOffset;
+            XrOrigin = xrOrigin;
+            LeftController = leftController;
+            RightController = rightController;
+            TrackedCamera = trackedCamera;
+            HierarchyReady = ValidateHierarchy();
+            if (HierarchyReady) ResetPresentationHistory();
+        }
 
         public static AircraftReferenceFrameRig Ensure(
             Transform simulationRoot,
@@ -91,6 +124,10 @@ namespace QuestFlightLab.Runtime
                 RightController = TrackedXrControllerPoseDrivers.EnsureRight(XrOrigin);
             }
 
+            // Legacy callers still receive a complete tracked rig. The authored
+            // production prefab serializes this driver before play begins.
+            TrackedXrCameraPoseDriver.Ensure(TrackedCamera);
+
             Rigidbody body = GetComponent<Rigidbody>();
             if (body != null) body.interpolation = RigidbodyInterpolation.Interpolate;
 
@@ -148,8 +185,24 @@ namespace QuestFlightLab.Runtime
             if (UserViewCalibrationOffset == null || UserViewCalibrationOffset.parent != PilotSeatAnchor) return false;
             if (XrOrigin == null || XrOrigin.parent != UserViewCalibrationOffset) return false;
             if (TrackedCamera == null || !TrackedCamera.transform.IsChildOf(XrOrigin)) return false;
-            if (!TrackedXrControllerPoseDrivers.HasRequiredHierarchy(XrOrigin)) return false;
+            if (!TrackedXrCameraPoseDriver.HasRequiredBindings(TrackedCamera)) return false;
+            if (LeftController == null || LeftController.parent != XrOrigin ||
+                !TrackedXrControllerPoseDrivers.HasRequiredBindings(LeftController, true)) return false;
+            if (RightController == null || RightController.parent != XrOrigin ||
+                !TrackedXrControllerPoseDrivers.HasRequiredBindings(RightController, false)) return false;
             return CenterOfGravityReference.localPosition.sqrMagnitude < 0.000001f;
+        }
+
+        private bool HasAuthoredReferences()
+        {
+            return CenterOfGravityReference != null &&
+                   AircraftVisualRoot != null &&
+                   PilotSeatAnchor != null &&
+                   UserViewCalibrationOffset != null &&
+                   XrOrigin != null &&
+                   LeftController != null &&
+                   RightController != null &&
+                   TrackedCamera != null;
         }
 
         public void ResetPresentationHistory()

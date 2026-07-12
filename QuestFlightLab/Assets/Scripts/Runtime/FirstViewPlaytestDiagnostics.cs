@@ -128,6 +128,7 @@ namespace QuestFlightLab.Runtime
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
+            if (ProductionVerticalSliceRoot.IsProductionSceneLoaded()) return;
             if (!QuestLaunchOptions.PlaytestHudEnabled()) return;
             if (FindFirstObjectByType<FirstViewPlaytestDiagnostics>() != null) return;
 

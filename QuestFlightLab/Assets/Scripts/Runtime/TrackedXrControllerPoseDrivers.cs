@@ -12,8 +12,10 @@ namespace QuestFlightLab.Runtime
     /// </summary>
     public static class TrackedXrControllerPoseDrivers
     {
-        public const string LeftControllerName = "LeftHand Controller";
-        public const string RightControllerName = "RightHand Controller";
+        public const string LeftControllerName = "Left Touch Controller";
+        public const string RightControllerName = "Right Touch Controller";
+        public const string LegacyLeftControllerName = "LeftHand Controller";
+        public const string LegacyRightControllerName = "RightHand Controller";
 
         public static Transform EnsureLeft(Transform xrOrigin) => Ensure(xrOrigin, true);
         public static Transform EnsureRight(Transform xrOrigin) => Ensure(xrOrigin, false);
@@ -21,8 +23,8 @@ namespace QuestFlightLab.Runtime
         public static bool HasRequiredHierarchy(Transform xrOrigin)
         {
             if (xrOrigin == null) return false;
-            Transform left = FindDirectChild(xrOrigin, LeftControllerName);
-            Transform right = FindDirectChild(xrOrigin, RightControllerName);
+            Transform left = FindController(xrOrigin, true);
+            Transform right = FindController(xrOrigin, false);
             return HasRequiredBindings(left, true) && HasRequiredBindings(right, false);
         }
 
@@ -39,7 +41,7 @@ namespace QuestFlightLab.Runtime
         {
             if (xrOrigin == null) return null;
             string name = left ? LeftControllerName : RightControllerName;
-            Transform controller = FindDirectChild(xrOrigin, name);
+            Transform controller = FindController(xrOrigin, left);
             if (controller == null)
             {
                 GameObject go = new GameObject(name);
@@ -98,7 +100,7 @@ namespace QuestFlightLab.Runtime
                 expectedControlType: controlType)));
         }
 
-        private static bool HasRequiredBindings(Transform controller, bool left)
+        public static bool HasRequiredBindings(Transform controller, bool left)
         {
             if (controller == null) return false;
             TrackedPoseDriver driver = controller.GetComponent<TrackedPoseDriver>();
@@ -132,6 +134,13 @@ namespace QuestFlightLab.Runtime
             }
 
             return null;
+        }
+
+        private static Transform FindController(Transform xrOrigin, bool left)
+        {
+            string currentName = left ? LeftControllerName : RightControllerName;
+            string legacyName = left ? LegacyLeftControllerName : LegacyRightControllerName;
+            return FindDirectChild(xrOrigin, currentName) ?? FindDirectChild(xrOrigin, legacyName);
         }
     }
 }

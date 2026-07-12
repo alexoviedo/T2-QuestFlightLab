@@ -196,6 +196,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Visual QA artifact directory")
     parser.add_argument("--baseline", help="Baseline Visual QA directory or contact-sheet PNG")
+    parser.add_argument("--minimum-screenshots", type=int, default=10)
     parser.add_argument("--fail-on-errors", action="store_true")
     args = parser.parse_args()
 
@@ -218,8 +219,10 @@ def main() -> int:
         if shot_path.name:
             hud_by_name[shot_path.name] = bool(shot.get("hudVisible", False))
 
-    if len(screenshots) < 10:
-        errors.append(f"expected at least 10 screenshots, found {len(screenshots)}")
+    if len(screenshots) < args.minimum_screenshots:
+        errors.append(
+            f"expected at least {args.minimum_screenshots} screenshots, found {len(screenshots)}"
+        )
 
     for screenshot in screenshots:
         try:

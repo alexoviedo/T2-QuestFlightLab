@@ -34,6 +34,7 @@ namespace QuestFlightLab.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
+            if (ProductionVerticalSliceRoot.IsProductionSceneLoaded()) return;
             if (!QuestLaunchOptions.PlaytestHudEnabled() || QuestLaunchOptions.VerboseHudEnabled()) return;
             if (FindFirstObjectByType<PlaytestHud>() != null) return;
 

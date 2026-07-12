@@ -14,10 +14,14 @@ param(
   [int]$ReadinessTimeoutSeconds = 120,
   [ValidateRange(60, 180)]
   [int]$MeasurementTimeoutSeconds = 90,
+  [ValidateSet('','unity_prototype','jsbsim_native')]
+  [string]$FlightBackend = '',
   [switch]$SkipInstall,
   [switch]$SkipScreenRecording,
   [switch]$StaticEvidenceOnly,
-  [switch]$SuppressOperatorPrompt
+  [switch]$SuppressOperatorPrompt,
+  [switch]$ProductionVerticalSlice,
+  [switch]$NoHumanWitness
 )
 
 Set-StrictMode -Version Latest
@@ -27,9 +31,17 @@ $QuestFrameBudgetMs = 1000.0 / 72.0
 $RequiredAverageMs = 13.2
 $RequiredP95Ms = $QuestFrameBudgetMs
 $RequiredOverBudgetRatio = 0.05
-$RequiredDrawCalls = 150
-$RequiredVisibleTriangles = 500000
-$OperatorRequest = 'Please wear the Quest and slowly pan your head left, right, up, and down while looking at the cockpit, mountains, water, and grass. Then remain looking forward until I say the capture is complete.'
+$RequiredDrawCalls = if ($ProductionVerticalSlice) { 180 } else { 150 }
+$RequiredVisibleTriangles = if ($ProductionVerticalSlice) { 700000 } else { 500000 }
+$RequiredSceneMaterials = if ($ProductionVerticalSlice) { 40 } else { [int]::MaxValue }
+$LaunchSceneryMode = if ($ProductionVerticalSlice) { 'production_vertical_slice_v2' } else { 'visual_fidelity_demo' }
+$LaunchHud = if ($ProductionVerticalSlice) { 'false' } else { 'true' }
+if ([string]::IsNullOrWhiteSpace($FlightBackend)) { $FlightBackend = 'unity_prototype' }
+$OperatorRequest = if ($ProductionVerticalSlice) {
+  'Please wear the Quest 3 and inspect the Production Vertical Slice while slowly looking left, right, forward, and backward.'
+} else {
+  'Please wear the Quest and slowly pan your head left, right, up, and down while looking at the cockpit, mountains, water, and grass. Then remain looking forward until I say the capture is complete.'
+}
 $script:ResolvedSerial = $DeviceSerial
 
 function New-ArtifactDirectory {
@@ -310,6 +322,15 @@ function Get-RuntimeEvidenceSummary {
       transparentWaterRenderers = [int](Get-ObjectProperty $report 'transparentWaterRendererCount' 0)
       waterMaterials = [int](Get-ObjectProperty $report 'uniqueWaterMaterialCount' 0)
       waterTriangles = [long](Get-ObjectProperty $report 'waterTriangles' 0)
+      productionVerticalSliceActive = [bool](Get-ObjectProperty $report 'productionVerticalSliceActive' $false)
+      productionArchitectureVersion = [string](Get-ObjectProperty $report 'productionArchitectureVersion' '')
+      authoredProductionHierarchyValid = [bool](Get-ObjectProperty $report 'authoredProductionHierarchyValid' $false)
+      productionEnvironmentContractValid = [bool](Get-ObjectProperty $report 'productionEnvironmentContractValid' $false)
+      legacyRuntimeRepairAbsent = [bool](Get-ObjectProperty $report 'legacyRuntimeRepairAbsent' $false)
+      authoritativePhysicsBackend = [string](Get-ObjectProperty $report 'authoritativePhysicsBackend' '')
+      sceneMaterialCount = [int](Get-ObjectProperty $report 'sceneMaterialCount' 0)
+      performanceDrawCallGate = [int](Get-ObjectProperty $report 'performanceDrawCallGate' 0)
+      performanceVisibleTriangleGate = [long](Get-ObjectProperty $report 'performanceVisibleTriangleGate' 0)
       realDataEnvironmentActive = [bool](Get-ObjectProperty $report 'realDataEnvironmentActive' $false)
       proceduralFallbackActive = [bool](Get-ObjectProperty $report 'proceduralFallbackActive' $false)
       runtimeEnvironmentRoot = [string](Get-ObjectProperty $report 'runtimeEnvironmentRoot' '')
@@ -319,6 +340,7 @@ function Get-RuntimeEvidenceSummary {
       seatYawErrorDegrees = [double](Get-ObjectProperty $report 'startupSeatYawErrorDegrees' -1)
       defaultPilotEyeAftMeters = [double](Get-ObjectProperty $report 'defaultPilotEyeAftMeters' 0)
       eyeToPanelDistanceMeters = [double](Get-ObjectProperty $report 'eyeToPanelDistanceMeters' -1)
+      productionDefaultSeatAuthored = [bool](Get-ObjectProperty $report 'productionDefaultSeatAuthored' $false)
       cockpitLightingStrategy = [string](Get-ObjectProperty $report 'cockpitLightingStrategy' '')
       cockpitStaticDepthStrength = [double](Get-ObjectProperty $report 'cockpitStaticDepthStrength' 0)
       cockpitRealtimeShadowCasters = [int](Get-ObjectProperty $report 'cockpitRealtimeShadowCasters' -1)
@@ -602,9 +624,10 @@ function Write-GateSummary {
   $overPass = $runtimeAvailable -and [double](Get-ObjectProperty $Runtime 'framesOverBudgetRatio' 1) -le $RequiredOverBudgetRatio
   $drawPass = $runtimeAvailable -and [long](Get-ObjectProperty $Runtime 'drawCalls' ([long]::MaxValue)) -le $RequiredDrawCalls
   $trianglePass = $runtimeAvailable -and [long](Get-ObjectProperty $Runtime 'visibleTriangles' ([long]::MaxValue)) -le $RequiredVisibleTriangles
+  $materialPass = $runtimeAvailable -and [int](Get-ObjectProperty $Runtime 'sceneMaterialCount' 0) -le $RequiredSceneMaterials
   $durationPass = $runtimeAvailable -and [double](Get-ObjectProperty $Runtime 'warmupSeconds' 0) -ge 90.0 -and [double](Get-ObjectProperty $Runtime 'measuredSeconds' 0) -ge 60.0
   $faultFree = -not $Faults.crash -and -not $Faults.anr -and -not $Faults.oom -and $Faults.unityExceptionCount -eq 0
-  $machinePass = $averagePass -and $p95Pass -and $overPass -and $drawPass -and $trianglePass -and $durationPass -and $faultFree -and -not $ThermalWarning
+  $machinePass = $averagePass -and $p95Pass -and $overPass -and $drawPass -and $trianglePass -and $materialPass -and $durationPass -and $faultFree -and -not $ThermalWarning
 
   $workloadSource = 'unavailable'
   $workloadAverage = 0.0
@@ -663,6 +686,7 @@ function Write-GateSummary {
       framesOverBudgetRatioMax = $RequiredOverBudgetRatio
       drawCallsMax = $RequiredDrawCalls
       visibleTrianglesMax = $RequiredVisibleTriangles
+      sceneMaterialsMax = $RequiredSceneMaterials
     }
     deliveredCadenceGate = [ordered]@{
       passed = $machinePass
@@ -673,6 +697,7 @@ function Write-GateSummary {
       overBudgetRatioPassed = $overPass
       drawCallsPassed = $drawPass
       visibleTrianglesPassed = $trianglePass
+      sceneMaterialsPassed = $materialPass
       faultFree = $faultFree
       thermalPassed = -not $ThermalWarning
     }
@@ -687,6 +712,7 @@ function Write-GateSummary {
       timingPassed = $workloadTimingPass
       drawCallsPassed = $drawPass
       visibleTrianglesPassed = $trianglePass
+      sceneMaterialsPassed = $materialPass
       faultFree = $faultFree
       thermalPassed = -not $ThermalWarning
     }
@@ -737,7 +763,8 @@ function Write-GateSummary {
     [void]$md.AppendLine("- Delivered interval average / p95 / p99: $(Format-Number $Runtime.averageFrameMs '0.000') / $(Format-Number $Runtime.p95FrameMs '0.000') / $(Format-Number $Runtime.p99FrameMs '0.000') ms")
     [void]$md.AppendLine("- Frames over 13.889 ms: $($Runtime.framesOverBudget) / $($Runtime.sampleCount) ($(Format-Number ([double]$Runtime.framesOverBudgetRatio * 100) '0.00')%)")
     [void]$md.AppendLine("- Workload average / p95: $(Format-Number $Runtime.averageWorkloadMs '0.000') / $(Format-Number $Runtime.p95WorkloadMs '0.000') ms")
-    [void]$md.AppendLine("- Draw calls: $($Runtime.drawCalls) ($($Runtime.drawCallSource)); visible triangles: $($Runtime.visibleTriangles) ($($Runtime.triangleSource))")
+    [void]$md.AppendLine("- Draw calls: $($Runtime.drawCalls) ($($Runtime.drawCallSource)); visible triangles: $($Runtime.visibleTriangles) ($($Runtime.triangleSource)); scene materials: $(Get-ObjectProperty $Runtime 'sceneMaterialCount' 0)")
+    [void]$md.AppendLine("- Production scene / architecture / backend: $(Get-ObjectProperty $Runtime 'productionVerticalSliceActive' $false) / $(Get-ObjectProperty $Runtime 'productionArchitectureVersion' '') / $(Get-ObjectProperty $Runtime 'authoritativePhysicsBackend' '')")
     [void]$md.AppendLine("- Active renderers / LOD groups / crossfade LOD groups: $($Runtime.activeRenderers) / $($Runtime.activeLodGroups) / $($Runtime.crossFadeLodGroups)")
     [void]$md.AppendLine("- Water surfaces / transparent water slots / materials / triangles: $($Runtime.waterRenderers) / $($Runtime.transparentWaterRenderers) / $($Runtime.waterMaterials) / $($Runtime.waterTriangles)")
     [void]$md.AppendLine("- Seat: completed=$($Runtime.seatAlignmentCompleted), recenter=$($Runtime.seatRecenterCount), error=$(Format-Number $Runtime.seatPositionErrorMeters '0.0000') m / $(Format-Number $Runtime.seatYawErrorDegrees '0.00') deg")
@@ -820,15 +847,25 @@ $logcatPath = Join-Path $OutputDir 'logcat_full.txt'
 $logcatErrorPath = Join-Path $OutputDir 'logcat_stderr.txt'
 $pulledEvidence = @()
 $appPid = ''
-$humanStatus = if ($StaticEvidenceOnly) { 'NOT_RUN_BLOCKED_HEADSET_OFF_OR_UNAVAILABLE' } else { 'PENDING_HUMAN_HEADSET_WITNESS' }
+$humanStatus = if ($StaticEvidenceOnly) {
+  'NOT_RUN_BLOCKED_HEADSET_OFF_OR_UNAVAILABLE'
+} elseif ($NoHumanWitness) {
+  'NOT_RUN_NO_USER_AVAILABLE'
+} else {
+  'PENDING_HUMAN_HEADSET_WITNESS'
+}
 $screen = [pscustomobject]@{ started = $false; pulled = $false; bytes = 0; error = '' }
 $originalStayAwakeSetting = ''
 $stayAwakeSettingChanged = $false
+$questPowerAutomationChanged = $false
 
 try {
   $devices = Resolve-QuestDevice
   Set-Content -LiteralPath (Join-Path $OutputDir 'adb_devices.txt') -Value $devices -Encoding UTF8
-  if ([string]::IsNullOrWhiteSpace($ApkPath)) { $ApkPath = Join-Path $ProjectPath 'Builds\Android\QuestFlightLab-v0.1-dev.apk' }
+  if ([string]::IsNullOrWhiteSpace($ApkPath)) {
+    $apkName = if ($ProductionVerticalSlice) { 'QuestFlightLab-production-v2.apk' } else { 'QuestFlightLab-v0.1-dev.apk' }
+    $ApkPath = Join-Path $ProjectPath "Builds\Android\$apkName"
+  }
   if (-not $SkipInstall) {
     if (-not (Test-Path -LiteralPath $ApkPath)) { throw "APK not found: $ApkPath. Run scripts\build_quest.ps1 first." }
     $install = Invoke-Adb -Arguments @('install', '-r', $ApkPath)
@@ -839,7 +876,25 @@ try {
   Set-Content -LiteralPath (Join-Path $OutputDir 'stay_awake_setting_before.txt') -Value $originalStayAwakeSetting -Encoding UTF8
   Invoke-Adb -Arguments @('shell', 'svc', 'power', 'stayon', 'usb') -AllowFailure | Out-Null
   $stayAwakeSettingChanged = $true
+  if ($NoHumanWitness) {
+    Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '-a', 'com.oculus.vrpowermanager.automation_disable') -AllowFailure | Out-Null
+    Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '-a', 'com.oculus.vrpowermanager.prox_close') -AllowFailure | Out-Null
+    $questPowerAutomationChanged = $true
+  }
   Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
+  Start-Sleep -Seconds 2
+  $powerAfterWake = Invoke-Adb -Arguments @('shell', 'dumpsys', 'power') -AllowFailure
+  Set-Content -LiteralPath (Join-Path $OutputDir 'power_after_unattended_wake.txt') -Value $powerAfterWake -Encoding UTF8
+  if ($NoHumanWitness -and $powerAfterWake -notmatch 'mWakefulness=Awake') {
+    Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '-a', 'com.oculus.vrpowermanager.prox_close') -AllowFailure | Out-Null
+    Invoke-Adb -Arguments @('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP') -AllowFailure | Out-Null
+    Start-Sleep -Seconds 2
+    $powerAfterWake = Invoke-Adb -Arguments @('shell', 'dumpsys', 'power') -AllowFailure
+    Set-Content -LiteralPath (Join-Path $OutputDir 'power_after_unattended_wake_retry.txt') -Value $powerAfterWake -Encoding UTF8
+  }
+  if ($NoHumanWitness -and $powerAfterWake -notmatch 'mWakefulness=Awake') {
+    throw 'Quest remained asleep after unattended wake/proximity automation; no app measurement was started.'
+  }
   Invoke-Adb -Arguments @('shell', 'dumpsys', 'thermalservice') -AllowFailure |
     Set-Content -LiteralPath (Join-Path $OutputDir 'thermal_before.txt') -Encoding UTF8
   Invoke-Adb -Arguments @('shell', 'dumpsys', 'battery') -AllowFailure |
@@ -851,33 +906,40 @@ try {
 
   $launchOptionsPath = Join-Path $OutputDir 'launch_options.json'
   [ordered]@{ options = @(
-    [ordered]@{ key = 'qfl_scenery_mode'; value = 'visual_fidelity_demo' },
+    [ordered]@{ key = 'qfl_scenery_mode'; value = $LaunchSceneryMode },
     [ordered]@{ key = 'qfl_demo_mode'; value = 'short_playtest' },
-    [ordered]@{ key = 'qfl_playtest_hud'; value = 'true' },
+    [ordered]@{ key = 'qfl_playtest_hud'; value = $LaunchHud },
     [ordered]@{ key = 'qfl_verbose_hud'; value = 'false' },
-    [ordered]@{ key = 'qfl_flight_backend'; value = 'unity_prototype' }
+    [ordered]@{ key = 'qfl_flight_backend'; value = $FlightBackend }
   ) } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $launchOptionsPath -Encoding UTF8
   Invoke-Adb -Arguments @('shell', 'mkdir', '-p', "/sdcard/Android/data/$PackageId/files/QuestFlightLab") | Out-Null
   Invoke-Adb -Arguments @('push', $launchOptionsPath, "/sdcard/Android/data/$PackageId/files/QuestFlightLab/launch_options.json") |
     Set-Content -LiteralPath (Join-Path $OutputDir 'adb_push_launch_options.txt') -Encoding UTF8
 
-  if (-not $StaticEvidenceOnly -and -not $SuppressOperatorPrompt) { Write-Host $OperatorRequest }
+  if (-not $StaticEvidenceOnly -and -not $SuppressOperatorPrompt -and -not $NoHumanWitness) { Write-Host $OperatorRequest }
   Invoke-Adb -Arguments @('logcat', '-c') | Out-Null
   $logcatProcess = Start-AdbBackgroundProcess -Arguments @('logcat', '-v', 'threadtime') -StdoutPath $logcatPath -StderrPath $logcatErrorPath
   $component = "$PackageId/$Activity"
   $launch = Invoke-Adb -Arguments @(
     'shell', 'am', 'start', '-S', '-n', $component,
-    '--es', 'qfl_scenery_mode', 'visual_fidelity_demo',
+    '--es', 'qfl_scenery_mode', $LaunchSceneryMode,
     '--es', 'qfl_demo_mode', 'short_playtest',
-    '--es', 'qfl_playtest_hud', 'true',
+    '--es', 'qfl_playtest_hud', $LaunchHud,
     '--es', 'qfl_verbose_hud', 'false',
-    '--es', 'qfl_flight_backend', 'unity_prototype'
+    '--es', 'qfl_flight_backend', $FlightBackend
   )
   Set-Content -LiteralPath (Join-Path $OutputDir 'app_launch.txt') -Value $launch -Encoding UTF8
 
   Start-Sleep -Seconds 2
-  $appPid = (Invoke-Adb -Arguments @('shell', 'pidof', $PackageId) -AllowFailure).Trim()
+  for ($pidAttempt = 0; $pidAttempt -lt 20; $pidAttempt++) {
+    $appPid = (Invoke-Adb -Arguments @('shell', 'pidof', $PackageId) -AllowFailure).Trim()
+    if (-not [string]::IsNullOrWhiteSpace($appPid)) { break }
+    Start-Sleep -Seconds 1
+  }
   Set-Content -LiteralPath (Join-Path $OutputDir 'app_pid.txt') -Value $appPid -Encoding UTF8
+  if ([string]::IsNullOrWhiteSpace($appPid)) {
+    throw 'Production app did not acquire a PID after launch; see power/app_launch/logcat artifacts.'
+  }
 
   if ($StaticEvidenceOnly) {
     [void](Wait-ForLogPattern -Path $logcatPath -Pattern '\[QuestFlightLab\]\[RealKBDU\].*renderers=.*tris=' -TimeoutSeconds ([Math]::Min(45, $ReadinessTimeoutSeconds)) -Stage 'Waiting for static real-data environment evidence')
@@ -923,6 +985,12 @@ try {
   }
   if ($null -ne $logcatProcess -and -not $logcatProcess.HasExited) {
     Stop-Process -Id $logcatProcess.Id -Force -ErrorAction SilentlyContinue
+  }
+  if ($questPowerAutomationChanged) {
+    Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '-a', 'com.oculus.vrpowermanager.prox_far') -AllowFailure | Out-Null
+    Invoke-Adb -Arguments @('shell', 'am', 'broadcast', '-a', 'com.oculus.vrpowermanager.automation_enable') -AllowFailure | Out-Null
+    Set-Content -LiteralPath (Join-Path $OutputDir 'quest_power_automation_restore.txt') `
+      -Value 'prox_far and automation_enable broadcasts sent' -Encoding UTF8
   }
   if ($stayAwakeSettingChanged) {
     if ([string]::IsNullOrWhiteSpace($originalStayAwakeSetting) -or $originalStayAwakeSetting -eq 'null') {

@@ -8,6 +8,7 @@ namespace QuestFlightLab.Environment
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         public static void EnhanceExistingScene()
         {
+            if (ProductionEnvironmentActivation.IsProductionVerticalSliceActive()) return;
             GameObject root = GameObject.Find("KBDU_Approx_Airport_NotForNavigation");
             if (root == null) return;
 

@@ -78,6 +78,7 @@ namespace QuestFlightLab.Environment
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
+            if (ProductionEnvironmentActivation.IsProductionVerticalSliceActive()) return;
             GameObject go = new GameObject("Quest Splat Runtime Gate Controller");
             DontDestroyOnLoad(go);
             go.AddComponent<QuestSplatRuntimeGateController>();

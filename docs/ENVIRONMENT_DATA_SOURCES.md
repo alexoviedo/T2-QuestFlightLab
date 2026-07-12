@@ -100,3 +100,16 @@ The committed OSM derivative remains the source for 620 linear waterways and 180
 - keeps water renderers free of distance LOD/crossfade so a seated head turn cannot swap their mesh or enabled state.
 
 The explicit procedural fallback uses the same stable mesh/material path instead of thin transparent reservoir cubes. This geometry remains contextual and not hydrologically surveyed. Ground land-cover rendering uses the three Poly Haven CC0 maps and import policy documented in `docs/ASSET_SOURCES.md`; the OSM/FAA/USGS data licenses and attribution above are unchanged.
+
+## Production Vertical Slice V2 Authored Path
+
+The production scene consumes `Assets/Production/Environment/ProductionEnvironmentRoot.prefab`. Its terrain, FAA runway, OSM context, Boulder Reservoir, materials, and macro texture are baked in the Editor and referenced directly; runtime code validates/reports the contract but does not construct the production environment.
+
+- near zone: 4 km USGS terrain plus bounded airport/context geometry;
+- mid zone: 12 km lower-detail USGS terrain and selected combined OSM context;
+- far zone: one immutable USGS-derived 24 km terrain mesh with no `LODGroup`, crossfade, camera scaling, or runtime rebuild;
+- runway: one FAA endpoint-derived linear grade, one offline terrain blend, one tessellated pavement mesh shared by rendering and collision, and one combined depth-biased marking mesh;
+- water: Boulder Reservoir only, with opaque ZWrite water and a stable shore bank; low-value minor hydrography is excluded;
+- macro appearance: unique 1024×1024 project-authored USGS/OSM land-cover derivative with irregular warped parcels and continuous variation, plus the documented Poly Haven CC0 microdetail.
+
+The macro map is a muted synthetic fallback, not public-domain orthophoto imagery. Pattern-altitude and headset Visual QA remain required before claiming it is visually convincing.

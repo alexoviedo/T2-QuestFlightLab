@@ -29,6 +29,10 @@ namespace QuestFlightLab.Environment
 
         public override SceneryProviderStatus ActivateProvider(Transform parent)
         {
+            if (ProductionEnvironmentActivation.IsProductionVerticalSliceActive())
+            {
+                return ProductionEnvironmentActivation.BakedProductionStatus(nameof(SplatSceneryProvider), Mode);
+            }
             bool rendererAvailable = IsGaussianSplatRendererAvailable();
             SceneryProviderStatus status = Status(nameof(SplatSceneryProvider), Mode, SceneryMode.MeshFallback);
             status.rendererAvailable = rendererAvailable;

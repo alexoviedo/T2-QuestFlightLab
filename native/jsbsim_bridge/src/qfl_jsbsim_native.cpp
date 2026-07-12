@@ -132,6 +132,33 @@ int qfl_jsbsim_reset(
   try {
     JSBSim::FGFDMExec& fdm = *native->fdm;
     fdm.Setsim_time(0.0);
+    // A single native instance is deliberately reused by the validation and
+    // runtime reset paths. Clear every command that can otherwise leak from a
+    // previous flight before RunIC initializes actuator and ground-reaction
+    // state. The first external control sample replaces these idle values.
+    set_property(fdm, "ap/elevator_cmd", 0.0);
+    set_property(fdm, "ap/aileron_cmd", 0.0);
+    set_property(fdm, "ap/roll-cmd-norm-output", 0.0);
+    set_property(fdm, "fcs/aileron-cmd-norm", 0.0);
+    set_property(fdm, "fcs/elevator-cmd-norm", 0.0);
+    set_property(fdm, "fcs/rudder-cmd-norm", 0.0);
+    set_property(fdm, "fcs/pitch-trim-cmd-norm", 0.0);
+    set_property(fdm, "fcs/roll-trim-cmd-norm", 0.0);
+    set_property(fdm, "fcs/yaw-trim-cmd-norm", 0.0);
+    set_property(fdm, "fcs/flap-cmd-norm", 0.0);
+    set_property(fdm, "fcs/left-brake-cmd-norm", 0.0);
+    set_property(fdm, "fcs/right-brake-cmd-norm", 0.0);
+    set_property(fdm, "fcs/center-brake-cmd-norm", 0.0);
+    set_property(fdm, "fcs/throttle-cmd-norm", initial_conditions->engine_running ? 0.10 : 0.0);
+    set_property(fdm, "fcs/throttle-cmd-norm[0]", initial_conditions->engine_running ? 0.10 : 0.0);
+    set_property(fdm, "fcs/mixture-cmd-norm", initial_conditions->engine_running ? 1.0 : 0.0);
+    set_property(fdm, "fcs/mixture-cmd-norm[0]", initial_conditions->engine_running ? 1.0 : 0.0);
+    set_property(fdm, "propulsion/active_engine", 0.0);
+    set_property(fdm, "propulsion/magneto_cmd", initial_conditions->engine_running ? 3.0 : 0.0);
+    set_property(fdm, "propulsion/starter_cmd", 0.0);
+    // JSBSim's supported direct-start property is set before RunIC so the
+    // initial propulsion forces and moments belong to the requested state.
+    set_property(fdm, "propulsion/set-running", initial_conditions->engine_running ? -1.0 : 0.0);
     set_property(fdm, "ic/lat-geod-deg", initial_conditions->latitude_degrees);
     set_property(fdm, "ic/long-gc-deg", initial_conditions->longitude_degrees);
     set_property(fdm, "ic/h-sl-ft", initial_conditions->altitude_msl_feet);
@@ -144,19 +171,6 @@ int qfl_jsbsim_reset(
     if (!fdm.RunIC()) {
       set_error(native, "JSBSim RunIC failed.");
       return 0;
-    }
-
-    if (initial_conditions->engine_running) {
-      set_property(fdm, "propulsion/active_engine", 0.0);
-      set_property(fdm, "propulsion/magneto_cmd", 3.0);
-      set_property(fdm, "propulsion/starter_cmd", 1.0);
-      set_property(fdm, "propulsion/engine/set-running", 1.0);
-      set_property(fdm, "fcs/mixture-cmd-norm", 1.0);
-      set_property(fdm, "fcs/throttle-cmd-norm", 0.0);
-    } else {
-      set_property(fdm, "propulsion/engine/set-running", 0.0);
-      set_property(fdm, "propulsion/starter_cmd", 0.0);
-      set_property(fdm, "propulsion/magneto_cmd", 0.0);
     }
     native->last_error.clear();
     return 1;

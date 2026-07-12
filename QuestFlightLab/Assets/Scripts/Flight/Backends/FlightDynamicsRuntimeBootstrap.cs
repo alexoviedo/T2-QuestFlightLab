@@ -12,6 +12,11 @@ namespace QuestFlightLab.Flight.Backends
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void BootstrapRequestedBackend()
         {
+            // ProductionVerticalSlice owns its authored coordinator, spawn, and
+            // backend selection. Launch options must never add or mutate a
+            // second runtime authority in that scene.
+            if (ProductionVerticalSliceRoot.IsProductionSceneLoaded()) return;
+
             string option = QuestLaunchOptions.FlightBackend();
             if (string.IsNullOrWhiteSpace(option)) return;
 

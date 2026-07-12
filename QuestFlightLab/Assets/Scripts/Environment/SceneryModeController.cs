@@ -17,6 +17,12 @@ namespace QuestFlightLab.Environment
 
         private void Start()
         {
+            if (ProductionEnvironmentActivation.IsProductionVerticalSliceActive())
+            {
+                LastStatus = ProductionEnvironmentActivation.BakedProductionStatus(nameof(SceneryModeController), requestedMode);
+                enabled = false;
+                return;
+            }
             if (LastStatus != null)
             {
                 return;
@@ -27,6 +33,11 @@ namespace QuestFlightLab.Environment
 
         public SceneryProviderStatus ApplyMode(SceneryMode mode)
         {
+            if (ProductionEnvironmentActivation.IsProductionVerticalSliceActive())
+            {
+                LastStatus = ProductionEnvironmentActivation.BakedProductionStatus(nameof(SceneryModeController), mode);
+                return LastStatus;
+            }
             EnsureProviders();
             if (mode == SceneryMode.MeshFallback)
             {

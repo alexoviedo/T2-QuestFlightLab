@@ -182,6 +182,20 @@ Three official Poly Haven 1K diffuse maps are committed as the optimized runtime
 
 `EnvironmentGroundTextureImportPolicy` enforces mipmaps, mip streaming, Repeat wrap, trilinear filtering, anisotropic level 4, a 1024 maximum, and Android ASTC 6×6 high-quality compression. `KbduGroundAntiTile` samples each source once (three texture samples total), blends them with stable world-space macro/mid variation, and fades micro detail from 350 m to 2.4 km to control Quest shimmer. Terrain rings keep one global world mapping so their shared boundaries remain continuous. Context/land-cover batches vary only the secondary texture rotations and phases through a deterministic `MaterialPropertyBlock`; they retain shared material instances and do not reset the primary world-space prairie layer. No normal/displacement map or dense 3D grass field is used.
 
+## Production Vertical Slice V2 Baked Environment
+
+`Assets/Production/Environment/ProductionEnvironmentRoot.prefab` and its `Generated`, `Materials`, and `Textures` children are deterministic project-authored outputs of `ProductionEnvironmentPrefabBaker`. The authoring inputs are the already-pinned compact derivatives above; no new external download or raw archive is committed.
+
+- terrain meshes: derived from USGS 3DEP snapshot `20260710T214309Z` (United States government data; public domain), baked as fixed near 4 km, mid 12 km, and immutable far 24 km mesh assets;
+- runway: FAA/BTS runway 08/26 endpoints and dimensions effective `2026-04-16` (United States government work; unrestricted public use), with an offline project-authored terrain flatten/blend and one shared visual/collision mesh;
+- airport/context geometry: bounded OSM derivative under ODbL-1.0 with required attribution `© OpenStreetMap contributors`;
+- essential water: OSM Boulder Reservoir polygon, way `35597714`, retained as the sole production water body with a project-authored stable shore-bank interface; minor ditches, streams, ponds, and reservoirs are not baked into this slice;
+- `ProductionKbduMacroAlbedo.png`: a project-authored 1024×1024 deterministic derivative of the pinned USGS elevation/slope and OSM land-cover, road, and aeroway data. It uses continuous low-frequency variation and warped irregular parcels; it is unique over the 12 km context and imported with mips, trilinear filtering, anisotropy 4, Clamp wrap, and Android ASTC 6×6;
+- microdetail: the three Poly Haven CC0 1.0 maps recorded in the preceding section, sampled stochastically in world space and faded with distance;
+- production ground, runway-marking, and water shaders: project-authored source code with no third-party shader content.
+
+The macro albedo is intentionally a muted synthetic land-cover derivative, not an orthophoto or a claim of photorealism. It contains no Google Maps, Google Earth, Street View, paid, or unclear-license pixels. All geometry is simplified and labeled KBDU-inspired / not for navigation, surveying, FAA approval, or training credit.
+
 ## Rules For Future Visual Assets
 
 - Prefer self-generated procedural Unity/Blender assets for quick iteration.

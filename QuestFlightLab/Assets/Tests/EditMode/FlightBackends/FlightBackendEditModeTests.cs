@@ -21,6 +21,21 @@ namespace QuestFlightLab.Tests.EditMode
         }
 
         [Test]
+        public void FlightStateFiniteContractCoversTelemetryAndRates()
+        {
+            FlightDynamicsState state = new FlightDynamicsState
+            {
+                rotationUnity = Quaternion.identity
+            };
+            Assert.That(state.IsFinite, Is.True);
+            state.engineRpm = double.NaN;
+            Assert.That(state.IsFinite, Is.False);
+            state.engineRpm = 900.0;
+            state.angularVelocityBodyDegreesPerSecond = new Vector3(float.PositiveInfinity, 0f, 0f);
+            Assert.That(state.IsFinite, Is.False);
+        }
+
+        [Test]
         public void KbduGeodeticEnuRoundTripIsStable()
         {
             GeodeticReference origin = GeodeticReference.Kbdu;
@@ -54,11 +69,19 @@ namespace QuestFlightLab.Tests.EditMode
         }
 
         [Test]
-        public void NativePitchInputPreservesBackendContractNoseUpConvention()
+        public void NativePitchInputConvertsProjectNoseUpToStockC172xConvention()
         {
-            Assert.That(JSBSimNativeFlightBackend.ContractPitchToJsbsim(0.25), Is.EqualTo(0.25).Within(1e-12));
-            Assert.That(JSBSimNativeFlightBackend.ContractPitchToJsbsim(-0.4), Is.EqualTo(-0.4).Within(1e-12));
-            Assert.That(JSBSimNativeFlightBackend.ContractPitchToJsbsim(2.0), Is.EqualTo(1.0).Within(1e-12));
+            Assert.That(JSBSimNativeFlightBackend.ContractPitchToJsbsim(0.25), Is.EqualTo(-0.25).Within(1e-12));
+            Assert.That(JSBSimNativeFlightBackend.ContractPitchToJsbsim(-0.4), Is.EqualTo(0.4).Within(1e-12));
+            Assert.That(JSBSimNativeFlightBackend.ContractPitchToJsbsim(2.0), Is.EqualTo(-1.0).Within(1e-12));
+        }
+
+        [Test]
+        public void NativeRudderInputConvertsProjectRightYawToStockC172xConvention()
+        {
+            Assert.That(JSBSimNativeFlightBackend.ContractRudderToJsbsim(0.25), Is.EqualTo(-0.25).Within(1e-12));
+            Assert.That(JSBSimNativeFlightBackend.ContractRudderToJsbsim(-0.4), Is.EqualTo(0.4).Within(1e-12));
+            Assert.That(JSBSimNativeFlightBackend.ContractRudderToJsbsim(-2.0), Is.EqualTo(1.0).Within(1e-12));
         }
 
         [Test]
@@ -127,6 +150,128 @@ namespace QuestFlightLab.Tests.EditMode
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
                 Is.Null,
                 "The runtime demo must only supply controls; it must never overwrite authoritative pose.");
+        }
+
+        [Test]
+        public void CoordinatorPublishesReadOnlySnapshotAtBackendControlBoundary()
+        {
+            GameObject root = new GameObject("CoordinatorControlSnapshotProbe");
+            AircraftState state = root.AddComponent<AircraftState>();
+            SimpleAircraftPhysics physics = root.AddComponent<SimpleAircraftPhysics>();
+            physics.state = state;
+            FlightDynamicsCoordinator coordinator = root.AddComponent<FlightDynamicsCoordinator>();
+            coordinator.requestedBackend = FlightDynamicsBackendKind.UnityPrototype;
+            coordinator.simulationRoot = root.transform;
+            coordinator.presentationRoot = root.transform;
+            coordinator.aircraftState = state;
+            coordinator.unityPrototype = physics;
+            try
+            {
+                Assert.That(coordinator.InitializeSelectedBackend(), Is.True, coordinator.LastError);
+                AircraftControlState input = AircraftControlState.Neutral(0.64f);
+                input.aileron = -0.21f;
+                input.elevator = 0.17f;
+                input.rudder = 0.06f;
+                input.trim = 0.08f;
+                input.flaps = 0.33f;
+                Assert.That(coordinator.StepForTest(input, 1.0 / 120.0), Is.True, coordinator.LastError);
+
+                FlightDynamicsControlSnapshot snapshot = coordinator.LastAppliedControls;
+                Assert.That(snapshot.aileron, Is.EqualTo(-0.21f).Within(1e-6f));
+                Assert.That(snapshot.elevator, Is.EqualTo(0.17f).Within(1e-6f));
+                Assert.That(snapshot.throttle, Is.EqualTo(0.64f).Within(1e-6f));
+                Assert.That(snapshot.trim, Is.EqualTo(0.08f).Within(1e-6f));
+                Assert.That(snapshot.flaps, Is.EqualTo(0.33f).Within(1e-6f));
+
+                snapshot.elevator = -1f;
+                Assert.That(coordinator.LastAppliedControls.elevator, Is.EqualTo(0.17f).Within(1e-6f),
+                    "Consumers receive a value copy and cannot mutate authoritative input.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void CoordinatorUsesAndPersistsAuthoredInitialConditionsAcrossReset()
+        {
+            GameObject spawn = new GameObject("AuthoredFlightSpawn");
+            FlightDynamicsInitialConditionProvider provider = spawn.AddComponent<FlightDynamicsInitialConditionProvider>();
+            provider.derivePositionFromSpawnTransform = false;
+            provider.deriveHeadingFromSpawnTransform = false;
+            provider.latitudeDegrees = GeodeticReference.Kbdu.latitudeDegrees;
+            provider.longitudeDegrees = GeodeticReference.Kbdu.longitudeDegrees;
+            provider.altitudeMslMeters = GeodeticReference.Kbdu.altitudeMslMeters + 50.0;
+            provider.terrainElevationMslMeters = GeodeticReference.Kbdu.altitudeMslMeters;
+            provider.headingDegrees = 123.0;
+
+            GameObject root = new GameObject("AuthoredInitialConditionsProbe");
+            AircraftState state = root.AddComponent<AircraftState>();
+            SimpleAircraftPhysics physics = root.AddComponent<SimpleAircraftPhysics>();
+            physics.state = state;
+            FlightDynamicsCoordinator coordinator = root.AddComponent<FlightDynamicsCoordinator>();
+            coordinator.requestedBackend = FlightDynamicsBackendKind.UnityPrototype;
+            coordinator.simulationRoot = root.transform;
+            coordinator.presentationRoot = root.transform;
+            coordinator.aircraftState = state;
+            coordinator.unityPrototype = physics;
+            coordinator.initialConditionProvider = provider;
+            try
+            {
+                Assert.That(coordinator.InitializeSelectedBackend(), Is.True, coordinator.LastError);
+                Assert.That(root.transform.position.y, Is.EqualTo(50f).Within(0.02f));
+                Assert.That(Mathf.DeltaAngle(root.transform.eulerAngles.y, 123f), Is.EqualTo(0f).Within(0.01f));
+                Assert.That(coordinator.LastResetInitialConditions.headingDegrees, Is.EqualTo(123.0).Within(1e-8));
+
+                // The reset contract persists the state resolved at backend
+                // initialization even if authoring fields or pose later move.
+                provider.headingDegrees = 210.0;
+                provider.altitudeMslMeters += 100.0;
+                root.transform.SetPositionAndRotation(new Vector3(500f, 500f, 500f), Quaternion.identity);
+                Assert.That(coordinator.ResetToConfiguredInitialConditions(), Is.True, coordinator.LastError);
+                Assert.That(root.transform.position.y, Is.EqualTo(50f).Within(0.02f));
+                Assert.That(Mathf.DeltaAngle(root.transform.eulerAngles.y, 123f), Is.EqualTo(0f).Within(0.01f));
+                Assert.That(coordinator.LastAppliedControls.throttle, Is.EqualTo(0.10f).Within(1e-6f));
+                Assert.That(coordinator.LastAppliedControls.mixture, Is.EqualTo(1f).Within(1e-6f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(spawn);
+            }
+        }
+
+        [Test]
+        public void ProductionMarkerPreventsLaunchOptionFromMutatingAuthoredBackend()
+        {
+            string environmentKey = QuestLaunchOptions.FlightBackendKey.ToUpperInvariant();
+            string previous = System.Environment.GetEnvironmentVariable(environmentKey);
+            GameObject marker = new GameObject("ProductionVerticalSliceRootTestMarker");
+            marker.AddComponent<ProductionVerticalSliceRoot>();
+            GameObject aircraft = new GameObject("AuthoredProductionAircraft");
+            AircraftState state = aircraft.AddComponent<AircraftState>();
+            SimpleAircraftPhysics prototype = aircraft.AddComponent<SimpleAircraftPhysics>();
+            prototype.state = state;
+            FlightDynamicsCoordinator authored = aircraft.AddComponent<FlightDynamicsCoordinator>();
+            authored.requestedBackend = FlightDynamicsBackendKind.UnityPrototype;
+            try
+            {
+                System.Environment.SetEnvironmentVariable(environmentKey, "jsbsim_native");
+                System.Reflection.MethodInfo bootstrap = typeof(FlightDynamicsRuntimeBootstrap).GetMethod(
+                    "BootstrapRequestedBackend",
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                Assert.That(bootstrap, Is.Not.Null);
+                bootstrap.Invoke(null, null);
+                Assert.That(aircraft.GetComponents<FlightDynamicsCoordinator>().Length, Is.EqualTo(1));
+                Assert.That(authored.requestedBackend, Is.EqualTo(FlightDynamicsBackendKind.UnityPrototype));
+            }
+            finally
+            {
+                System.Environment.SetEnvironmentVariable(environmentKey, previous);
+                Object.DestroyImmediate(aircraft);
+                Object.DestroyImmediate(marker);
+            }
         }
 
         [Test]

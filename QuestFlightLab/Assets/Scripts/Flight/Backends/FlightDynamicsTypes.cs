@@ -1,4 +1,5 @@
 using System;
+using QuestFlightLab.Runtime;
 using UnityEngine;
 
 namespace QuestFlightLab.Flight.Backends
@@ -74,6 +75,50 @@ namespace QuestFlightLab.Flight.Backends
         public static FlightDynamicsAtmosphere Calm => default;
     }
 
+    /// <summary>
+    /// Allocation-free value snapshot of the exact analog controls handed to
+    /// the active authoritative backend. Returning this struct by value keeps
+    /// presentation/animation consumers from mutating simulation input.
+    /// </summary>
+    [Serializable]
+    public struct FlightDynamicsControlSnapshot
+    {
+        public float aileron;
+        public float elevator;
+        public float rudder;
+        public float throttle;
+        public float mixture;
+        public float carbHeat;
+        public float trim;
+        public float flaps;
+        public float leftToeBrake;
+        public float rightToeBrake;
+
+        public static FlightDynamicsControlSnapshot NeutralIdle => new FlightDynamicsControlSnapshot
+        {
+            throttle = 0.10f,
+            mixture = 1f
+        };
+
+        public static FlightDynamicsControlSnapshot From(AircraftControlState controls)
+        {
+            if (controls == null) return NeutralIdle;
+            return new FlightDynamicsControlSnapshot
+            {
+                aileron = controls.aileron,
+                elevator = controls.elevator,
+                rudder = controls.rudder,
+                throttle = controls.throttle,
+                mixture = controls.mixture,
+                carbHeat = controls.carbHeat,
+                trim = controls.trim,
+                flaps = controls.flaps,
+                leftToeBrake = controls.leftToeBrake,
+                rightToeBrake = controls.rightToeBrake
+            };
+        }
+    }
+
     [Serializable]
     public struct FlightDynamicsState
     {
@@ -103,14 +148,30 @@ namespace QuestFlightLab.Flight.Backends
             IsFiniteNumber(latitudeDegrees) &&
             IsFiniteNumber(longitudeDegrees) &&
             IsFiniteNumber(altitudeMslMeters) &&
+            IsFiniteNumber(altitudeAglMeters) &&
             IsFiniteNumber(calibratedAirspeedKnots) &&
+            IsFiniteNumber(groundSpeedKnots) &&
+            IsFiniteNumber(verticalSpeedFeetPerMinute) &&
+            IsFiniteNumber(headingDegrees) &&
+            IsFiniteNumber(pitchDegrees) &&
+            IsFiniteNumber(bankDegrees) &&
+            IsFiniteNumber(angleOfAttackDegrees) &&
+            IsFiniteNumber(sideslipDegrees) &&
+            IsFiniteNumber(engineRpm) &&
+            IsFiniteNumber(loadFactorG) &&
             IsFiniteNumber(positionUnityMeters.x) &&
             IsFiniteNumber(positionUnityMeters.y) &&
             IsFiniteNumber(positionUnityMeters.z) &&
             IsFiniteNumber(rotationUnity.x) &&
             IsFiniteNumber(rotationUnity.y) &&
             IsFiniteNumber(rotationUnity.z) &&
-            IsFiniteNumber(rotationUnity.w);
+            IsFiniteNumber(rotationUnity.w) &&
+            IsFiniteNumber(velocityUnityMetersPerSecond.x) &&
+            IsFiniteNumber(velocityUnityMetersPerSecond.y) &&
+            IsFiniteNumber(velocityUnityMetersPerSecond.z) &&
+            IsFiniteNumber(angularVelocityBodyDegreesPerSecond.x) &&
+            IsFiniteNumber(angularVelocityBodyDegreesPerSecond.y) &&
+            IsFiniteNumber(angularVelocityBodyDegreesPerSecond.z);
 
         private static bool IsFiniteNumber(double value)
         {

@@ -304,8 +304,12 @@ namespace QuestFlightLab.Environment
 
         private MountainTemporalStabilityReport CreateReport()
         {
+            bool productionActive = _authoritativeRoot != null &&
+                                    (_authoritativeRoot.GetComponent<ProductionEnvironmentRoot>() != null ||
+                                     _authoritativeRoot.GetComponentInParent<ProductionEnvironmentRoot>() != null);
             bool realActive = _authoritativeRoot != null && _authoritativeRoot.gameObject.activeInHierarchy &&
-                              string.Equals(_authoritativeRoot.name, RealKbduEnvironmentBuilder.RootName, StringComparison.Ordinal);
+                              (productionActive ||
+                               string.Equals(_authoritativeRoot.name, RealKbduEnvironmentBuilder.RootName, StringComparison.Ordinal));
             MountainTemporalStabilityReport report = new MountainTemporalStabilityReport
             {
                 unityVersion = Application.unityVersion,
@@ -320,6 +324,8 @@ namespace QuestFlightLab.Environment
             };
             report.limitations.Add("Transform/mesh/renderer immutability is machine-verified; perceived silhouette stability still requires the recorded stereo headset sweep and human witness.");
             report.limitations.Add("Renderer.isVisible is diagnostic only and may change normally with the camera frustum; it is not treated as an enabled-renderer mutation.");
+            if (productionActive)
+                report.limitations.Add("The authored production USGS near/mid/far mesh set is treated as the real-data authority even though it intentionally does not use the legacy RealKBDU runtime root name.");
             return report;
         }
 
@@ -484,7 +490,12 @@ namespace QuestFlightLab.Environment
 
         private static bool IsAuthoritativeTerrainRenderer(Renderer renderer)
         {
-            return renderer != null && renderer.name.StartsWith("RealTerrain_", StringComparison.Ordinal);
+            if (renderer == null) return false;
+            return renderer.name.StartsWith("RealTerrain_", StringComparison.Ordinal) ||
+                   renderer.name.StartsWith("Terrain_AirportPatch_USGS", StringComparison.Ordinal) ||
+                   renderer.name.StartsWith("Terrain_Near4km_USGS", StringComparison.Ordinal) ||
+                   renderer.name.StartsWith("Terrain_Mid12km_USGS", StringComparison.Ordinal) ||
+                   renderer.name.StartsWith("Terrain_Far24km_Immutable_USGS", StringComparison.Ordinal);
         }
 
         private int CountActiveLegacyMountainRenderers()

@@ -136,6 +136,8 @@ namespace QuestFlightLab.Runtime
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
+            if (ProductionVerticalSliceRoot.IsProductionSceneLoaded()) return;
+
             bool repairRequired = Application.platform == RuntimePlatform.Android ||
                                   QuestLaunchOptions.SeatCalibrationEnabled() ||
                                   QuestLaunchOptions.ShortPlaytestDemoRequested() ||
@@ -154,6 +156,12 @@ namespace QuestFlightLab.Runtime
 
         private void Awake()
         {
+            if (ProductionVerticalSliceRoot.IsProductionSceneLoaded())
+            {
+                enabled = false;
+                return;
+            }
+
             Instance = this;
             // Configure tracking before the first rendered frame. The authored
             // scene may contain an empty TrackedPoseDriver action after upgrades.

@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/ProductionVerticalSlice.unity
+    guid: 74b9b539077acb04e8c78091d90cbe88
+  - enabled: 1
     path: Assets/Scenes/InputLab.unity
     guid: 48d21df3f9b65234081d3273d036e185
   m_configObjects:

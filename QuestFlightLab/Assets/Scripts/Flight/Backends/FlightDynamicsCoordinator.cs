@@ -22,6 +22,10 @@ namespace QuestFlightLab.Flight.Backends
         public Rigidbody authoritativeRigidbody;
         public Usb2BleInputMapper controls;
 
+        [Header("Authored Initial Conditions")]
+        [Tooltip("Optional production spawn/reset source. Null preserves the legacy KBDU runway default.")]
+        public FlightDynamicsInitialConditionProvider initialConditionProvider;
+
         [Header("JSBSim")]
         public string jsbsimAircraft = "c172x";
         public string nativeDataRootOverride = string.Empty;
@@ -37,6 +41,8 @@ namespace QuestFlightLab.Flight.Backends
         public string LastError { get; private set; } = string.Empty;
         public string FallbackReason { get; private set; } = string.Empty;
         public FlightDynamicsState CurrentState => _currentState;
+        public FlightDynamicsControlSnapshot LastAppliedControls { get; private set; } = FlightDynamicsControlSnapshot.NeutralIdle;
+        public FlightDynamicsInitialConditions LastResetInitialConditions { get; private set; }
         public double DroppedSimulationSeconds => _accumulator?.DroppedSeconds ?? 0.0;
 
         private IFlightDynamicsBackend _backend;
@@ -51,6 +57,9 @@ namespace QuestFlightLab.Flight.Backends
         private FlightBackendRuntimeEvidenceReporter _runtimeEvidence;
         private bool _allocationCounterAvailable = true;
         private Action<double> _stepBackendAction;
+        private static readonly AircraftControlState NeutralIdleControls = AircraftControlState.Neutral(0.10f);
+        private FlightDynamicsInitialConditions _configuredInitialConditions;
+        private bool _hasConfiguredInitialConditions;
 
         private void Awake()
         {
@@ -90,6 +99,7 @@ namespace QuestFlightLab.Flight.Backends
         public bool InitializeSelectedBackend()
         {
             ShutdownBackend();
+            RefreshConfiguredInitialConditions();
             if (!FlightDynamicsAuthority.TryAcquire(simulationRoot, this, out _authorityLease, out string authorityError))
             {
                 return Fail(authorityError);
@@ -143,13 +153,15 @@ namespace QuestFlightLab.Flight.Backends
             }
 
             _backend.SetAtmosphere(FlightDynamicsAtmosphere.Calm);
-            if (!_backend.Reset(FlightDynamicsInitialConditions.KbduRunway()))
+            if (!_backend.Reset(_configuredInitialConditions))
             {
                 LastError = _backend.LastError;
                 _backend.Dispose();
                 _backend = null;
                 return false;
             }
+            LastResetInitialConditions = _configuredInitialConditions;
+            ApplyControls(NeutralIdleControls);
 
             _currentState = _backend.CurrentState;
             _previousState = _currentState;
@@ -167,18 +179,13 @@ namespace QuestFlightLab.Flight.Backends
             if (!IsInitialized) return;
             if (controls != null && controls.ConsumeResetRequest())
             {
-                _backend.Reset(FlightDynamicsInitialConditions.KbduRunway());
-                _currentState = _backend.CurrentState;
-                _previousState = _currentState;
-                _accumulator.Reset();
-                ApplyAuthoritativeState(_currentState);
-                ApplyLegacyState(_currentState);
+                ResetToConfiguredInitialConditions();
                 return;
             }
 
             if (controls != null && controls.Paused) return;
-            AircraftControlState controlState = controls != null ? controls.Current : AircraftControlState.Neutral();
-            _backend.SetControls(controlState);
+            AircraftControlState controlState = controls != null ? controls.Current : NeutralIdleControls;
+            ApplyControls(controlState);
             _accumulator.Consume(Time.fixedDeltaTime, _stepBackendAction);
         }
 
@@ -195,8 +202,41 @@ namespace QuestFlightLab.Flight.Backends
         public bool StepForTest(AircraftControlState controlState, double fixedDeltaTimeSeconds)
         {
             if (!IsInitialized) return false;
-            _backend.SetControls(controlState);
+            ApplyControls(controlState ?? NeutralIdleControls);
             return StepBackend(fixedDeltaTimeSeconds);
+        }
+
+        public void RefreshConfiguredInitialConditions()
+        {
+            _configuredInitialConditions = initialConditionProvider != null
+                ? initialConditionProvider.Build(GeodeticReference.Kbdu)
+                : FlightDynamicsInitialConditions.KbduRunway();
+            _hasConfiguredInitialConditions = true;
+        }
+
+        public bool ResetToConfiguredInitialConditions()
+        {
+            if (!IsInitialized) return Fail("Cannot reset flight dynamics before backend initialization.");
+            if (!_hasConfiguredInitialConditions) RefreshConfiguredInitialConditions();
+            if (!_backend.Reset(_configuredInitialConditions))
+            {
+                return Fail($"{_backend.DisplayName} reset failed: {_backend.LastError}");
+            }
+
+            LastResetInitialConditions = _configuredInitialConditions;
+            ApplyControls(NeutralIdleControls);
+            _currentState = _backend.CurrentState;
+            _previousState = _currentState;
+            _accumulator?.Reset();
+            ApplyAuthoritativeState(_currentState);
+            ApplyLegacyState(_currentState);
+            return true;
+        }
+
+        private void ApplyControls(AircraftControlState controlState)
+        {
+            LastAppliedControls = FlightDynamicsControlSnapshot.From(controlState);
+            _backend.SetControls(controlState);
         }
 
         private bool StepBackend(double fixedDeltaTimeSeconds)
@@ -350,6 +390,7 @@ namespace QuestFlightLab.Flight.Backends
         {
             _backend?.Dispose();
             _backend = null;
+            LastAppliedControls = FlightDynamicsControlSnapshot.NeutralIdle;
             RestoreNonUnityPhysicsState();
             _authorityLease?.Dispose();
             _authorityLease = null;

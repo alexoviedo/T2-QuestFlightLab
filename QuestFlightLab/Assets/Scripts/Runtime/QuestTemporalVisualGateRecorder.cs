@@ -5,7 +5,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using QuestFlightLab.Aircraft;
 using QuestFlightLab.Environment;
+using QuestFlightLab.Flight.Backends;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -30,7 +32,7 @@ namespace QuestFlightLab.Runtime
     [Serializable]
     public sealed class QuestTemporalVisualGateReport
     {
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
         public string generatedUtc;
         public string unityVersion;
         public string platform;
@@ -41,6 +43,12 @@ namespace QuestFlightLab.Runtime
         public string runtimeEnvironmentRoot;
         public bool realDataEnvironmentActive;
         public bool proceduralFallbackActive;
+        public bool productionVerticalSliceActive;
+        public string productionArchitectureVersion;
+        public bool authoredProductionHierarchyValid;
+        public bool productionEnvironmentContractValid;
+        public bool legacyRuntimeRepairAbsent;
+        public string authoritativePhysicsBackend;
         public bool readinessPrerequisitesMet;
         public string readinessStatus;
         public float readinessWaitSeconds;
@@ -87,6 +95,9 @@ namespace QuestFlightLab.Runtime
         public int transparentWaterRendererCount;
         public int uniqueWaterMaterialCount;
         public long waterTriangles;
+        public int sceneMaterialCount;
+        public int performanceDrawCallGate;
+        public long performanceVisibleTriangleGate;
         public bool importedC172Loaded;
         public bool startupSeatAlignmentCompleted;
         public int startupSeatStableFrameCount;
@@ -95,6 +106,7 @@ namespace QuestFlightLab.Runtime
         public float startupSeatYawErrorDegrees;
         public float defaultPilotEyeAftMeters;
         public float eyeToPanelDistanceMeters;
+        public bool productionDefaultSeatAuthored;
         public bool cockpitLightingPolicyAvailable;
         public string cockpitLightingStrategy;
         public float cockpitStaticDepthStrength;
@@ -128,6 +140,9 @@ namespace QuestFlightLab.Runtime
         public const float QuestOverBudgetGateRatio = 0.05f;
         public const int QuestDrawCallGate = 150;
         public const long QuestVisibleTriangleGate = 500000L;
+        public const int ProductionDrawCallGate = 180;
+        public const long ProductionVisibleTriangleGate = 700000L;
+        public const int ProductionSceneMaterialGate = 40;
         public const string DeliveredIntervalSemantics = "Time.unscaledDeltaTime delivered-frame cadence; synchronized 72 Hz presentation naturally centers near 13.889 ms and is not app execution headroom.";
         public const string WorkloadTimingSemantics = "Per-frame max of Unity FrameTimingManager CPU and nonzero GPU durations; Quest CPU timing may include XR synchronization wait, so host app-PID VrApi App and CPU&GPU metrics remain separate.";
 
@@ -149,12 +164,23 @@ namespace QuestFlightLab.Runtime
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
-            if (Application.isEditor || !QuestLaunchOptions.VisualFidelityDemoRequested()) return;
+            if (Application.isEditor ||
+                (!QuestLaunchOptions.VisualFidelityDemoRequested() && !ProductionVerticalSliceRoot.IsProductionSceneLoaded())) return;
             if (FindFirstObjectByType<QuestTemporalVisualGateRecorder>() != null) return;
 
             GameObject host = new GameObject("Quest Temporal Visual Gate Recorder");
             DontDestroyOnLoad(host);
             host.AddComponent<QuestTemporalVisualGateRecorder>();
+
+            ProductionVerticalSliceRoot production = FindFirstObjectByType<ProductionVerticalSliceRoot>();
+            ProductionEnvironmentRoot environment = production != null && production.EnvironmentRoot != null
+                ? production.EnvironmentRoot.GetComponentInChildren<ProductionEnvironmentRoot>(true)
+                : null;
+            if (environment != null && environment.GetComponent<MountainTemporalStabilityProbe>() == null)
+            {
+                MountainTemporalStabilityProbe probe = environment.gameObject.AddComponent<MountainTemporalStabilityProbe>();
+                probe.Initialize(environment.transform, environment.transform);
+            }
         }
 
         private IEnumerator Start()
@@ -225,8 +251,51 @@ namespace QuestFlightLab.Runtime
             StopRecorders();
         }
 
+        public static bool EvaluateSceneReadiness(out string status)
+        {
+            return SceneReady(out status);
+        }
+
         private static bool SceneReady(out string status)
         {
+            ProductionVerticalSliceRoot production = FindFirstObjectByType<ProductionVerticalSliceRoot>();
+            if (production != null)
+            {
+                if (production.AircraftRig == null || !production.AircraftRig.ValidateHierarchy())
+                {
+                    status = "waiting for valid authored production aircraft/XR hierarchy";
+                    return false;
+                }
+                ProductionEnvironmentRoot authoredEnvironment = production.EnvironmentRoot != null
+                    ? production.EnvironmentRoot.GetComponentInChildren<ProductionEnvironmentRoot>(true)
+                    : null;
+                string environmentStatus = "missing";
+                if (authoredEnvironment == null ||
+                    !authoredEnvironment.gameObject.activeInHierarchy ||
+                    !authoredEnvironment.TryValidateContract(out environmentStatus))
+                {
+                    status = "waiting for authored production environment: " + (authoredEnvironment == null ? "missing" : environmentStatus);
+                    return false;
+                }
+                if (FindFirstObjectByType<QuestFirstViewRuntimeRepair>(FindObjectsInactive.Include) != null ||
+                    FindFirstObjectByType<FirstViewPlaytestDiagnostics>(FindObjectsInactive.Include) != null)
+                {
+                    status = "production scene contains a forbidden legacy first-view repair/diagnostic";
+                    return false;
+                }
+                ProductionAircraftLightingController lighting = production.AircraftRig.AircraftVisualRoot != null
+                    ? production.AircraftRig.AircraftVisualRoot.GetComponent<ProductionAircraftLightingController>()
+                    : null;
+                if (lighting == null || lighting.Report == null)
+                {
+                    status = "waiting for authored production cockpit lighting";
+                    return false;
+                }
+
+                status = "ready: authored production hierarchy, baked environment, default seat, cockpit lighting, and legacy suppression validated";
+                return true;
+            }
+
             GameObject realRoot = GameObject.Find(RealKbduEnvironmentBuilder.RootName);
             if (realRoot == null || !realRoot.activeInHierarchy)
             {
@@ -277,12 +346,28 @@ namespace QuestFlightLab.Runtime
             float readinessWait,
             float actualWarmup)
         {
+            ProductionVerticalSliceRoot production = FindFirstObjectByType<ProductionVerticalSliceRoot>();
+            ProductionEnvironmentRoot productionEnvironment = production != null && production.EnvironmentRoot != null
+                ? production.EnvironmentRoot.GetComponentInChildren<ProductionEnvironmentRoot>(true)
+                : null;
             GameObject realRoot = GameObject.Find(RealKbduEnvironmentBuilder.RootName);
             GameObject fallbackRoot = GameObject.Find(RealKbduEnvironmentBuilder.ProceduralFallbackRootName);
             QuestFirstViewRuntimeRepair repair = QuestFirstViewRuntimeRepair.Instance != null
                 ? QuestFirstViewRuntimeRepair.Instance
                 : FindFirstObjectByType<QuestFirstViewRuntimeRepair>();
             CockpitLightingReport lighting = repair != null ? repair.ImportedC172Lighting : null;
+            if (production != null && production.AircraftRig != null && production.AircraftRig.AircraftVisualRoot != null)
+            {
+                ProductionAircraftLightingController productionLighting =
+                    production.AircraftRig.AircraftVisualRoot.GetComponent<ProductionAircraftLightingController>();
+                lighting = productionLighting != null ? productionLighting.Report : null;
+            }
+            bool productionContractValid = productionEnvironment != null &&
+                                           productionEnvironment.TryValidateContract(out _);
+            PilotSeatProfile productionSeat = production != null ? production.PilotSeatProfile : null;
+            bool productionAircraftLoaded = production != null && production.AircraftRig != null &&
+                                            production.AircraftRig.AircraftVisualRoot != null &&
+                                            production.AircraftRig.AircraftVisualRoot.GetComponentsInChildren<Renderer>(true).Length > 10;
 
             QuestTemporalVisualGateReport report = new QuestTemporalVisualGateReport
             {
@@ -292,23 +377,41 @@ namespace QuestFlightLab.Runtime
                 deviceModel = SystemInfo.deviceModel,
                 graphicsDeviceType = SystemInfo.graphicsDeviceType.ToString(),
                 graphicsDeviceName = SystemInfo.graphicsDeviceName,
-                sceneryMode = QuestLaunchOptions.SceneryMode(),
-                runtimeEnvironmentRoot = realRoot != null ? HierarchyPath(realRoot.transform) : string.Empty,
-                realDataEnvironmentActive = realRoot != null && realRoot.activeInHierarchy,
+                sceneryMode = production != null ? ProductionVerticalSliceRoot.ArchitectureVersion : QuestLaunchOptions.SceneryMode(),
+                runtimeEnvironmentRoot = productionEnvironment != null
+                    ? HierarchyPath(productionEnvironment.transform)
+                    : realRoot != null ? HierarchyPath(realRoot.transform) : string.Empty,
+                realDataEnvironmentActive = productionEnvironment != null && productionEnvironment.gameObject.activeInHierarchy ||
+                                            realRoot != null && realRoot.activeInHierarchy,
                 proceduralFallbackActive = fallbackRoot != null && fallbackRoot.activeInHierarchy,
+                productionVerticalSliceActive = production != null,
+                productionArchitectureVersion = production != null ? production.AuthoredArchitectureVersion : string.Empty,
+                authoredProductionHierarchyValid = production != null && production.AircraftRig != null && production.AircraftRig.ValidateHierarchy(),
+                productionEnvironmentContractValid = productionContractValid,
+                legacyRuntimeRepairAbsent = production == null || repair == null,
+                authoritativePhysicsBackend = production != null && production.FlightDynamicsCoordinator != null
+                    ? production.FlightDynamicsCoordinator.ActiveBackendKind.ToString()
+                    : string.Empty,
                 readinessPrerequisitesMet = ready,
                 readinessStatus = readinessStatus,
                 readinessWaitSeconds = readinessWait,
                 warmupSeconds = actualWarmup,
                 requestedMeasurementSeconds = Mathf.Max(1f, measurementSeconds),
-                importedC172Loaded = repair != null && repair.ImportedC172Loaded,
+                importedC172Loaded = production != null ? productionAircraftLoaded : repair != null && repair.ImportedC172Loaded,
                 startupSeatAlignmentCompleted = repair != null && repair.StartupSeatAlignmentCompleted,
                 startupSeatStableFrameCount = repair != null ? repair.StartupSeatStableFrameCount : 0,
                 startupSeatRecenterCount = repair != null ? repair.StartupSeatRecenterCount : 0,
                 startupSeatPositionErrorMeters = repair != null ? repair.StartupSeatPositionErrorMeters : -1f,
                 startupSeatYawErrorDegrees = repair != null ? repair.StartupSeatYawErrorDegrees : -1f,
-                defaultPilotEyeAftMeters = repair != null ? repair.DefaultPilotEyeAftMetersUsed : 0f,
-                eyeToPanelDistanceMeters = repair != null ? repair.DefaultEyeToPanelDistanceMeters : -1f,
+                defaultPilotEyeAftMeters = productionSeat != null
+                    ? Mathf.Abs(productionSeat.nominalEyeLocalPosition.z)
+                    : repair != null ? repair.DefaultPilotEyeAftMetersUsed : 0f,
+                eyeToPanelDistanceMeters = productionSeat != null
+                    ? productionSeat.EyeToPanelForwardDistanceMeters()
+                    : repair != null ? repair.DefaultEyeToPanelDistanceMeters : -1f,
+                productionDefaultSeatAuthored = productionSeat != null && production.AircraftRig != null &&
+                                                Vector3.Distance(production.AircraftRig.PilotSeatAnchor.localPosition,
+                                                    productionSeat.nominalEyeLocalPosition) < 0.0001f,
                 cockpitLightingPolicyAvailable = lighting != null,
                 cockpitLightingStrategy = lighting != null ? lighting.strategy : string.Empty,
                 cockpitStaticDepthStrength = lighting != null ? lighting.staticDepthStrength : 0f,
@@ -324,6 +427,11 @@ namespace QuestFlightLab.Runtime
             report.limitations.Add("Unity FrameTimingManager may return zero GPU milliseconds on Quest; use the host summary's app-PID-filtered VrApi GPU utilization and combined timing for bottleneck evidence.");
             report.limitations.Add("Scene-audit draw calls and visible triangles are conservative estimates when Unity runtime profiler counters are unavailable.");
             report.limitations.Add("Screen recording is started by the host script and can add overhead; the host summary reports whether it ran during this measurement.");
+            if (production != null)
+            {
+                report.limitations.Add("ProductionVerticalSlice uses an authored default seat and intentionally does not invoke the legacy automatic startup recenter path.");
+                report.limitations.Add("No user wearing the headset means this capture cannot pass perceived viewpoint or stereo temporal visual acceptance.");
+            }
             return report;
         }
 
@@ -387,6 +495,7 @@ namespace QuestFlightLab.Runtime
 
             Camera camera = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
             report.renderBudget = QuestRenderBudgetAudit.Capture(camera);
+            report.sceneMaterialCount = report.renderBudget != null ? report.renderBudget.uniqueMaterialCount : 0;
             report.activeRendererCount = FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
                 .Count(renderer => renderer.enabled);
             LODGroup[] lodGroups = FindObjectsByType<LODGroup>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
@@ -400,10 +509,16 @@ namespace QuestFlightLab.Runtime
             long triangles = report.runtimeTriangleRecorderAvailable && report.maximumRuntimeTriangles > 0
                 ? report.maximumRuntimeTriangles
                 : report.renderBudget.estimatedFrustumTriangles;
+            report.performanceDrawCallGate = report.productionVerticalSliceActive ? ProductionDrawCallGate : QuestDrawCallGate;
+            report.performanceVisibleTriangleGate = report.productionVerticalSliceActive
+                ? ProductionVisibleTriangleGate
+                : QuestVisibleTriangleGate;
+            bool materialGate = !report.productionVerticalSliceActive || report.sceneMaterialCount <= ProductionSceneMaterialGate;
             bool commonBudgetGate = report.readinessPrerequisitesMet &&
                                     report.measuredSeconds >= report.requestedMeasurementSeconds &&
-                                    drawCalls <= QuestDrawCallGate &&
-                                    triangles <= QuestVisibleTriangleGate;
+                                    drawCalls <= report.performanceDrawCallGate &&
+                                    triangles <= report.performanceVisibleTriangleGate &&
+                                    materialGate;
             report.deliveredCadencePerformanceGatePassed = commonBudgetGate && EvaluateTimingGate(
                 report.averageFrameMs,
                 report.p95FrameMs,
@@ -569,9 +684,11 @@ namespace QuestFlightLab.Runtime
             builder.AppendLine($"- Unity CPU/GPU p95: {report.p95CpuFrameMs:0.000}ms / {report.p95GpuFrameMs:0.000}ms ({report.gpuTimingSamples} nonzero GPU samples)");
             builder.AppendLine($"- Runtime/audit draw calls: {report.maximumRuntimeDrawCalls} / {report.renderBudget?.estimatedInstancedDrawCalls ?? 0}");
             builder.AppendLine($"- Runtime/audit visible triangles: {report.maximumRuntimeTriangles} / {report.renderBudget?.estimatedFrustumTriangles ?? 0}");
+            builder.AppendLine($"- Production scene/materials/backend: {report.productionVerticalSliceActive}/{report.sceneMaterialCount}/{report.authoritativePhysicsBackend}");
+            builder.AppendLine($"- Active performance limits draw/triangles: {report.performanceDrawCallGate}/{report.performanceVisibleTriangleGate:N0}");
             builder.AppendLine($"- Active renderers/LOD groups/crossfade LOD groups: {report.activeRendererCount}/{report.activeLodGroupCount}/{report.crossFadeLodGroupCount}");
             builder.AppendLine($"- Water renderers/transparent slots/materials/triangles: {report.waterRendererCount}/{report.transparentWaterRendererCount}/{report.uniqueWaterMaterialCount}/{report.waterTriangles}");
-            builder.AppendLine($"- Seat alignment: {report.startupSeatAlignmentCompleted}; recenter={report.startupSeatRecenterCount}; error={report.startupSeatPositionErrorMeters:0.0000}m/{report.startupSeatYawErrorDegrees:0.00}deg");
+            builder.AppendLine($"- Legacy seat alignment / production authored default: {report.startupSeatAlignmentCompleted}/{report.productionDefaultSeatAuthored}; recenter={report.startupSeatRecenterCount}; error={report.startupSeatPositionErrorMeters:0.0000}m/{report.startupSeatYawErrorDegrees:0.00}deg");
             builder.AppendLine($"- Default eye aft/panel distance: {report.defaultPilotEyeAftMeters:0.000}m / {report.eyeToPanelDistanceMeters:0.000}m");
             builder.AppendLine($"- Cockpit depth/shadow map: strength={report.cockpitStaticDepthStrength:0.00}; realtime casters/receivers={report.cockpitRealtimeShadowCasters}/{report.cockpitRealtimeShadowReceivers}");
             builder.AppendLine($"- Requested delivered-cadence performance gate (host crash/thermal checks excluded): {(report.deliveredCadencePerformanceGatePassed ? "PASS" : "FAIL")}");

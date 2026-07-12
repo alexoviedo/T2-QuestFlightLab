@@ -29,6 +29,7 @@ namespace QuestFlightLab.Training
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureTrainingController()
         {
+            if (ProductionVerticalSliceRoot.IsProductionSceneLoaded()) return;
             if (FindFirstObjectByType<TrainingModeController>() != null) return;
 
             GameObject go = new GameObject("Training Mode Controller");

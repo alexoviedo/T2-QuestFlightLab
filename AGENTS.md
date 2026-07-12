@@ -17,3 +17,4 @@
 - Inspect every staged binary and asset before committing.
 - Remove temporary worktrees and branches before completion unless explicitly justified.
 - Final responses must disclose failures and limitations honestly.
+- The production vertical slice is assembled explicitly in scene/prefab assets. Runtime repair code may support legacy scenes but must not be required to construct the production XR hierarchy, aircraft hierarchy, runway, or environment.

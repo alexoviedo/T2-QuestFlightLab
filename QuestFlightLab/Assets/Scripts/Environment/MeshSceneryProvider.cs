@@ -10,6 +10,10 @@ namespace QuestFlightLab.Environment
 
         public override SceneryProviderStatus ActivateProvider(Transform parent)
         {
+            if (ProductionEnvironmentActivation.IsProductionVerticalSliceActive())
+            {
+                return ProductionEnvironmentActivation.BakedProductionStatus(nameof(MeshSceneryProvider), Mode);
+            }
             GameObject root = GameObject.Find(AirportRootName);
             if (root == null)
             {

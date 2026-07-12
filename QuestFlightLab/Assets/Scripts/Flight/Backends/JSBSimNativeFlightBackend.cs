@@ -104,6 +104,10 @@ namespace QuestFlightLab.Flight.Backends
         public bool Reset(FlightDynamicsInitialConditions initialConditions)
         {
             if (!RequireInitialized()) return false;
+            // Resets must not inherit control commands from the previous
+            // flight/scenario. JSBSim RunIC consumes command properties while
+            // initializing actuators and ground reactions.
+            _controls = InitialControls(initialConditions.engineRunning);
             NativeInitialConditions native = new NativeInitialConditions
             {
                 latitudeDegrees = initialConditions.latitudeDegrees,
@@ -134,10 +138,14 @@ namespace QuestFlightLab.Flight.Backends
             _controls = new NativeControls
             {
                 aileron = Clamp(controls.aileron, -1.0, 1.0),
-                // AircraftControlState and the pinned c172x FCS both use the
-                // project convention that positive pitch input is nose-up.
+                // AircraftControlState uses positive=pull/nose-up. The stock
+                // c172x FCS maps positive elevator deflection to a negative
+                // pitching moment, so the ABI command must be inverted.
                 elevator = ContractPitchToJsbsim(controls.elevator),
-                rudder = Clamp(controls.rudder, -1.0, 1.0),
+                // Project positive rudder commands a right yaw. Stock c172x
+                // positive rudder deflection produces a negative yawing
+                // moment, so this axis also crosses the ABI inverted.
+                rudder = ContractRudderToJsbsim(controls.rudder),
                 throttle = Clamp(controls.throttle, 0.0, 1.0),
                 mixture = Clamp(controls.mixture, 0.0, 1.0),
                 carbHeat = Clamp(controls.carbHeat, 0.0, 1.0),
@@ -271,7 +279,21 @@ namespace QuestFlightLab.Flight.Backends
 
         internal static double ContractPitchToJsbsim(double value)
         {
-            return Clamp(value, -1.0, 1.0);
+            return -Clamp(value, -1.0, 1.0);
+        }
+
+        internal static double ContractRudderToJsbsim(double value)
+        {
+            return -Clamp(value, -1.0, 1.0);
+        }
+
+        private static NativeControls InitialControls(bool engineRunning)
+        {
+            return new NativeControls
+            {
+                throttle = engineRunning ? 0.10 : 0.0,
+                mixture = engineRunning ? 1.0 : 0.0
+            };
         }
 
         [StructLayout(LayoutKind.Sequential)]
